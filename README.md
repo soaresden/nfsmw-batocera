@@ -8,8 +8,8 @@ Ce n'est pas un émulateur : le code PowerPC du `default.xex` est recompilé en 
 renderer Vulkan natif du port.
 
 > [!IMPORTANT]
-> **Ça tourne sur la Retroid Pocket 5** (Batocera v44, Turnip Adreno 650) : **57 à 60 FPS en course en 1280x720**,
-> sauvegardes, VF, manette, menu d'options. Encore en test : voir [État](#état).
+> **Ça tourne sur la Retroid Pocket 5** (Batocera v44, Turnip Adreno 650) : **60 FPS en course en 1280x720**,
+> son, vidéos, sauvegardes, VF, manette, menu d'options, mod boutons PlayStation. Détails : [État](#état).
 
 > [!NOTE]
 > Il faut **votre propre copie** du jeu Xbox 360, édition **PAL Espagne** (la même que le port Android). Ce dépôt ne
@@ -111,12 +111,12 @@ Les journaux sont `nfsmw-stdout.log` (lanceur) et `logs/nfsmw_001.log` (jeu). **
 | Sujet | État |
 |---|---|
 | Affichage | Vulkan sur Turnip (Adreno 650), 16/9 natif, 1280x720 interne (1920x1080 au choix) |
-| Performances | 57 à 60 FPS en course en 720p, avec ThinLTO et les fonctions chaudes en tête ; quelques saccades à la première course (shaders) |
+| Performances | 60 FPS presque tout le temps en 720p avec ThinLTO et les fonctions chaudes en tête (20 tranches de 10 s sur 24 à 58-60, moyenne 56,9) ; quelques saccades à la première course (shaders) |
 | Son du jeu | Repli stéréo du jeu (avec le LFE), limiteur et pompe audio comme sur Android |
-| Son des vidéos | Décodé par le jeu (`nfsmw_video_audio_nativo = false`) : le flux natif du port sortait mal en Bluetooth. **En cours de test** |
+| Son des vidéos | Décodé par le jeu (`nfsmw_video_audio_nativo = false`) : le flux natif du port sortait mal en Bluetooth |
 | Sauvegardes | Dans `data/` (copie lisible dans `saves/`) |
 | Langue | Celle de Batocera ; avec la VF doublée de nfsmw-nx, le français |
-| Manette | Reconnue par le SDL du jeu (la correspondance de Batocera numérote autrement les boutons) |
+| Manette | Reconnue par le SDL du jeu (la correspondance de Batocera numérote autrement les boutons) ; boutons de gauche et du haut remis en place (`input_sdl_intercambiar_xy`) |
 | Quitter | Hotkey + Start |
 
 Le lanceur écrit en tête de `nfsmw-stdout.log` la version du port (`VERSION`), Batocera, les pilotes Vulkan et
