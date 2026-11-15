@@ -140,7 +140,7 @@ redémarrage d'EmulationStation) :
 | Anticrénelage | désactivé, FXAA |
 | Filtre d'image | aucun, cinéma, sépia, noir et blanc, froid, chaud, vif, Matrix, CRT |
 | Correspondance manette | Auto (SDL du jeu, conseillé) ou celle de Batocera |
-| Boutons A/B X/Y | **Par lettre** (défaut : la lettre affichée est celle du bouton de la Retroid, A à droite, B en bas) ou par position (comme une manette Xbox) |
+| Boutons A/B X/Y | **Par lettre** (défaut : la lettre affichée est celle du bouton de la Retroid, A à droite, B en bas) ou par position (comme une manette Xbox ou PlayStation). Avec le mod boutons PlayStation installé, le défaut devient par position |
 
 Les autres réglages sont dans `nfsmw.toml`.
 
@@ -150,7 +150,9 @@ Les autres réglages sont dans `nfsmw.toml`.
 photo de manette Xbox 360 des écrans de chargement et du menu Commandes par celle de la DualShock 2 qu'EA a
 laissée dans le jeu. Il part de vos fichiers (sortis des archives par `batocera/tools/Extraire textures NFSMW.sh`)
 et produit `game_root/GLOBAL/` (`GLOBALB.LZC`, `GLOBALMEMORYFILE.BIN`, `DYNTEX.BIN`), sans toucher au reste : un
-autre mod de ces fichiers (la MX-5…) est gardé. Voir [son README](batocera/tools/ps_buttons/README.md).
+autre mod de ces fichiers (la MX-5…) est gardé. Disposition PlayStation : bas = ✕ (valider), droite = ○ (retour),
+gauche = □, haut = △ ; le lanceur met alors les boutons par position. Avec `--zip`, le mod se décompresse
+par-dessus `ports/`. Voir [son README](batocera/tools/ps_buttons/README.md).
 
 ### Outils
 

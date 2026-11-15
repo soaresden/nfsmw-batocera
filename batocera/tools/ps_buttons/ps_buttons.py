@@ -353,6 +353,22 @@ def preview(shown, path):
     sheet.convert('RGB').save(path)
 
 
+LISEZMOI = """Mod boutons PlayStation pour NFS Most Wanted (Batocera)
+
+A decompresser par-dessus /userdata/roms/ports/ (remplacer les fichiers). Dans game_root/GLOBAL/ :
+  GLOBALB.LZC           icones des boutons : croix, rond, carre, triangle, L1/R1/L2/R2
+  GLOBALMEMORYFILE.BIN  les memes icones dans le pack precharge (les autres mods de ce fichier sont gardes)
+  DYNTEX.BIN            la manette DualShock 2 sur les chargements et le menu Commandes (si --dyntex)
+
+Disposition PlayStation : bas = croix (valider), droite = rond (retour), gauche = carre, haut = triangle.
+Tant que ce dossier mods/boutons-playstation existe, le lanceur met les boutons par position (sauf si le
+menu NFS MOST WANTED > BOUTONS A/B X/Y dit Par lettre).
+
+Pour revenir en arriere : remettre vos anciens fichiers de game_root/GLOBAL/ et supprimer ce dossier.
+Fait avec batocera/tools/ps_buttons du depot nfsmw-batocera. Contient des donnees du jeu : ne pas partager.
+"""
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--globalb', required=True, help='GLOBAL/GLOBALB.LZC (5018060 bytes)')
@@ -392,6 +408,8 @@ def main():
             for extra in (a.preview, a.preview_controller):
                 if extra and os.path.exists(extra):
                     z.write(extra, 'NFS Most Wanted.sh/mods/boutons-playstation/' + os.path.basename(extra))
+            # The launcher sees this folder and sets the face buttons by position (run.sh).
+            z.writestr('NFS Most Wanted.sh/mods/boutons-playstation/LISEZMOI.txt', LISEZMOI)
         print('zip for Batocera:', a.zip)
     print('written to', os.path.join(a.out, 'GLOBAL'))
 

@@ -96,9 +96,12 @@ add_arg nfsmw_limite_fps "$(conf_get nfsmw_fps)"
 add_arg nfsmw_tratamiento_visual "$(conf_get nfsmw_visual_treatment)"
 add_arg nfsmw_antialiasing "$(conf_get nfsmw_antialiasing)"
 add_arg nfsmw_posproceso "$(conf_get nfsmw_postprocess)"
+# The PlayStation icons mod (mods/boutons-playstation, batocera/tools/ps_buttons) draws the symbols by position,
+# as on a PlayStation pad: with it, the face buttons go by position unless the menu asks for letters.
 case "$(conf_get nfsmw_buttons)" in
     lettre) ARGS+=("--input_sdl_por_letra") ;;
     position) ARGS+=("--no-input_sdl_por_letra") ;;
+    *) [ -d "$GAMEDIR/mods/boutons-playstation" ] && ARGS+=("--no-input_sdl_por_letra") ;;
 esac
 # Controller: Batocera passes SDL_GAMECONTROLLERCONFIG built with ITS SDL3's button numbers (3.4.x); the game
 # carries its own SDL3 (3.5), whose numbering differs on the Retroid Pocket 5 (Start acted as Back, Home as Start).
