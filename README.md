@@ -43,6 +43,13 @@ NFSMW** (`batocera/tools/Identifier NFSMW.sh`, aussi dans le paquet) dit quelle 
 `ports/nfsmw-identification.txt`. Une copie modifiée passe par la voie B, qui compile à partir de son propre
 `default.xex` (éditions connues : `tools/editions/regional/ediciones.json`).
 
+**Version française doublée.** La branche `tools/french-dub` de
+[soaresden/nfsmw-nx](https://github.com/soaresden/nfsmw-nx/tree/tools/french-dub) fait du disque **PAL anglais**
+(`default.xex` `e2ea2ff1…`) une version française complète (texte, 32 vidéos, voix en jeu) avec le disque Xbox
+original français. SpeedBreaker n'accepte pas l'édition PAL anglaise : cette copie passe par la voie B. Son
+`default.xex` n'est pas modifié, seuls `NFS/ZDIR.BIN`, `NFS/ZZDATA0.BIN`, `NFS/ZZDATA9.BIN` et des `Movies/*.wmv`
+changent, et le port ne vérifie pas ces fichiers.
+
 Les journaux sont `speedbreaker/batocera-launch.log` (le lanceur) et `speedbreaker/last-run.log` (le jeu).
 Le menu de SpeedBreaker s'ouvre avec **Back + Start** ; **Hotkey + Start** quitte.
 
