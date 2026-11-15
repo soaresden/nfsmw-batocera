@@ -31,6 +31,7 @@
 #include <rex/filesystem/entry.h>
 #include <rex/filesystem/file.h>
 #include <rex/filesystem/vfs.h>
+#include <rex/cvar.h>
 #include <rex/logging.h>
 #include <rex/system/kernel_state.h>
 #include <SDL3/SDL.h>
@@ -40,6 +41,19 @@ extern "C" {
 #include "libavutil/channel_layout.h"
 #include "libavutil/samplefmt.h"
 }
+
+// PARCHE LOCAL - Batocera: the movies' audio through the port's own decoder and a second SDL stream (true), or through
+// the game's decoder and its normal output (false). On Linux arm64 (Batocera) that second stream came out broken on
+// the Retroid Pocket 5 (PipeWire, Bluetooth headset) while the game's own path played the intros fine.
+#if REX_PLATFORM_LINUX && REX_ARCH_ARM64 && !REX_PLATFORM_ANDROID
+#define NFSMW_VIDEO_AUDIO_NATIVO_POR_DEFECTO false
+#else
+#define NFSMW_VIDEO_AUDIO_NATIVO_POR_DEFECTO true
+#endif
+REXCVAR_DEFINE_BOOL(nfsmw_video_audio_nativo, NFSMW_VIDEO_AUDIO_NATIVO_POR_DEFECTO, "NFSMW",
+                    "Audio de las peliculas con el descodificador del port y su propio flujo SDL (true) o con el "
+                    "descodificador del juego y su salida normal (false)")
+    .lifecycle(rex::cvar::Lifecycle::kInitOnly);
 
 namespace nfsmw::video_wmv3 {
 namespace {
@@ -490,6 +504,10 @@ void AudioWmaPro::Latido() {
 
 bool AudioWmaPro::Abrir(const std::string& ruta) {
   auto& e = *e_;
+  // PARCHE LOCAL - Batocera: the game decodes the movies' audio itself (as when FFmpeg lacks the decoder).
+  if (!REXCVAR_GET(nfsmw_video_audio_nativo)) {
+    return false;
+  }
   if (!e.fichero.Abrir(ruta) || !LeerCabecera(e.fichero, ruta, e.c) || e.c.codec_audio == AV_CODEC_ID_NONE) {
     REXLOG_WARN("[video] audio WMA nativo no disponible para '{}'", ruta);
     return false;

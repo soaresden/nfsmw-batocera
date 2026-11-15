@@ -331,6 +331,26 @@ if(REXGLUE_PLATFORM_SWITCH)
 endif()
 
 # Native Qt launcher (Linux). Used by packaging/appimage/.
+# Linux (Batocera on the Retroid Pocket 5): ThinLTO over the translated game and the app, as the Android build does,
+# plus the hot functions first (orden_funciones_lld.txt, the Switch's order) and lld's dead-code and identical-code
+# folding. Release only.
+option(NFSMW_LINUX_LTO "ThinLTO en el codigo del juego y de la app (Linux, Release)" ON)
+if(UNIX AND NOT APPLE AND NOT ANDROID AND NOT REXGLUE_PLATFORM_SWITCH AND NFSMW_LINUX_LTO
+   AND CMAKE_BUILD_TYPE STREQUAL "Release")
+    foreach(objetivo nfsmw_recomp nfsmw)
+        if(TARGET ${objetivo})
+            target_compile_options(${objetivo} PRIVATE -flto=thin)
+        endif()
+    endforeach()
+    cmake_host_system_information(RESULT NFSMW_NUCLEOS QUERY NUMBER_OF_LOGICAL_CORES)
+    target_link_options(nfsmw PRIVATE -flto=thin "-Wl,--thinlto-jobs=${NFSMW_NUCLEOS}"
+                        "-Wl,--thinlto-cache-dir=${CMAKE_BINARY_DIR}/thinlto-cache"
+                        -Wl,--gc-sections -Wl,--icf=safe
+                        "-Wl,--symbol-ordering-file=${CMAKE_CURRENT_SOURCE_DIR}/orden_funciones_lld.txt"
+                        -Wl,--no-warn-symbol-ordering)
+    set_property(TARGET nfsmw APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/orden_funciones_lld.txt")
+endif()
+
 option(NFSMW_BUILD_LAUNCHER "Build the native Qt launcher" ON)
 option(NFSMW_LAUNCHER_BUILD_TESTS "Build Qt launcher tests" OFF)
 if(NFSMW_BUILD_LAUNCHER AND UNIX AND NOT APPLE)
