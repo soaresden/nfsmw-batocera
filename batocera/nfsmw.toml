@@ -35,6 +35,9 @@ nfsmw_video_audio_nativo = false
 # Face buttons by letter: the Retroid Pocket 5 is labelled Nintendo-style (A on the right, B at the bottom), so the
 # button with the letter the game shows is the one that acts (B = nitrous). false = by position, as on an Xbox pad.
 input_sdl_por_letra = true
+# The Retroid Pocket 5 sends Linux's BTN_X (= BTN_NORTH) for its top button: SDL, following the xpad driver,
+# takes it for the left one. This puts left and top back where they are.
+input_sdl_intercambiar_xy = true
 # The native renderer does not use Xenos memory export, which needs vertex stores and atomics.
 vulkan_require_vertex_pipeline_stores_and_atomics = false
 

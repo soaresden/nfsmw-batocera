@@ -21,6 +21,12 @@
 #include <rex/platform.h>
 #include <rex/ui/virtual_key.h>
 
+// PARCHE LOCAL - Batocera: the left and top face buttons swapped. Linux's BTN_X is also BTN_NORTH; SDL follows
+// the xpad driver, where BTN_X is the Xbox X (left). Pads labelled Nintendo-style send BTN_X for their top button
+// (the Retroid Pocket 5: X on top, Y on the left), so SDL takes top for left and left for top.
+REXCVAR_DEFINE_BOOL(input_sdl_intercambiar_xy, false, "Input",
+                    "Intercambia los botones izquierdo y superior tal como los da SDL (mandos que mandan BTN_X "
+                    "con el boton de arriba, como la Retroid Pocket 5)");
 // PARCHE LOCAL - Batocera: face buttons by letter on pads labelled Nintendo-style (A on the right), as
 // input_xbox_layout = false does on the Switch. SDL maps by position: the bottom button is SDL's A.
 REXCVAR_DEFINE_BOOL(input_sdl_por_letra, false, "Input",
@@ -648,10 +654,18 @@ void SDLInputDriver::OnControllerDeviceButtonChangedLocked(const SDL_Event& even
     REXLOG_INFO("SDL HID: Unknown button was pressed: {}.", event.gbutton.button);
     return;
   }
-  auto xbutton = xbutton_lookup.at(event.gbutton.button);
+  uint8_t boton = event.gbutton.button;
+  if (REXCVAR_GET(input_sdl_intercambiar_xy)) {
+    if (boton == SDL_GAMEPAD_BUTTON_WEST) {
+      boton = SDL_GAMEPAD_BUTTON_NORTH;
+    } else if (boton == SDL_GAMEPAD_BUTTON_NORTH) {
+      boton = SDL_GAMEPAD_BUTTON_WEST;
+    }
+  }
+  auto xbutton = xbutton_lookup.at(boton);
   if (REXCVAR_GET(input_sdl_por_letra)) {
     // East is labelled A and south B on these pads; west is Y and north X.
-    switch (event.gbutton.button) {
+    switch (boton) {
       case SDL_GAMEPAD_BUTTON_SOUTH: xbutton = X_INPUT_GAMEPAD_B; break;
       case SDL_GAMEPAD_BUTTON_EAST: xbutton = X_INPUT_GAMEPAD_A; break;
       case SDL_GAMEPAD_BUTTON_WEST: xbutton = X_INPUT_GAMEPAD_Y; break;
