@@ -235,7 +235,115 @@ def patch_memfile(mem, globalb):
     raise ValueError('GLOBALMEMORYFILE.BIN has no copy of GLOBALB.LZC')
 
 
+# ---------------------------------------------------------------- loading screen / controls controller
+
+# GLOBAL/DYNTEX.BIN ("Global\\DynamicTextures.tpk", 151 textures; its header is preloaded from
+# GLOBALMEMORYFILE.BIN) keeps the controller picture of every platform, as EA made them: the 360 shows
+# LOADING_CONTROLLER_X360_C1/C2 (256x256, 32 bpp ARGB, 5 mips) on the loading screens and in the controls menu.
+# The PS2 ones (DualShock 2 photo, DXT5) have their callout lines where the 360's are, so they take their place.
+X360_C1, X360_C2 = 0xEC3C0443, 0xEC3C0444
+XBOX_C1, XBOX_C2 = 0x1113B973, 0x1113B974
+PS2_C1, PS2_C2 = 0xDF7B27A7, 0xDF7B27A8
+CONTROLLERS = {X360_C1: PS2_C1, X360_C2: PS2_C2, XBOX_C1: PS2_C1, XBOX_C2: PS2_C2}
+
+
+def tpk_entries(d):
+    """Compressed TPK index (0x33310003): [(offset of the 24-byte entry, hash, data offset, stored size, size)]."""
+    b, e = tpk.find(d, 0x33310003)
+    out = []
+    for o in range(b, e - 23, 24):
+        h, off, size, usize, _, _ = struct.unpack_from('<IIiiII', d, o)
+        out.append((o, h, off, size, usize))
+    return out
+
+
+def unpack(blob):
+    import huff
+    return huff.decompress(blob) if blob[:4] == b'HUFF' else jdlz.decompress(blob)
+
+
+def argb32_level(img, w, h):
+    """RGBA image -> one tiled big-endian ARGB level, padded to 32x32 texels."""
+    level = np.asarray(img.resize((w, h), Image.LANCZOS).convert('RGBA'), np.uint8)
+    aw, ah = (w + 31) & ~31, (h + 31) & ~31
+    out = np.zeros((aw * ah, 4), np.uint8)
+    for y in range(h):
+        for x in range(w):
+            out[xenos.tiled_offset(x, y, aw, 4)] = level[y, x][[3, 0, 1, 2]]
+    return out.tobytes()
+
+
+def argb32_encode(img, original):
+    """Levels 256..32 from `img`; the 16x16 tail (packed elsewhere, never visible here) kept from `original`."""
+    out = bytearray(original)
+    off, w = 0, img.width
+    while w >= 32:
+        lv = argb32_level(img, w, w)
+        out[off:off + len(lv)] = lv
+        off += len(lv)
+        w //= 2
+    return bytes(out)
+
+
+def patch_dyntex(d, log=print):
+    """DYNTEX.BIN bytes -> (new bytes, same size and index, [(name, before, after)])."""
+    d = bytearray(d)
+    ent = {h: (o, off, size, usize) for o, h, off, size, usize in tpk_entries(d)}
+    shown = []
+    for dst, src in CONTROLLERS.items():
+        if dst not in ent or src not in ent:
+            log('DYNTEX: texture %08X or %08X missing, skipped' % (dst, src))
+            continue
+        _, doff, dsize, dusize = ent[dst]
+        _, soff, ssize, _ = ent[src]
+        draw = unpack(bytes(d[doff:doff + dsize]))
+        sraw = unpack(bytes(d[soff:soff + ssize]))
+        dinfo, sinfo = draw[-0x9C:-0x20], sraw[-0x9C:-0x20]
+        dname = dinfo[0x0C:0x24].split(b'\0')[0].decode('latin-1')
+        w, h = struct.unpack_from('<hh', sinfo, 0x44)
+        picture = decode(sraw[:len(sraw) - 0x9C], w, h)  # the PS2 photo, DXT5
+        dw, dh = struct.unpack_from('<hh', dinfo, 0x44)
+        comp = dinfo[0x4A]
+        pixels = draw[:len(draw) - 0x9C]
+        if comp == 0x20:  # 32 bpp ARGB (the 360's)
+            before = argb_preview(pixels, dw, dh)
+            new_pixels = argb32_encode(picture.resize((dw, dh), Image.LANCZOS), pixels)
+            after = argb_preview(new_pixels, dw, dh)
+        elif comp == 0x26 and len(pixels) == len(sraw) - 0x9C:  # DXT5 like the PS2 one: same bytes
+            before = decode(pixels, dw, dh)
+            new_pixels = sraw[:len(sraw) - 0x9C]
+            after = decode(new_pixels, dw, dh)
+        else:
+            log('DYNTEX %s: format %02X not handled, skipped' % (dname, comp))
+            continue
+        raw = new_pixels + draw[len(draw) - 0x9C:]
+        assert len(raw) == dusize
+        blob = jdlz.compress(raw)
+        if len(blob) > dsize:
+            raise ValueError('%s: %d bytes compressed, only %d room' % (dname, len(blob), dsize))
+        assert jdlz.decompress(blob) == raw
+        d[doff:doff + dsize] = blob + b'\0' * (dsize - len(blob))
+        shown.append((dname, before, after))
+        log('%-26s <- PS2 controller (%d of %d bytes)' % (dname, len(blob), dsize))
+    return bytes(d), shown
+
+
+def argb_preview(pixels, w, h):
+    idx, total = xenos._map(w, h, 4)
+    a = np.frombuffer(pixels[:total * 4], np.uint8).reshape(total, 4)
+    return Image.fromarray(a[idx.reshape(-1)].reshape(h, w, 4)[:, :, [1, 2, 3, 0]].copy(), 'RGBA')
+
+
 def preview(shown, path):
+    if shown and shown[0][1].width > 64:
+        sheet = Image.new('RGBA', (len(shown) * 264, 560), (50, 50, 50, 255))
+        d = ImageDraw.Draw(sheet)
+        for i, (name, before, after) in enumerate(shown):
+            sheet.alpha_composite(before.resize((256, 256)), (i * 264 + 4, 4))
+            sheet.alpha_composite(after.resize((256, 256)), (i * 264 + 4, 266))
+            d.text((i * 264 + 4, 540), name, fill=WHITE)
+        sheet.convert('RGB').save(path)
+        return
     sheet = Image.new('RGBA', (len(shown) * 76, 170), (50, 50, 50, 255))
     d = ImageDraw.Draw(sheet)
     for i, (name, before, after) in enumerate(shown):
@@ -251,6 +359,9 @@ def main():
     ap.add_argument('--memfile', help='GLOBAL/GLOBALMEMORYFILE.BIN the game uses (its GLOBALB copy is patched)')
     ap.add_argument('--out', required=True, help='game_root: writes GLOBAL/GLOBALB.LZC (and GLOBALMEMORYFILE.BIN)')
     ap.add_argument('--preview', help='PNG with the icons before and after')
+    ap.add_argument('--dyntex', help='GLOBAL/DYNTEX.BIN: the controller picture of the loading screens and the '
+                                     'controls menu becomes EA\'s PS2 one')
+    ap.add_argument('--preview-controller', help='PNG with the controller pictures before and after')
     ap.add_argument('--retroid', action='store_true',
                     help='symbols where the buttons are with the face buttons by letter on a Retroid Pocket 5')
     a = ap.parse_args()
@@ -265,6 +376,12 @@ def main():
             f.write(mem)
     if a.preview:
         preview(shown, a.preview)
+    if a.dyntex:
+        dyn, dshown = patch_dyntex(open(a.dyntex, 'rb').read())
+        with open(os.path.join(a.out, 'GLOBAL', 'DYNTEX.BIN'), 'wb') as f:
+            f.write(dyn)
+        if a.preview_controller:
+            preview(dshown, a.preview_controller)
     print('written to', os.path.join(a.out, 'GLOBAL'))
 
 

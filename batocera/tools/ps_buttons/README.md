@@ -9,10 +9,19 @@ textures de `GLOBAL/GLOBALB.LZC`, préchargé aussi depuis `GLOBAL/GLOBALMEMORYF
 deux, aux mêmes tailles, sans toucher au reste (une MX-5 ou un autre mod de `GLOBALMEMORYFILE.BIN` est gardé).
 
 ```sh
-python3 ps_buttons.py --globalb GLOBALB.LZC --memfile GLOBALMEMORYFILE.BIN --out <game_root> --preview icones.png
+python3 ps_buttons.py --globalb GLOBALB.LZC --memfile GLOBALMEMORYFILE.BIN --dyntex DYNTEX.BIN \
+                      --out <game_root> --preview icones.png --preview-controller manette.png
 ```
 
-- `GLOBALB.LZC` : tiré des archives avec `../Extraire textures NFSMW.sh`.
+**L'image de manette** des écrans de chargement et du menu Commandes (`--dyntex`) : `GLOBAL/DYNTEX.BIN` garde
+les images de toutes les plateformes faites par EA. Le jeu affiche `LOADING_CONTROLLER_X360_C1/C2` (256x256,
+32 bits ARGB, 5 mips) ; l'outil y met les photos de DualShock 2 d'EA (`LOADING_CONTROLLER_PS2_C1/C2`, DXT5),
+dont les traits de légende tombent aux mêmes endroits (seul celui du bouton Guide n'a pas d'équivalent).
+Les images Xbox d'origine (`_XBOX_C1/C2`) sont remplacées aussi. Seules ces textures changent : l'index et
+l'en-tête préchargé dans `GLOBALMEMORYFILE.BIN` restent les mêmes. L'image suit les positions PlayStation
+(△ en haut), y compris avec `--retroid`.
+
+- `GLOBALB.LZC` et `DYNTEX.BIN` : tirés des archives avec `../Extraire textures NFSMW.sh`.
 - `GLOBALMEMORYFILE.BIN` : celui que le jeu utilise (un fichier séparé dans `game_root/GLOBAL/` si un mod l'y a
   mis, sinon celui des archives).
 
