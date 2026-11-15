@@ -15,46 +15,24 @@ renderer Vulkan natif du port.
 > Il faut **votre propre copie** du jeu Xbox 360, édition **PAL Espagne** (la même que le port Android). Ce dépôt ne
 > contient aucun fichier du jeu ni rien de généré à partir de lui.
 
-## Deux voies
+## Votre copie du jeu
 
-| Voie | Ce que c'est | État |
-|---|---|---|
-| **A. Ce port** (nfsmw-nx → Android Evolved → Linux), **recommandée** | Notre build aarch64 à partir du fork Android : `batocera/`. Accepte les copies modifiées (VF doublée, MX-5…) | **Tourne sur la RP5** |
-| **B. SpeedBreaker** | [SpeedBreaker](https://github.com/SpeedBreakerProject/speedbreaker), une autre recompilation du même jeu, a une version Linux arm64 (Steam Frame) : `speedbreaker/` l'emballe pour Batocera. Disques USA et PAL Espagne d'origine seulement | Paquet prêt, pas testé |
-
-### Voie B : SpeedBreaker
-
-```sh
-speedbreaker/make_package.sh            # télécharge SpeedBreaker arm64 et fait out/nfsmw-speedbreaker-batocera.zip
-```
-
-1. Décompressez `nfsmw-speedbreaker-batocera.zip` dans `/userdata/roms/ports/`.
-2. Copiez votre jeu dans `/userdata/roms/ports/speedbreaker/disc/` : le disque extrait (`default.xex`, `NFS/`,
-   `Movies/`, par exemple ceux du dossier `nsfmw-androidevolved/` de l'app Android) ou une image `.iso`. Disques
-   acceptés par SpeedBreaker : USA et PAL Espagne.
-3. Mettez à jour la liste des jeux, puis lancez **SpeedBreaker** dans **Ports**. Le premier lancement vérifie et
-   installe le jeu dans `speedbreaker/data/game` (une ou deux minutes, écran noir), puis il démarre.
-
-**Quelle copie ?** SpeedBreaker n'installe que les disques **USA** et **PAL Espagne** d'origine : il vérifie les 49
-fichiers et refuse les traductions de fans. Le texte du jeu peut quand même être mis en français dans ses réglages
-(Settings > Game > Language), seules les voix et les vidéos restent dans la langue du disque. Le port **Identifier
-NFSMW** (`batocera/tools/Identifier NFSMW.sh`, aussi dans le paquet) dit quelle édition est dans
-`speedbreaker/disc/` ou `nfsmw/game_root/` et quels fichiers diffèrent de l'original, dans
-`ports/nfsmw-identification.txt`. Une copie modifiée passe par la voie A (ce port), qui compile à partir de son propre
-`default.xex` (éditions connues : `tools/editions/regional/ediciones.json`).
+Il faut votre propre copie Xbox 360 **PAL Espagne** (`default.xex` `aad15fc2…`), comme pour le port Android. Les
+fichiers de données peuvent être modifiés (traduction, voitures…) : le port ne les vérifie pas. Le Port
+**Identifier NFSMW** (`batocera/tools/Identifier NFSMW.sh`) dit quelle édition est votre copie et quels fichiers
+diffèrent de l'original (`ports/nfsmw-identification.txt`). Éditions connues :
+`tools/editions/regional/ediciones.json`.
 
 **Version française doublée.** La branche `tools/french-dub` de
-[soaresden/nfsmw-nx](https://github.com/soaresden/nfsmw-nx/tree/tools/french-dub) fait du disque **PAL anglais**
-(`default.xex` `e2ea2ff1…`) une version française complète (texte, 32 vidéos, voix en jeu) avec le disque Xbox
-original français. SpeedBreaker n'accepte pas l'édition PAL anglaise : cette copie passe par la voie A (ce port). Son
-`default.xex` n'est pas modifié, seuls `NFS/ZDIR.BIN`, `NFS/ZZDATA0.BIN`, `NFS/ZZDATA9.BIN` et des `Movies/*.wmv`
-changent, et le port ne vérifie pas ces fichiers.
+[soaresden/nfsmw-nx](https://github.com/soaresden/nfsmw-nx/tree/tools/french-dub) fait une VF complète (texte,
+32 vidéos, voix en jeu) avec le disque Xbox original français. Seuls `NFS/ZDIR.BIN`, `NFS/ZZDATA0.BIN`,
+`NFS/ZZDATA9.BIN` et des `Movies/*.wmv` changent ; le lanceur la reconnaît et met la langue du jeu en
+conséquence.
 
-Les journaux sont `speedbreaker/batocera-launch.log` (le lanceur) et `speedbreaker/last-run.log` (le jeu).
-Le menu de SpeedBreaker s'ouvre avec **Back + Start** ; **Hotkey + Start** quitte.
-
-SpeedBreaker arm64 demande glibc 2.38 et la libstdc++ de GCC 15 (`GLIBCXX_3.4.34`). Si celle de Batocera est plus
-ancienne, `speedbreaker.sh` prend automatiquement celle de `lib/cxx/` que le paquet ajoute.
+> [!NOTE]
+> Autre recompilation du même jeu, [SpeedBreaker](https://github.com/SpeedBreakerProject/speedbreaker) a une
+> version Linux arm64, mais elle n'installe que les disques USA et PAL Espagne d'origine (49 fichiers vérifiés) :
+> pas de VF doublée ni de mods.
 
 ## D'où vient ce port
 
