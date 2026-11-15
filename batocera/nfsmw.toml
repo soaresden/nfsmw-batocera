@@ -16,6 +16,17 @@ nfsmw_resolucion_interna = "1280x720"
 present_perfil_pintado = false
 nfsmw_streaming_diag = false
 
+# ---- Linux (Batocera) gets the Android defaults ----
+# The SDK picks these by platform, and its Linux defaults are the desktop ones: with them the music, the police radio
+# and the menu sounds come out robotic (codepdbh/nfsmw-android PR #3538 saw it on a Linux PC). Android's values:
+audio_xma_en_trabajador = 2          # XMA decoded by the worker thread
+audio_sdl_bomba = true               # SDL audio fed by its own pump at a steady rate
+audio_sdl_bomba_cola = 12
+audio_maxqframes = 12
+nfsmw_audio_esperar_servidor_ms = 30 # wait up to 30 ms for the game's audio server packet, as on Android/Switch
+# The native renderer does not use Xenos memory export, which needs vertex stores and atomics.
+vulkan_require_vertex_pipeline_stores_and_atomics = false
+
 # ---- Switch release settings ----
 input_xbox_layout = false
 nfsmw_tratamiento_visual = "original"

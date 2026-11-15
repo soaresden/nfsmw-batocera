@@ -413,7 +413,7 @@ REX_HOOK_RAW(sub_823C83F8) {
       nfsmw::esperas::Sumar(nfsmw::esperas::kEjecutorSinOrdenes, ns_sin_ordenes);
     }
   }
-#if REX_PLATFORM_ANDROID && !defined(NFSC_RECOMP)
+#if (REX_PLATFORM_ANDROID || (REX_PLATFORM_LINUX && REX_ARCH_ARM64)) && !defined(NFSC_RECOMP)
   // Acquire the producer's count before the guest executor reads command bytes.
   constexpr uint32_t lista = 0x82909650;
   const uint32_t publicadas = nfsmw::ordenes::Publicadas(base + lista);
@@ -423,7 +423,7 @@ REX_HOOK_RAW(sub_823C83F8) {
   __imp__sub_823C83F8(ctx, base);
 }
 
-#if REX_PLATFORM_ANDROID && !defined(NFSC_RECOMP)
+#if (REX_PLATFORM_ANDROID || (REX_PLATFORM_LINUX && REX_ARCH_ARM64)) && !defined(NFSC_RECOMP)
 REX_EXTERN(__imp__sub_823C8378);
 REX_HOOK_RAW(sub_823C8378) {
   constexpr uint32_t lista = 0x82909650;

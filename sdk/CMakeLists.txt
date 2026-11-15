@@ -302,9 +302,11 @@ add_subdirectory(src/audio)
 add_subdirectory(src/graphics)
 add_subdirectory(src/system)
 add_subdirectory(src/kernel)
-if(NOT REXGLUE_PLATFORM_SWITCH AND NOT ANDROID AND NOT IOS)
+if(NOT REXGLUE_PLATFORM_SWITCH AND NOT ANDROID AND NOT IOS AND NOT CMAKE_CROSSCOMPILING)
     # Host tools. Code generation runs on the PC; a Switch build compiles its
-    # output.
+    # output. PARCHE LOCAL - Batocera: the same for any cross build (Linux aarch64 from an x86-64 PC): a rexglue
+    # for the target cannot run here, and without the rex::rexglue target the app uses the sources generated
+    # beforehand by the host rexglue (batocera/build.sh).
     add_subdirectory(src/codegen)
     add_subdirectory(src/rexglue)
 endif()
