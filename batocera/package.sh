@@ -33,6 +33,8 @@ SYSLIB=/usr/lib/aarch64-linux-gnu
 system_lib() {
   case "$1" in
     libc.so*|libm.so*|libdl.so*|libpthread.so*|librt.so*|ld-linux*|libvulkan.so*|libwayland*|libdrm*|libgbm*|libEGL*|libGL*|libasound*|libpulse*|libudev*|libdbus*|libsystemd*) return 0 ;;
+    # The C++ runtime goes to lib/cxx/, used only when the console's is older (see the launcher).
+    libstdc++.so*|libgcc_s.so*) return 0 ;;
   esac
   return 1
 }
@@ -58,6 +60,9 @@ while [ ${#pending[@]} -gt 0 ]; do
   done
 done
 
+mkdir -p "$DEST/nfsmw/lib/cxx"
+cp -L "$SYSLIB/libstdc++.so.6" "$SYSLIB/libgcc_s.so.1" "$DEST/nfsmw/lib/cxx/"
+
 cat > "$DEST/nfsmw/game_root/LISEZMOI.txt" <<'TXT'
 Copiez ici, depuis votre propre copie du jeu (Xbox 360, PAL Espagne) :
   default.xex
@@ -67,4 +72,4 @@ Copiez ici, depuis votre propre copie du jeu (Xbox 360, PAL Espagne) :
 TXT
 echo "Batocera package: $DEST"
 readelf -d "$DEST/nfsmw/nfsmw" | grep NEEDED
-ls "$DEST/nfsmw/lib"
+ls "$DEST/nfsmw" "$DEST/nfsmw/lib" "$DEST/nfsmw/lib/cxx"

@@ -22,8 +22,9 @@ endif()
 set(NFSMW_CPU_FLAGS "-mcpu=cortex-a77" CACHE STRING "CPU tuning flags")
 set(CMAKE_C_FLAGS_INIT "${NFSMW_CPU_FLAGS}")
 set(CMAKE_CXX_FLAGS_INIT "${NFSMW_CPU_FLAGS}")
-# libstdc++ and libgcc inside the binary: Batocera ships an older libstdc++ than the build sysroot.
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld -static-libstdc++ -static-libgcc")
+# libstdc++ stays shared: the executable and librexruntime.so must use the same one. package.sh puts the build's
+# copy in nfsmw/lib/cxx/ and the launcher uses it only when the console's is older.
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld")
 set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld")
 set(CMAKE_MODULE_LINKER_FLAGS_INIT "-fuse-ld=lld")
 
