@@ -25,14 +25,32 @@ cp "$RAIZ/batocera/nfsmw.toml" "$DEST/nfsmw/nfsmw.toml"
 cp "$RAIZ/batocera/port/NFS Most Wanted.sh" "$RAIZ/batocera/port/NFS Most Wanted.sh.keys" "$DEST/"
 chmod +x "$DEST/NFS Most Wanted.sh" "$DEST/nfsmw/nfsmw"
 
-# Shared libraries the binary needs and Batocera does not always carry. Vulkan, the C library and the
-# display stack (Wayland/X11/DRM) always come from the console: they must match its drivers.
+# Shared libraries the binary needs and Batocera does not always carry (X11/XCB client libraries, used only
+# when there is no Wayland), with their own dependencies. Vulkan, the C library, Wayland, DRM, audio and udev
+# always come from the console: they must match its drivers and services.
 SYSLIB=/usr/lib/aarch64-linux-gnu
-for lib in $(readelf -d "$DEST/nfsmw/nfsmw" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p'); do
-  case "$lib" in
-    libc.so*|libm.so*|libdl.so*|libpthread.so*|librt.so*|ld-linux*|libvulkan.so*|libwayland*|libX*|libxcb*|libdrm*|libgbm*|libEGL*|libGL*|libasound*|libpulse*|libudev*|libdbus*) ;;
-    *) if [ -f "$SYSLIB/$lib" ]; then cp -L "$SYSLIB/$lib" "$DEST/nfsmw/lib/"; else echo "warning: $lib not bundled" >&2; fi ;;
+system_lib() {
+  case "$1" in
+    libc.so*|libm.so*|libdl.so*|libpthread.so*|librt.so*|ld-linux*|libvulkan.so*|libwayland*|libdrm*|libgbm*|libEGL*|libGL*|libasound*|libpulse*|libudev*|libdbus*|libsystemd*) return 0 ;;
   esac
+  return 1
+}
+pending=("$DEST/nfsmw/nfsmw")
+for so in "$BUILD"/*.so "$BUILD"/*/*.so; do
+  [ -f "$so" ] && cp -L "$so" "$DEST/nfsmw/lib/" && pending+=("$DEST/nfsmw/lib/$(basename "$so")")
+done
+while [ ${#pending[@]} -gt 0 ]; do
+  elf=${pending[0]}; pending=("${pending[@]:1}")
+  for lib in $(readelf -d "$elf" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p'); do
+    system_lib "$lib" && continue
+    [ -f "$DEST/nfsmw/lib/$lib" ] && continue
+    if [ -f "$SYSLIB/$lib" ]; then
+      cp -L "$SYSLIB/$lib" "$DEST/nfsmw/lib/"
+      pending+=("$DEST/nfsmw/lib/$lib")
+    else
+      echo "warning: $lib not bundled" >&2
+    fi
+  done
 done
 
 cat > "$DEST/nfsmw/game_root/LISEZMOI.txt" <<'TXT'
@@ -44,3 +62,4 @@ Copiez ici, depuis votre propre copie du jeu (Xbox 360, PAL Espagne) :
 TXT
 echo "Batocera package: $DEST"
 readelf -d "$DEST/nfsmw/nfsmw" | grep NEEDED
+ls "$DEST/nfsmw/lib"

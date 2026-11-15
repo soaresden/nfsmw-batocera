@@ -15,6 +15,32 @@ renderer Vulkan natif du port.
 > Il faut **votre propre copie** du jeu Xbox 360, édition **PAL Espagne** (la même que le port Android). Ce dépôt ne
 > contient aucun fichier du jeu ni rien de généré à partir de lui.
 
+## Deux voies
+
+| Voie | Ce que c'est | État |
+|---|---|---|
+| **A. SpeedBreaker** (recommandée pour commencer) | [SpeedBreaker](https://github.com/SpeedBreakerProject/speedbreaker), une autre recompilation du même jeu Xbox 360, publie déjà une version **Linux arm64**, faite pour le Steam Frame (Snapdragon, Adreno, Mesa Turnip). Ce dépôt l'emballe pour Batocera : `speedbreaker/` | Paquet prêt, à essayer sur la RP5 |
+| **B. Ce port** (nfsmw-nx → Android Evolved → Linux) | Notre propre build aarch64 à partir du fork Android, qui tourne déjà sur la RP5 sous Android : `batocera/` | Le SDK compile pour aarch64 ; le jeu attend le `default.xex` |
+
+### Voie A : SpeedBreaker
+
+```sh
+speedbreaker/make_package.sh            # télécharge SpeedBreaker arm64 et fait out/nfsmw-speedbreaker-batocera.zip
+```
+
+1. Décompressez `nfsmw-speedbreaker-batocera.zip` dans `/userdata/roms/ports/`.
+2. Copiez votre jeu dans `/userdata/roms/ports/speedbreaker/disc/` : le disque extrait (`default.xex`, `NFS/`,
+   `Movies/`, par exemple ceux du dossier `nsfmw-androidevolved/` de l'app Android) ou une image `.iso`. Disques
+   acceptés par SpeedBreaker : USA et PAL Espagne.
+3. Mettez à jour la liste des jeux, puis lancez **SpeedBreaker** dans **Ports**. Le premier lancement vérifie et
+   installe le jeu dans `speedbreaker/data/game` (une ou deux minutes, écran noir), puis il démarre.
+
+Les journaux sont `speedbreaker/batocera-launch.log` (le lanceur) et `speedbreaker/last-run.log` (le jeu).
+Le menu de SpeedBreaker s'ouvre avec **Back + Start** ; **Hotkey + Start** quitte.
+
+SpeedBreaker arm64 demande glibc 2.38 et la libstdc++ de GCC 15 (`GLIBCXX_3.4.34`). Si celle de Batocera est plus
+ancienne, `speedbreaker.sh` prend automatiquement celle de `lib/cxx/` que le paquet ajoute.
+
 ## D'où vient ce port
 
 | Projet | Apport |
