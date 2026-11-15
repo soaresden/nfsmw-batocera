@@ -23,6 +23,8 @@ mkdir -p "$DEST/nfsmw/lib" "$DEST/nfsmw/game_root"
 cp "$EXE" "$DEST/nfsmw/nfsmw"
 llvm-strip-20 --strip-unneeded "$DEST/nfsmw/nfsmw" 2>/dev/null || llvm-strip --strip-unneeded "$DEST/nfsmw/nfsmw" 2>/dev/null || aarch64-linux-gnu-strip --strip-unneeded "$DEST/nfsmw/nfsmw"
 cp "$RAIZ/batocera/nfsmw.toml" "$DEST/nfsmw/nfsmw.toml"
+# The NFS MOST WANTED submenu of EmulationStation's advanced game options (the launcher installs it).
+cp "$RAIZ/batocera/port/es_features_nfsmw.cfg" "$DEST/nfsmw/es_features_nfsmw.cfg"
 cp "$RAIZ/batocera/port/NFS Most Wanted.sh" "$RAIZ/batocera/port/NFS Most Wanted.sh.keys" "$DEST/"
 chmod +x "$DEST/NFS Most Wanted.sh" "$DEST/nfsmw/nfsmw"
 

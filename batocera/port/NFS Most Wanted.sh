@@ -37,12 +37,63 @@ export MESA_SHADER_CACHE_DIR="$GAMEDIR/cache/mesa"
 export MESA_SHADER_CACHE_MAX_SIZE=1G
 mkdir -p "$MESA_SHADER_CACHE_DIR"
 
-chmod +x ./nfsmw 2>/dev/null
+chmod +x "$GAMEDIR/nfsmw" 2>/dev/null
 {
     echo "[batocera] $(date '+%F %T') $(cat /usr/share/batocera/batocera.version 2>/dev/null) $(uname -r)"
     echo "[batocera] C++ runtime: system ${SYS_CXX:-none}, bundled ${OWN_CXX:-none}; LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
-    echo "[batocera] WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-} DISPLAY=${DISPLAY:-} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}"
+    echo "[batocera] WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-} DISPLAY=${DISPLAY:-} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-} HOME=${HOME:-}"
+    echo "[batocera] SDL_GAMECONTROLLERCONFIG: ${SDL_GAMECONTROLLERCONFIG:-(none)}"
     ls /usr/share/vulkan/icd.d/ 2>/dev/null | sed 's/^/[batocera] vulkan icd: /'
 } > "$GAMEDIR/nfsmw-stdout.log" 2>&1
-./nfsmw "$@" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
+# Full path: the Hotkey + Start action (NFS Most Wanted.sh.keys) finds the game by it.
+# ---- Options from EmulationStation (ADVANCED GAME OPTIONS > NFS MOST WANTED) ----
+# es_features_nfsmw.cfg adds the menu; it is copied where EmulationStation reads it (seen after its next restart).
+ES_CFG_DIR="${NFSMW_ES_CFG_DIR:-/userdata/system/configs/emulationstation}"
+if [ -f "$GAMEDIR/es_features_nfsmw.cfg" ] && [ -d "$ES_CFG_DIR" ] && \
+   ! cmp -s "$GAMEDIR/es_features_nfsmw.cfg" "$ES_CFG_DIR/es_features_nfsmw.cfg"; then
+    cp "$GAMEDIR/es_features_nfsmw.cfg" "$ES_CFG_DIR/es_features_nfsmw.cfg"
+fi
+CONF="${NFSMW_BATOCERA_CONF:-/userdata/system/batocera.conf}"
+ROMNAME="$(basename "$0")"
+# The game's own setting (ports["NFS Most Wanted.sh"].key), else the Ports system's (ports.key).
+conf_get() {
+    local v=""
+    [ -f "$CONF" ] || return 0
+    v=$(grep -F "ports[\"$ROMNAME\"].$1=" "$CONF" | tail -1 | cut -d= -f2-)
+    [ -z "$v" ] && v=$(grep -E "^ports\.$1=" "$CONF" | tail -1 | cut -d= -f2-)
+    echo "$v"
+}
+ARGS=()
+add_arg() { [ -n "$2" ] && ARGS+=("--$1=$2"); }
+
+# Language: auto (default) follows Batocera's system.language. The French dub of nfsmw-nx (tools/french-dub) puts
+# the French text and speech in the English slot: with it, French means 0.
+LANG_OPT="$(conf_get nfsmw_language)"
+if [ -z "$LANG_OPT" ] || [ "$LANG_OPT" = auto ]; then
+    SYS_LANG="$(grep -E '^system\.language=' "$CONF" 2>/dev/null | tail -1 | cut -d= -f2)"
+    case "${SYS_LANG%%_*}" in
+        en) LANG_OPT=0 ;; fr) LANG_OPT=1 ;; de) LANG_OPT=2 ;; it) LANG_OPT=3 ;; es) LANG_OPT=4 ;;
+        nl) LANG_OPT=5 ;; sv) LANG_OPT=6 ;; da) LANG_OPT=7 ;; pl) LANG_OPT=12 ;; fi) LANG_OPT=13 ;;
+        *) LANG_OPT=0 ;;
+    esac
+    if [ "$LANG_OPT" = 1 ] && { [ -f "$GAMEDIR/game_root/Movies/movies_report.txt" ] || [ -f "$GAMEDIR/game_root/Movies/rapport_films.txt" ]; }; then
+        LANG_OPT=0
+    fi
+fi
+add_arg nfsmw_idioma "$LANG_OPT"
+add_arg nfsmw_resolucion_interna "$(conf_get nfsmw_resolution)"
+add_arg nfsmw_limite_fps "$(conf_get nfsmw_fps)"
+add_arg nfsmw_tratamiento_visual "$(conf_get nfsmw_visual_treatment)"
+add_arg nfsmw_antialiasing "$(conf_get nfsmw_antialiasing)"
+add_arg nfsmw_posproceso "$(conf_get nfsmw_postprocess)"
+case "$(conf_get nfsmw_buttons)" in
+    lettre) ARGS+=("--input_sdl_por_letra") ;;
+    position) ARGS+=("--no-input_sdl_por_letra") ;;
+esac
+echo "[batocera] options: ${ARGS[*]}" >> "$GAMEDIR/nfsmw-stdout.log"
+
+# Saves, profiles and caches next to the game (ports/nfsmw/data) instead of /userdata/system/.local/share/nfsmw.
+# user_data_root is read before nfsmw.toml, so it is given on the command line.
+mkdir -p "$GAMEDIR/data"
+"$GAMEDIR/nfsmw" --user_data_root="$GAMEDIR/data" "${ARGS[@]}" "$@" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
 echo "[batocera] exit code $?" >> "$GAMEDIR/nfsmw-stdout.log"

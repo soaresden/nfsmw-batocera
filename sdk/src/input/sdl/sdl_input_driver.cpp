@@ -21,6 +21,11 @@
 #include <rex/platform.h>
 #include <rex/ui/virtual_key.h>
 
+// PARCHE LOCAL - Batocera: face buttons by letter on pads labelled Nintendo-style (A on the right), as
+// input_xbox_layout = false does on the Switch. SDL maps by position: the bottom button is SDL's A.
+REXCVAR_DEFINE_BOOL(input_sdl_por_letra, false, "Input",
+                    "Botones frontales por letra en mandos con A a la derecha (estilo Nintendo): el boton A "
+                    "acepta. false = por posicion, como en un mando Xbox: el de abajo acepta");
 REXCVAR_DEFINE_STRING(hid_mappings_file, "gamecontrollerdb.txt", "Input",
                       "Path to SDL gamecontroller mappings file");
 
@@ -644,6 +649,16 @@ void SDLInputDriver::OnControllerDeviceButtonChangedLocked(const SDL_Event& even
     return;
   }
   auto xbutton = xbutton_lookup.at(event.gbutton.button);
+  if (REXCVAR_GET(input_sdl_por_letra)) {
+    // East is labelled A and south B on these pads; west is Y and north X.
+    switch (event.gbutton.button) {
+      case SDL_GAMEPAD_BUTTON_SOUTH: xbutton = X_INPUT_GAMEPAD_B; break;
+      case SDL_GAMEPAD_BUTTON_EAST: xbutton = X_INPUT_GAMEPAD_A; break;
+      case SDL_GAMEPAD_BUTTON_WEST: xbutton = X_INPUT_GAMEPAD_Y; break;
+      case SDL_GAMEPAD_BUTTON_NORTH: xbutton = X_INPUT_GAMEPAD_X; break;
+      default: break;
+    }
+  }
   // Pressed or released?
   if (event.gbutton.down) {
     if (xbutton == X_INPUT_GAMEPAD_GUIDE && !REXCVAR_GET(guide_button)) {

@@ -309,9 +309,12 @@ class NfsmwApp : public rex::ReXApp {
     // SetupPresentation does not change a device that already exists.
     PonerSiNadieLoPidio("vulkan_native_shader_features", "true");
 #endif
-#if !REX_PLATFORM_SWITCH
+#if !REX_PLATFORM_SWITCH && !(REX_PLATFORM_LINUX && REX_ARCH_ARM64)
     // Keyboard and mouse in addition to the gamepad. The Switch has neither:
     // the synthetic device would only shadow the libnx controllers.
+    // Linux arm64 (Batocera on handhelds) neither: there is no keyboard, and Batocera's hotkeys arrive as
+    // keyboard events (Hotkey + Start = Alt+F4), which the synthetic device would turn into game input.
+    // mnk_mode = true in nfsmw.toml still turns it on.
     PonerSiNadieLoPidio("mnk_mode", "true");
 #endif
   }
