@@ -1,5 +1,6 @@
 #!/bin/bash
-# Copies three texture packs out of the game's NFS/ZZDATA archives, to look for the button icons (A/B/X/Y).
+# Copies texture packs out of the game's NFS/ZZDATA archives: the button icons (GLOBALB.LZC), the fonts
+# (LANGUAGETEXTURES.BIN), the race HUD (INGAMEB.LZC) and the loading screen's controller (DYNTEX.BIN).
 # Read-only: nothing of the game is changed. Positions from the PAL Spanish ZDIR.BIN with the PAL English data
 # (the French dub of nfsmw-nx); a size check says if they do not match.
 # As a Port: copy it to /userdata/roms/ports/ and launch it. Result: /userdata/roms/ports/nfsmw-extrait/
@@ -22,5 +23,6 @@ done <<'LIST'
 LANGUAGETEXTURES.BIN 0 79225 138048
 GLOBALB.LZC 4 158699 5018060
 INGAMEB.LZC 4 184788 602872
+DYNTEX.BIN 5 35639 16697664
 LIST
 echo "fini"
