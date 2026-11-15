@@ -6,6 +6,7 @@
 # Output: out/nfsmw-speedbreaker-batocera.zip, to unzip into /userdata/roms/ports/:
 #   SpeedBreaker.sh                 Ports launcher (installs the game on first launch)
 #   SpeedBreaker.sh.keys            Hotkey + Start quits
+#   Identifier NFSMW.sh             checks which edition the copy in speedbreaker/disc is (nfsmw-identification.txt)
 #   speedbreaker/                   the official SpeedBreaker-steamos-arm64 download, unchanged, plus:
 #     lib/cxx/                      GCC 15 libstdc++ and libgcc_s (arm64), used by speedbreaker.sh only if
 #                                   the system's are older (SpeedBreaker arm64 needs GLIBCXX_3.4.34)
@@ -48,7 +49,7 @@ cp "$WORK/ex/usr/share/doc/gcc-15-base/copyright" "$SB/licenses/gcc-runtime/copy
 cp -L "$WORK/ex/usr/lib/aarch64-linux-gnu/libstdc++.so.6" "$WORK/ex/usr/lib/aarch64-linux-gnu/libgcc_s.so.1" "$SB/lib/cxx/"
 
 echo "== Batocera launcher"
-cp "$RAIZ/speedbreaker/SpeedBreaker.sh" "$RAIZ/speedbreaker/SpeedBreaker.sh.keys" "$WORK/pkg/"
+cp "$RAIZ/speedbreaker/SpeedBreaker.sh" "$RAIZ/speedbreaker/SpeedBreaker.sh.keys" "$RAIZ/batocera/tools/Identifier NFSMW.sh" "$WORK/pkg/"
 chmod +x "$WORK/pkg/SpeedBreaker.sh"
 : > "$SB/portable.txt"
 mkdir -p "$SB/disc"

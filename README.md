@@ -35,6 +35,14 @@ speedbreaker/make_package.sh            # télécharge SpeedBreaker arm64 et fai
 3. Mettez à jour la liste des jeux, puis lancez **SpeedBreaker** dans **Ports**. Le premier lancement vérifie et
    installe le jeu dans `speedbreaker/data/game` (une ou deux minutes, écran noir), puis il démarre.
 
+**Quelle copie ?** SpeedBreaker n'installe que les disques **USA** et **PAL Espagne** d'origine : il vérifie les 49
+fichiers et refuse les traductions de fans. Le texte du jeu peut quand même être mis en français dans ses réglages
+(Settings > Game > Language), seules les voix et les vidéos restent dans la langue du disque. Le port **Identifier
+NFSMW** (`batocera/tools/Identifier NFSMW.sh`, aussi dans le paquet) dit quelle édition est dans
+`speedbreaker/disc/` ou `nfsmw/game_root/` et quels fichiers diffèrent de l'original, dans
+`ports/nfsmw-identification.txt`. Une copie modifiée passe par la voie B, qui compile à partir de son propre
+`default.xex` (éditions connues : `tools/editions/regional/ediciones.json`).
+
 Les journaux sont `speedbreaker/batocera-launch.log` (le lanceur) et `speedbreaker/last-run.log` (le jeu).
 Le menu de SpeedBreaker s'ouvre avec **Back + Start** ; **Hotkey + Start** quitte.
 
