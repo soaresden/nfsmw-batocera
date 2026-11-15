@@ -32,6 +32,9 @@ nfsmw_audio_esperar_servidor_ms = 30 # wait up to 30 ms for the game's audio ser
 # Movies' audio: false = the game decodes it and plays it through its normal output (default on Batocera: the
 # port's own decoder opens a second SDL stream, which came out broken on the Retroid Pocket 5); true = the port's.
 nfsmw_video_audio_nativo = false
+# Face buttons by letter: the Retroid Pocket 5 is labelled Nintendo-style (A on the right, B at the bottom), so the
+# button with the letter the game shows is the one that acts (B = nitrous). false = by position, as on an Xbox pad.
+input_sdl_por_letra = true
 # The native renderer does not use Xenos memory export, which needs vertex stores and atomics.
 vulkan_require_vertex_pipeline_stores_and_atomics = false
 
