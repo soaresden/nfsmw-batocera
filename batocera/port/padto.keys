@@ -3,7 +3,7 @@
         {
             "trigger": ["hotkey", "start"],
             "type": "exec",
-            "target": "pkill -9 -f /ports/nfsmw/nfsmw",
+            "target": "pkill -9 -x nfsmw",
             "description": "Quit NFS Most Wanted"
         }
     ]

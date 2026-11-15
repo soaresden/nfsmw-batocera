@@ -1,8 +1,19 @@
 #!/bin/bash
 # Need for Speed: Most Wanted (2005, Xbox 360 recompiled) - Batocera "Ports" launcher.
-# Lives in /userdata/roms/ports/ next to the nfsmw/ folder.
+#
+# Two layouts:
+#   /userdata/roms/ports/NFS Most Wanted.sh/run.sh   one folder named like a port (EmulationStation lists a
+#                                                    folder with the .sh extension as a game and Batocera runs its
+#                                                    run.sh; the quit keys are its padto.keys). Default.
+#   /userdata/roms/ports/NFS Most Wanted.sh          this script at the top of ports/, next to an nfsmw/ folder.
 HERE="$(cd "$(dirname "$0")" && pwd)"
-GAMEDIR="$HERE/nfsmw"
+if [ -x "$HERE/nfsmw" ] && [ ! -d "$HERE/nfsmw" ]; then
+    GAMEDIR="$HERE"
+    ROMNAME="$(basename "$HERE")"
+else
+    GAMEDIR="$HERE/nfsmw"
+    ROMNAME="$(basename "$0")"
+fi
 cd "$GAMEDIR" || exit 1
 
 # The game reads default.xex from game_root/, next to NFS/ and Movies/. One left next to the executable is moved
@@ -45,7 +56,6 @@ chmod +x "$GAMEDIR/nfsmw" 2>/dev/null
     echo "[batocera] SDL_GAMECONTROLLERCONFIG: ${SDL_GAMECONTROLLERCONFIG:-(none)}"
     ls /usr/share/vulkan/icd.d/ 2>/dev/null | sed 's/^/[batocera] vulkan icd: /'
 } > "$GAMEDIR/nfsmw-stdout.log" 2>&1
-# Full path: the Hotkey + Start action (NFS Most Wanted.sh.keys) finds the game by it.
 # ---- Options from EmulationStation (ADVANCED GAME OPTIONS > NFS MOST WANTED) ----
 # es_features_nfsmw.cfg adds the menu; it is copied where EmulationStation reads it (seen after its next restart).
 ES_CFG_DIR="${NFSMW_ES_CFG_DIR:-/userdata/system/configs/emulationstation}"
@@ -54,7 +64,6 @@ if [ -f "$GAMEDIR/es_features_nfsmw.cfg" ] && [ -d "$ES_CFG_DIR" ] && \
     cp "$GAMEDIR/es_features_nfsmw.cfg" "$ES_CFG_DIR/es_features_nfsmw.cfg"
 fi
 CONF="${NFSMW_BATOCERA_CONF:-/userdata/system/batocera.conf}"
-ROMNAME="$(basename "$0")"
 # The game's own setting (ports["NFS Most Wanted.sh"].key), else the Ports system's (ports.key).
 conf_get() {
     local v=""

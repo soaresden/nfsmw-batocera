@@ -68,35 +68,43 @@ Le README d'origine du port Android est dans [README.android.md](README.android.
 
 ## Installation sur la console
 
-1. Construisez le paquet (voir [Compilation](#compilation)) : il sort dans `out/batocera/`.
-2. Copiez **le contenu** de `out/batocera/` dans `/userdata/roms/ports/` (partage réseau `\\BATOCERA\share\roms\ports`
-   ou carte SD).
-3. Copiez les fichiers de votre jeu dans `/userdata/roms/ports/nfsmw/game_root/`. Si le port Android tourne déjà sur
-   la Retroid, ce sont ceux du dossier `nsfmw-androidevolved/` du stockage interne :
+1. Construisez le paquet (voir [Compilation](#compilation)) : il sort dans `out/batocera/`, un seul dossier
+   `NFS Most Wanted.sh/`.
+2. Copiez ce dossier dans `/userdata/roms/ports/` (partage réseau `\\BATOCERA\share\roms\ports` ou carte SD).
+   EmulationStation affiche un dossier qui porte l'extension `.sh` comme un jeu, et Batocera lance son `run.sh`.
+3. Copiez les fichiers de votre jeu dans son `game_root/`. Si le port Android tourne déjà sur la Retroid, ce sont
+   ceux du dossier `nsfmw-androidevolved/` du stockage interne :
 
    ```text
-   /userdata/roms/ports/
-     NFS Most Wanted.sh          (lanceur, visible dans « Ports »)
-     NFS Most Wanted.sh.keys     (Hotkey + Start pour quitter)
-     nfsmw/
-       nfsmw                     (le jeu)
-       nfsmw.toml                (réglages)
-       lib/
-       game_root/
-         default.xex
-         NFS/
-         Movies/
-         nfsmw_shaders.nfsp      (celle générée par l'app Android)
+   /userdata/roms/ports/NFS Most Wanted.sh/
+     run.sh                    (lanceur)
+     padto.keys                (Hotkey + Start pour quitter)
+     nfsmw                     (le jeu), librexruntime.so, librexgpu-xenos.so
+     nfsmw.toml                (réglages)
+     es_features_nfsmw.cfg     (le menu d'options, installé par le lanceur)
+     lib/
+     data/                     (sauvegardes, profils, cache : créé au premier lancement)
+     game_root/
+       default.xex
+       NFS/
+       Movies/
+     nfsmw_shaders.nfsp        (celle générée par l'app Android, ici ou dans game_root/)
    ```
 
 4. Dans EmulationStation : **Menu → Paramètres du jeu → Mettre à jour la liste des jeux**, puis lancez
-   *NFS Most Wanted* dans **Ports**.
+   *NFS Most Wanted* dans **Ports**. Après le premier lancement, redémarrez EmulationStation pour voir le menu
+   **Options avancées du jeu → NFS MOST WANTED** (langue, résolution, FPS, filtres, manette).
 
-Le journal du jeu se trouve dans `nfsmw/nfsmw-stdout.log`. **Envoyez-le à chaque essai** : il dit ce qui manque.
+Les journaux sont `nfsmw-stdout.log` (lanceur) et `logs/nfsmw_001.log` (jeu). **Envoyez-les à chaque essai.**
+
+> [!NOTE]
+> L'ancienne disposition (`NFS Most Wanted.sh` à la racine de `ports/` et un dossier `nfsmw/` à côté) marche
+> encore. Pour passer à la nouvelle : supprimez `NFS Most Wanted.sh` et `NFS Most Wanted.sh.keys`, renommez
+> `nfsmw/` en `NFS Most Wanted.sh/`, et copiez-y le contenu du nouveau paquet.
 
 > [!CAUTION]
 > **La première course compile les pipelines graphiques**, donc elle saccade quelques secondes. Ils sont ensuite
-> gardés dans `nfsmw/cache/mesa`.
+> gardés dans `data/cache`.
 
 ## Commandes
 
@@ -128,7 +136,7 @@ versionné), compile pour aarch64 et prépare `out/batocera/`. Il faut environ 1
 | `batocera/toolchain-aarch64-linux.cmake` | Compilation croisée clang + lld, réglée pour le Cortex-A77, libstdc++ statique |
 | `batocera/build.sh` | Les quatre étapes, du `default.xex` au paquet |
 | `batocera/package.sh` | Le dossier Ports : binaire, bibliothèques, réglages, lanceur |
-| `batocera/port/` | Le lanceur `.sh` et sa touche de sortie (`.keys`) |
+| `batocera/port/` | Le lanceur `run.sh`, la touche de sortie `padto.keys` et le menu d'options `es_features_nfsmw.cfg` |
 | `batocera/nfsmw.toml` | Les réglages de départ |
 | `app/src/nfsmw_nucleos_grandes.cpp` | Les threads du jeu sur les cœurs rapides (A77), repris du port Android |
 
