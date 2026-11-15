@@ -33,7 +33,7 @@ SB_USA='@USA@'
 SB_PAL_ES='@ES@'
 
 report() {
-  local DIR="$1" xex ed list data ok bad missing hash size path
+  local DIR="$1" xex ed list data ok bad missing hash size path f
   echo
   echo "################ $DIR"
   xex=$(sha256sum "$DIR/default.xex" | cut -d' ' -f1)
@@ -47,15 +47,19 @@ report() {
   if ls "$DIR"/Movies/*french* >/dev/null 2>&1; then echo "Movies: French-named files present"; fi
   echo "-- files"
   (cd "$DIR" && find . -type f | sed 's|^\./||' | sort | while read -r f; do echo "$(stat -c %s "$f") $f"; done)
+  # Batocera layout: default.xex may sit next to the executable while the disc files are in game_root/.
+  local DATA="$DIR"
+  [ ! -d "$DIR/NFS" ] && [ -d "$DIR/game_root/NFS" ] && DATA="$DIR/game_root" && echo "(disc files checked in game_root/)"
   for list in USA PAL_ES; do
     if [ $list = USA ]; then data="$SB_USA"; else data="$SB_PAL_ES"; fi
     ok=0; bad=0; missing=0
     echo "-- SpeedBreaker $list check"
     while read -r hash size path; do
       [ -n "$path" ] || continue
-      if [ ! -f "$DIR/$path" ]; then missing=$((missing+1)); continue; fi
-      if [ "$(stat -c %s "$DIR/$path")" != "$size" ]; then echo "  SIZE     $path"; bad=$((bad+1)); continue; fi
-      if [ "$(sha256sum "$DIR/$path" | cut -d' ' -f1)" != "$hash" ]; then echo "  CHANGED  $path"; bad=$((bad+1)); continue; fi
+      [ "$path" = default.xex ] && f="$DIR/$path" || f="$DATA/$path"
+      if [ ! -f "$f" ]; then missing=$((missing+1)); continue; fi
+      if [ "$(stat -c %s "$f")" != "$size" ]; then echo "  SIZE     $path"; bad=$((bad+1)); continue; fi
+      if [ "$(sha256sum "$f" | cut -d' ' -f1)" != "$hash" ]; then echo "  CHANGED  $path"; bad=$((bad+1)); continue; fi
       ok=$((ok+1))
     done <<< "$data"
     echo "  $ok identical, $bad different, $missing missing (of 49)"

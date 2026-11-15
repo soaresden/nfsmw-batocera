@@ -16,6 +16,11 @@ nfsmw_resolucion_interna = "1280x720"
 present_perfil_pintado = false
 nfsmw_streaming_diag = false
 
+# Language of the game's text: -1 = the edition's (Spanish on the PAL Spanish executable); 0 English, 1 French,
+# 2 German, 3 Italian, 4 Spanish, 5 Dutch, 6 Swedish, 7 Danish, 12 Polish, 13 Finnish. Speech and movies stay in
+# the disc's language. With the French dub of nfsmw-nx (tools/french-dub), ENGLISH.BIN holds the French text: 0.
+nfsmw_idioma = -1
+
 # ---- Linux (Batocera) gets the Android defaults ----
 # The SDK picks these by platform, and its Linux defaults are the desktop ones: with them the music, the police radio
 # and the menu sounds come out robotic (codepdbh/nfsmw-android PR #3538 saw it on a Linux PC). Android's values:

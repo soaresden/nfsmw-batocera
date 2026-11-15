@@ -5,8 +5,15 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GAMEDIR="$HERE/nfsmw"
 cd "$GAMEDIR" || exit 1
 
+# The game reads default.xex from game_root/, next to NFS/ and Movies/. One left next to the executable is moved
+# there (same folder tree, nothing is copied).
+if [ ! -f "$GAMEDIR/game_root/default.xex" ] && [ -f "$GAMEDIR/default.xex" ] && [ -d "$GAMEDIR/game_root/NFS" ]; then
+    mv "$GAMEDIR/default.xex" "$GAMEDIR/game_root/default.xex" && \
+        echo "[batocera] default.xex moved into game_root/" >> "$GAMEDIR/nfsmw-launcher.log"
+fi
 if [ ! -f "$GAMEDIR/game_root/default.xex" ]; then
-    echo "game_root/default.xex introuvable: copiez default.xex, NFS/ et Movies/ dans $GAMEDIR/game_root/" >&2
+    echo "[batocera] $(date '+%F %T') game_root/default.xex introuvable: copiez default.xex, NFS/ et Movies/ dans $GAMEDIR/game_root/" \
+        | tee "$GAMEDIR/nfsmw-stdout.log" >&2
     exit 1
 fi
 
