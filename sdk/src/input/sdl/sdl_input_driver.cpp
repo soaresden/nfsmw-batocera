@@ -21,6 +21,9 @@
 #include <rex/platform.h>
 #include <rex/ui/virtual_key.h>
 
+// PARCHE LOCAL - Batocera: every button press in the log (the SDL button, its label and the Xbox button sent).
+REXCVAR_DEFINE_BOOL(input_sdl_diag, false, "Input",
+                    "Diagnostico: escribe en el log cada boton pulsado (boton SDL, su etiqueta y boton Xbox enviado)");
 // PARCHE LOCAL - Batocera: the left and top face buttons swapped. Linux's BTN_X is also BTN_NORTH; SDL follows
 // the xpad driver, where BTN_X is the Xbox X (left). Pads labelled Nintendo-style send BTN_X for their top button
 // (the Retroid Pocket 5: X on top, Y on the left), so SDL takes top for left and left for top.
@@ -552,6 +555,11 @@ void SDLInputDriver::OnControllerDeviceAddedLocked(const SDL_Event& event) {
 
   REXLOG_INFO("SDL OnControllerDeviceAdded: connection order {}, device {}.", ordinal,
               static_cast<uint64_t>(state.id));
+  // PARCHE LOCAL - Batocera: the mapping SDL uses for this pad, to read with input_sdl_diag.
+  if (char* mapping = SDL_GetGamepadMapping(controller)) {
+    REXLOG_INFO("SDL mapping: {}", mapping);
+    SDL_free(mapping);
+  }
 }
 
 void SDLInputDriver::OnControllerDeviceRemovedLocked(const SDL_Event& event) {
@@ -674,6 +682,17 @@ void SDLInputDriver::OnControllerDeviceButtonChangedLocked(const SDL_Event& even
     }
   }
   // Pressed or released?
+  if (REXCVAR_GET(input_sdl_diag) && event.gbutton.down) {
+    static const char* const kNombresXbox[16] = {"DPAD_UP", "DPAD_DOWN", "DPAD_LEFT", "DPAD_RIGHT", "START", "BACK",
+                                                 "LEFT_THUMB", "RIGHT_THUMB", "LB", "RB", "GUIDE", "?",
+                                                 "A", "B", "X", "Y"};
+    int bit = 0;
+    while (bit < 16 && !(xbutton & (1u << bit))) ++bit;
+    REXLOG_INFO("[mando] SDL {} ({}, etiqueta {}) -> Xbox {}", int(event.gbutton.button),
+                SDL_GetGamepadStringForButton(SDL_GamepadButton(event.gbutton.button)),
+                int(SDL_GetGamepadButtonLabel(controller.sdl, SDL_GamepadButton(event.gbutton.button))),
+                bit < 16 ? kNombresXbox[bit] : "?");
+  }
   if (event.gbutton.down) {
     if (xbutton == X_INPUT_GAMEPAD_GUIDE && !REXCVAR_GET(guide_button)) {
       return;
