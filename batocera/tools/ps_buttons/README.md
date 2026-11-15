@@ -16,8 +16,13 @@ python3 ps_buttons.py --globalb GLOBALB.LZC --memfile GLOBALMEMORYFILE.BIN --out
 - `GLOBALMEMORYFILE.BIN` : celui que le jeu utilise (un fichier séparé dans `game_root/GLOBAL/` si un mod l'y a
   mis, sinon celui des archives).
 
-Copiez ensuite le dossier `GLOBAL/` produit dans `game_root/` et réglez les boutons **par position**
-(`input_sdl_por_letra = false`, ou dans Batocera : BOUTONS A/B X/Y = Par position) : le bouton du bas est ✕.
+Copiez ensuite le dossier `GLOBAL/` produit dans `game_root/`, puis :
+
+- par défaut, réglez les boutons **par position** (`input_sdl_por_letra = false`, ou dans Batocera : BOUTONS
+  A/B X/Y = Par position) : le bouton du bas est ✕ ;
+- avec `--retroid`, gardez les boutons **par lettre** (réglage par défaut du paquet Batocera) : les symboles sont
+  dessinés là où sont les boutons de la Retroid Pocket 5 dans ce mode (A à droite = ○, B en bas = ✕,
+  X en haut = △, Y à gauche = □).
 
 Les fichiers produits contiennent des données du jeu : ne les partagez pas. Les modules `jdlz.py`, `tpk.py`,
 `huff.py`, `xenos.py` et `dxt.py` viennent de [MazdaMx5-nd-rf-ingames](https://github.com/soaresden/MazdaMx5-nd-rf-ingames)

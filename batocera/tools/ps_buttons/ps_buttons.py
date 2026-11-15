@@ -7,7 +7,8 @@ GLOBAL/GLOBALB.LZC, 32x32 DXT5, 2 mips, white on transparent):
     CROSS = A   TRIANGLE = B   SQUARE = X   CIRCLE = Y
     L1 = LT     L2 = LB        R1 = RT      R2 = RB      SELECT = RB   START = Start   R3 = right stick
 
-This tool redraws them as PlayStation icons in the same style (white, ring around the face buttons) by
+This tool redraws them as PlayStation icons in the same style (or, with --retroid, by the Retroid Pocket 5's
+places when the port's face buttons go by letter: see RETROID below), (white, ring around the face buttons) by
 position, as on a PlayStation pad: A (bottom) becomes cross, B circle, X square, Y triangle; LB/RB become
 L1/R1 and LT/RT L2/R2. With them, set the face buttons by position in the port (input_sdl_por_letra = false,
 or BOUTONS A/B X/Y = Par position in Batocera's menu): the bottom button is cross.
@@ -42,6 +43,10 @@ SIZE = 32
 WHITE = (255, 255, 255, 255)
 
 # texture -> what to draw (by position: the Xbox button it shows -> the PlayStation one in its place)
+# Retroid layout (--retroid): with the port's face buttons by letter (input_sdl_por_letra = true) on a pad
+# labelled Nintendo-style (Retroid Pocket 5: A right, B bottom, X top, Y left), the Xbox A is the right
+# button, B the bottom one, X the top one and Y the left one: each icon is the PlayStation symbol at that place.
+RETROID = {'CROSS': 'circle', 'TRIANGLE': 'cross', 'SQUARE': 'triangle', 'CIRCLE': 'square'}
 TEXTURES = {
     'CROSS': 'cross',        # A
     'TRIANGLE': 'circle',    # B
@@ -186,12 +191,13 @@ def draw_icon(kind, k=8):
 
 # ---------------------------------------------------------------- files
 
-def patch_globalb(blob, log=print):
+def patch_globalb(blob, retroid=False, log=print):
     """GLOBALB.LZC bytes -> (new bytes at the same size, [(name, before, after)])."""
     fe = bytearray(jdlz.decompress(blob))
     found = find_textures(fe)
     changed, shown = [], []
-    for name, kind in TEXTURES.items():
+    textures = dict(TEXTURES, **RETROID) if retroid else TEXTURES
+    for name, kind in textures.items():
         t = found.get(name)
         if t is None:
             log('missing texture %s: skipped' % name)
@@ -245,9 +251,11 @@ def main():
     ap.add_argument('--memfile', help='GLOBAL/GLOBALMEMORYFILE.BIN the game uses (its GLOBALB copy is patched)')
     ap.add_argument('--out', required=True, help='game_root: writes GLOBAL/GLOBALB.LZC (and GLOBALMEMORYFILE.BIN)')
     ap.add_argument('--preview', help='PNG with the icons before and after')
+    ap.add_argument('--retroid', action='store_true',
+                    help='symbols where the buttons are with the face buttons by letter on a Retroid Pocket 5')
     a = ap.parse_args()
     blob = open(a.globalb, 'rb').read()
-    new, shown = patch_globalb(blob)
+    new, shown = patch_globalb(blob, a.retroid)
     os.makedirs(os.path.join(a.out, 'GLOBAL'), exist_ok=True)
     with open(os.path.join(a.out, 'GLOBAL', 'GLOBALB.LZC'), 'wb') as f:
         f.write(new)
