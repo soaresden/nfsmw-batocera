@@ -362,6 +362,8 @@ def main():
     ap.add_argument('--dyntex', help='GLOBAL/DYNTEX.BIN: the controller picture of the loading screens and the '
                                      'controls menu becomes EA\'s PS2 one')
     ap.add_argument('--preview-controller', help='PNG with the controller pictures before and after')
+    ap.add_argument('--zip', help='also a zip to extract over /userdata/roms/ports/ on Batocera '
+                                  '(NFS Most Wanted.sh/game_root/GLOBAL/...)')
     ap.add_argument('--retroid', action='store_true',
                     help='symbols where the buttons are with the face buttons by letter on a Retroid Pocket 5')
     a = ap.parse_args()
@@ -382,6 +384,15 @@ def main():
             f.write(dyn)
         if a.preview_controller:
             preview(dshown, a.preview_controller)
+    if a.zip:
+        import zipfile
+        with zipfile.ZipFile(a.zip, 'w', zipfile.ZIP_DEFLATED) as z:
+            for name in sorted(os.listdir(os.path.join(a.out, 'GLOBAL'))):
+                z.write(os.path.join(a.out, 'GLOBAL', name), 'NFS Most Wanted.sh/game_root/GLOBAL/' + name)
+            for extra in (a.preview, a.preview_controller):
+                if extra and os.path.exists(extra):
+                    z.write(extra, 'NFS Most Wanted.sh/mods/boutons-playstation/' + os.path.basename(extra))
+        print('zip for Batocera:', a.zip)
     print('written to', os.path.join(a.out, 'GLOBAL'))
 
 

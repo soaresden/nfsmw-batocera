@@ -10,8 +10,12 @@ deux, aux mêmes tailles, sans toucher au reste (une MX-5 ou un autre mod de `GL
 
 ```sh
 python3 ps_buttons.py --globalb GLOBALB.LZC --memfile GLOBALMEMORYFILE.BIN --dyntex DYNTEX.BIN \
-                      --out <game_root> --preview icones.png --preview-controller manette.png
+                      --out <game_root> --preview icones.png --preview-controller manette.png \
+                      --zip nfsmw-boutons-playstation.zip
 ```
+
+Avec `--zip`, le zip se décompresse directement par-dessus `/userdata/roms/ports/` sur Batocera
+(`NFS Most Wanted.sh/game_root/GLOBAL/…`). Gardez une copie de votre `game_root/GLOBAL/` avant.
 
 **L'image de manette** des écrans de chargement et du menu Commandes (`--dyntex`) : `GLOBAL/DYNTEX.BIN` garde
 les images de toutes les plateformes faites par EA. Le jeu affiche `LOADING_CONTROLLER_X360_C1/C2` (256x256,
