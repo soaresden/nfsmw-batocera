@@ -22,9 +22,12 @@ PY=${PYTHON:-python3}
   echo "sdk/thirdparty is incomplete: run 'python3 tools/fetch_thirdparty.py' first" >&2; exit 1; }
 
 echo "== 1. host code generator"
+# x86-64-v2: the SDK's memory.cpp uses SSSE3 shuffles. The SDK writes its programs to sdk/out/<platform>/.
 cmake -S "$RAIZ/sdk" -B "$OUT/host" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_C_COMPILER="${CC:-clang-20}" -DCMAKE_CXX_COMPILER="${CXX:-clang++-20}" -DREXGLUE_ENABLE_TRACY=OFF >/dev/null
+  -DCMAKE_C_COMPILER="${CC:-clang-20}" -DCMAKE_CXX_COMPILER="${CXX:-clang++-20}" -DREXGLUE_ENABLE_TRACY=OFF \
+  -DCMAKE_C_FLAGS=-march=x86-64-v2 -DCMAKE_CXX_FLAGS=-march=x86-64-v2 >/dev/null
 cmake --build "$OUT/host" --target rexglue -j "$JOBS"
+REXGLUE_HOST="$RAIZ/sdk/out/linux-amd64/rexglue"
 
 echo "== 2. translate the game"
 mkdir -p "$RAIZ/assets/game_root"
@@ -32,7 +35,7 @@ if [ "$(realpath "$XEX")" != "$(realpath -m "$RAIZ/assets/game_root/default.xex"
   cp "$XEX" "$RAIZ/assets/game_root/default.xex"
 fi
 if [ ! -f "$RAIZ/app/generated/default/nfsmw_init.h" ] || [ "$XEX" -nt "$RAIZ/app/generated/default/nfsmw_init.h" ]; then
-  REXGLUE="$OUT/host/rexglue" PYTHON="$PY" "$RAIZ/tools/codegen.sh" app
+  REXGLUE="$REXGLUE_HOST" PYTHON="$PY" bash "$RAIZ/tools/codegen.sh" app
 fi
 
 echo "== 3. cross build (aarch64 Linux)"
@@ -44,4 +47,4 @@ cmake -S "$RAIZ/app" -B "$OUT/arm64" -G Ninja -DCMAKE_BUILD_TYPE=Release \
 cmake --build "$OUT/arm64" -j "$JOBS"
 
 echo "== 4. package"
-"$RAIZ/batocera/package.sh" "$OUT/arm64" "$OUT/batocera"
+"$RAIZ/batocera/package.sh" "$OUT/arm64" "$OUT/batocera" "$RAIZ/sdk/out/linux-arm64"

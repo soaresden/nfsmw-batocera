@@ -14,7 +14,8 @@ set -euo pipefail
 RAIZ=$(cd "$(dirname "$0")/.." && pwd)
 BUILD=${1:?build dir}
 DEST=${2:?output dir}
-EXE=$(find "$BUILD" -maxdepth 2 -type f -name nfsmw -perm -u+x | head -1)
+SDKOUT=${3:-$RAIZ/sdk/out/linux-arm64}   # librexruntime.so and the GPU plugin, which loads from the exe's folder
+EXE=$(find "$BUILD" "$SDKOUT" -maxdepth 2 -type f -name nfsmw -perm -u+x 2>/dev/null | head -1)
 [ -n "$EXE" ] || { echo "nfsmw not found in $BUILD" >&2; exit 1; }
 
 rm -rf "$DEST"
@@ -36,14 +37,18 @@ system_lib() {
   return 1
 }
 pending=("$DEST/nfsmw/nfsmw")
-for so in "$BUILD"/*.so "$BUILD"/*/*.so; do
-  [ -f "$so" ] && cp -L "$so" "$DEST/nfsmw/lib/" && pending+=("$DEST/nfsmw/lib/$(basename "$so")")
+# The SDK's own libraries go next to the executable (RUNPATH $ORIGIN; the GPU plugin is opened from there).
+for so in "$SDKOUT"/librex*.so "$BUILD"/librex*.so; do
+  [ -f "$so" ] || continue
+  cp -L "$so" "$DEST/nfsmw/"
+  llvm-strip-20 --strip-unneeded "$DEST/nfsmw/$(basename "$so")" 2>/dev/null || true
+  pending+=("$DEST/nfsmw/$(basename "$so")")
 done
 while [ ${#pending[@]} -gt 0 ]; do
   elf=${pending[0]}; pending=("${pending[@]:1}")
   for lib in $(readelf -d "$elf" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p'); do
     system_lib "$lib" && continue
-    [ -f "$DEST/nfsmw/lib/$lib" ] && continue
+    [ -f "$DEST/nfsmw/lib/$lib" ] || [ -f "$DEST/nfsmw/$lib" ] && continue
     if [ -f "$SYSLIB/$lib" ]; then
       cp -L "$SYSLIB/$lib" "$DEST/nfsmw/lib/"
       pending+=("$DEST/nfsmw/lib/$lib")
