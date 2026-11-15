@@ -51,6 +51,7 @@ mkdir -p "$MESA_SHADER_CACHE_DIR"
 chmod +x "$GAMEDIR/nfsmw" 2>/dev/null
 {
     echo "[batocera] $(date '+%F %T') $(cat /usr/share/batocera/batocera.version 2>/dev/null) $(uname -r)"
+    echo "[batocera] port: $(cat "$GAMEDIR/VERSION" 2>/dev/null || echo 'no VERSION file (a build older than 2026-11-15 17:00)')"
     echo "[batocera] C++ runtime: system ${SYS_CXX:-none}, bundled ${OWN_CXX:-none}; LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
     echo "[batocera] WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-} DISPLAY=${DISPLAY:-} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-} HOME=${HOME:-}"
     echo "[batocera] SDL_GAMECONTROLLERCONFIG: ${SDL_GAMECONTROLLERCONFIG:-(none)}"

@@ -30,8 +30,8 @@ Copiez ensuite le dossier `GLOBAL/` produit dans `game_root/`, puis :
 - par défaut, réglez les boutons **par position** (`input_sdl_por_letra = false`, ou dans Batocera : BOUTONS
   A/B X/Y = Par position) : le bouton du bas est ✕ ;
 - avec `--retroid`, gardez les boutons **par lettre** (réglage par défaut du paquet Batocera) : les symboles sont
-  dessinés là où sont les boutons de la Retroid Pocket 5 dans ce mode (A à droite = ○, B en bas = ✕,
-  X en haut = △, Y à gauche = □).
+  dessinés pour la Retroid Pocket 5 dans ce mode : X en haut = △, Y à gauche = □, et ✕ / ○ comme par position
+  (A = ✕, B = ○), réglé d'après l'essai sur la console.
 
 Les fichiers produits contiennent des données du jeu : ne les partagez pas. Les modules `jdlz.py`, `tpk.py`,
 `huff.py`, `xenos.py` et `dxt.py` viennent de [MazdaMx5-nd-rf-ingames](https://github.com/soaresden/MazdaMx5-nd-rf-ingames)

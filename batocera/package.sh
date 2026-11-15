@@ -25,6 +25,8 @@ mkdir -p "$PKG/lib" "$PKG/game_root"
 cp "$EXE" "$PKG/nfsmw"
 llvm-strip-20 --strip-unneeded "$PKG/nfsmw" 2>/dev/null || llvm-strip --strip-unneeded "$PKG/nfsmw" 2>/dev/null || aarch64-linux-gnu-strip --strip-unneeded "$PKG/nfsmw"
 cp "$RAIZ/batocera/nfsmw.toml" "$PKG/nfsmw.toml"
+# Which build this is: the launcher writes it at the top of nfsmw-stdout.log.
+echo "nfsmw-batocera $(git -C "$RAIZ" describe --always --dirty 2>/dev/null || echo unknown) $(date -u '+%F %H:%M UTC')" > "$PKG/VERSION"
 # The NFS MOST WANTED submenu of EmulationStation's advanced game options (the launcher installs it).
 cp "$RAIZ/batocera/port/es_features_nfsmw.cfg" "$PKG/es_features_nfsmw.cfg"
 cp "$RAIZ/batocera/port/run.sh" "$RAIZ/batocera/port/padto.keys" "$PKG/"

@@ -46,7 +46,7 @@ WHITE = (255, 255, 255, 255)
 # Retroid layout (--retroid): with the port's face buttons by letter (input_sdl_por_letra = true) on a pad
 # labelled Nintendo-style (Retroid Pocket 5: A right, B bottom, X top, Y left), the Xbox A is the right
 # button, B the bottom one, X the top one and Y the left one: each icon is the PlayStation symbol at that place.
-RETROID = {'CROSS': 'circle', 'TRIANGLE': 'cross', 'SQUARE': 'triangle', 'CIRCLE': 'square'}
+RETROID = {'SQUARE': 'triangle', 'CIRCLE': 'square'}  # cross and circle stay by position (tested on the RP5)
 TEXTURES = {
     'CROSS': 'cross',        # A
     'TRIANGLE': 'circle',    # B

@@ -7,9 +7,9 @@ Ce n'est pas un émulateur : le code PowerPC du `default.xex` est recompilé en 
 [ReXGlue](https://github.com/rexglue/rexglue-sdk) puis compilé pour Linux aarch64. Le jeu est dessiné par le
 renderer Vulkan natif du port.
 
-> [!WARNING]
-> **Expérimental.** Le jeu n'a pas encore tourné sous Batocera. Le code vient d'un port Android qui marche sur la
-> même machine, mais le système, le pilote graphique et le fenêtrage ne sont pas les mêmes.
+> [!IMPORTANT]
+> **Ça tourne sur la Retroid Pocket 5** (Batocera v44, Turnip Adreno 650) : **57 à 60 FPS en course en 1280x720**,
+> sauvegardes, VF, manette, menu d'options. Encore en test : voir [État](#état).
 
 > [!NOTE]
 > Il faut **votre propre copie** du jeu Xbox 360, édition **PAL Espagne** (la même que le port Android). Ce dépôt ne
@@ -19,10 +19,10 @@ renderer Vulkan natif du port.
 
 | Voie | Ce que c'est | État |
 |---|---|---|
-| **A. SpeedBreaker** (recommandée pour commencer) | [SpeedBreaker](https://github.com/SpeedBreakerProject/speedbreaker), une autre recompilation du même jeu Xbox 360, publie déjà une version **Linux arm64**, faite pour le Steam Frame (Snapdragon, Adreno, Mesa Turnip). Ce dépôt l'emballe pour Batocera : `speedbreaker/` | Paquet prêt, à essayer sur la RP5 |
-| **B. Ce port** (nfsmw-nx → Android Evolved → Linux) | Notre propre build aarch64 à partir du fork Android, qui tourne déjà sur la RP5 sous Android : `batocera/` | Le SDK compile pour aarch64 ; le jeu attend le `default.xex` |
+| **A. Ce port** (nfsmw-nx → Android Evolved → Linux), **recommandée** | Notre build aarch64 à partir du fork Android : `batocera/`. Accepte les copies modifiées (VF doublée, MX-5…) | **Tourne sur la RP5** |
+| **B. SpeedBreaker** | [SpeedBreaker](https://github.com/SpeedBreakerProject/speedbreaker), une autre recompilation du même jeu, a une version Linux arm64 (Steam Frame) : `speedbreaker/` l'emballe pour Batocera. Disques USA et PAL Espagne d'origine seulement | Paquet prêt, pas testé |
 
-### Voie A : SpeedBreaker
+### Voie B : SpeedBreaker
 
 ```sh
 speedbreaker/make_package.sh            # télécharge SpeedBreaker arm64 et fait out/nfsmw-speedbreaker-batocera.zip
@@ -40,13 +40,13 @@ fichiers et refuse les traductions de fans. Le texte du jeu peut quand même êt
 (Settings > Game > Language), seules les voix et les vidéos restent dans la langue du disque. Le port **Identifier
 NFSMW** (`batocera/tools/Identifier NFSMW.sh`, aussi dans le paquet) dit quelle édition est dans
 `speedbreaker/disc/` ou `nfsmw/game_root/` et quels fichiers diffèrent de l'original, dans
-`ports/nfsmw-identification.txt`. Une copie modifiée passe par la voie B, qui compile à partir de son propre
+`ports/nfsmw-identification.txt`. Une copie modifiée passe par la voie A (ce port), qui compile à partir de son propre
 `default.xex` (éditions connues : `tools/editions/regional/ediciones.json`).
 
 **Version française doublée.** La branche `tools/french-dub` de
 [soaresden/nfsmw-nx](https://github.com/soaresden/nfsmw-nx/tree/tools/french-dub) fait du disque **PAL anglais**
 (`default.xex` `e2ea2ff1…`) une version française complète (texte, 32 vidéos, voix en jeu) avec le disque Xbox
-original français. SpeedBreaker n'accepte pas l'édition PAL anglaise : cette copie passe par la voie B. Son
+original français. SpeedBreaker n'accepte pas l'édition PAL anglaise : cette copie passe par la voie A (ce port). Son
 `default.xex` n'est pas modifié, seuls `NFS/ZDIR.BIN`, `NFS/ZZDATA0.BIN`, `NFS/ZZDATA9.BIN` et des `Movies/*.wmv`
 changent, et le port ne vérifie pas ces fichiers.
 
@@ -106,10 +106,58 @@ Les journaux sont `nfsmw-stdout.log` (lanceur) et `logs/nfsmw_001.log` (jeu). **
 > **La première course compile les pipelines graphiques**, donc elle saccade quelques secondes. Ils sont ensuite
 > gardés dans `data/cache`.
 
-## Commandes
+## État
 
-Les boutons sont ceux de la manette Xbox 360 : **A** valide, **B** revient, **ZR/ZL** pour accélérer et freiner,
-**+/Start** pour la pause. **Hotkey + Start** quitte le jeu. Le menu de debug s'ouvre avec **L + R + Droite**.
+| Sujet | État |
+|---|---|
+| Affichage | Vulkan sur Turnip (Adreno 650), 16/9 natif, 1280x720 interne (1920x1080 au choix) |
+| Performances | 57 à 60 FPS en course en 720p, avec ThinLTO et les fonctions chaudes en tête ; quelques saccades à la première course (shaders) |
+| Son du jeu | Repli stéréo du jeu (avec le LFE), limiteur et pompe audio comme sur Android |
+| Son des vidéos | Décodé par le jeu (`nfsmw_video_audio_nativo = false`) : le flux natif du port sortait mal en Bluetooth. **En cours de test** |
+| Sauvegardes | Dans `data/` (copie lisible dans `saves/`) |
+| Langue | Celle de Batocera ; avec la VF doublée de nfsmw-nx, le français |
+| Manette | Reconnue par le SDL du jeu (la correspondance de Batocera numérote autrement les boutons) |
+| Quitter | Hotkey + Start |
+
+Le lanceur écrit en tête de `nfsmw-stdout.log` la version du port (`VERSION`), Batocera, les pilotes Vulkan et
+la correspondance de manette : **envoyez ce fichier et `logs/nfsmw_00X.log` avec chaque retour.**
+
+## Commandes et options
+
+Les boutons sont ceux de la manette Xbox 360 : **A** valide, **B** revient (nitro en course), gâchettes pour
+accélérer et freiner, **Start** pour la pause. **Hotkey + Start** quitte le jeu. Le menu de debug s'ouvre avec
+**L + R + Droite**.
+
+**Options avancées du jeu → NFS MOST WANTED** dans EmulationStation (installé par le lanceur, visible après un
+redémarrage d'EmulationStation) :
+
+| Option | Valeurs |
+|---|---|
+| Langue du jeu | Auto (celle de Batocera), celle du disque, ou une des dix langues |
+| Résolution interne | 1280x720, 1920x1080, 1024x576 |
+| Limite de FPS | 60, 30 |
+| Filtre jaune du jeu | original, doux, désactivé |
+| Anticrénelage | désactivé, FXAA |
+| Filtre d'image | aucun, cinéma, sépia, noir et blanc, froid, chaud, vif, Matrix, CRT |
+| Correspondance manette | Auto (SDL du jeu, conseillé) ou celle de Batocera |
+| Boutons A/B X/Y | **Par lettre** (défaut : la lettre affichée est celle du bouton de la Retroid, A à droite, B en bas) ou par position (comme une manette Xbox) |
+
+Les autres réglages sont dans `nfsmw.toml`.
+
+### Boutons PlayStation
+
+`batocera/tools/ps_buttons/` remplace les icônes Xbox par des icônes PlayStation (✕ ○ □ △, L1/R1/L2/R2) et la
+photo de manette Xbox 360 des écrans de chargement et du menu Commandes par celle de la DualShock 2 qu'EA a
+laissée dans le jeu. Il part de vos fichiers (sortis des archives par `batocera/tools/Extraire textures NFSMW.sh`)
+et produit `game_root/GLOBAL/` (`GLOBALB.LZC`, `GLOBALMEMORYFILE.BIN`, `DYNTEX.BIN`), sans toucher au reste : un
+autre mod de ces fichiers (la MX-5…) est gardé. Voir [son README](batocera/tools/ps_buttons/README.md).
+
+### Outils
+
+| Outil (Port à copier dans `ports/`) | Rôle |
+|---|---|
+| `batocera/tools/Identifier NFSMW.sh` | Dit quelle édition est votre copie et quels fichiers diffèrent de l'original (`ports/nfsmw-identification.txt`) |
+| `batocera/tools/Extraire textures NFSMW.sh` | Sort des archives les packs de textures dont le mod PlayStation a besoin (`ports/nfsmw-extrait/`) |
 
 ## Compilation
 
@@ -133,12 +181,13 @@ versionné), compile pour aarch64 et prépare `out/batocera/`. Il faut environ 1
 
 | Fichier | Rôle |
 |---|---|
-| `batocera/toolchain-aarch64-linux.cmake` | Compilation croisée clang + lld, réglée pour le Cortex-A77, libstdc++ statique |
+| `batocera/toolchain-aarch64-linux.cmake` | Compilation croisée clang 20 + lld, réglée pour le Cortex-A77 |
 | `batocera/build.sh` | Les quatre étapes, du `default.xex` au paquet |
-| `batocera/package.sh` | Le dossier Ports : binaire, bibliothèques, réglages, lanceur |
+| `batocera/package.sh` | Le dossier `NFS Most Wanted.sh/` : binaire, bibliothèques, réglages, lanceur, `VERSION` |
 | `batocera/port/` | Le lanceur `run.sh`, la touche de sortie `padto.keys` et le menu d'options `es_features_nfsmw.cfg` |
 | `batocera/nfsmw.toml` | Les réglages de départ |
 | `app/src/nfsmw_nucleos_grandes.cpp` | Les threads du jeu sur les cœurs rapides (A77), repris du port Android |
+| `app/orden_funciones_lld.txt` | Les fonctions chaudes en tête du code (ordre de la Switch), avec ThinLTO |
 
 ## Licence
 
