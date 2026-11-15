@@ -185,11 +185,13 @@ bool SDLAudioDriver::Initialize() {
   // A 1-channel device gets the stereo fold too, then SDL collapses to mono.
   // Handing it a 6ch stream instead would use SDL's own downmix.
   //
+  // PARCHE LOCAL - Batocera: Linux arm64 handhelds behave as Android here (stereo fold with the LFE, limiter,
+  // sleeping pump): their speakers and Bluetooth headsets are offered as 5.1 by PipeWire.
   // Android always gets the stereo fold. AAudio accepts a 6ch stream even on a phone with two speakers, and
   // then SDL's 5.1 to stereo matrix does the fold with very low weights (front 0.29, centre 0.21, LFE 0.09):
   // the whole game comes out about 10 dB down and the engines, which live in the centre and the LFE, far more.
   bool plegar = obtained_spec.channels <= 2;
-#if REX_PLATFORM_ANDROID
+#if (REX_PLATFORM_ANDROID || (REX_PLATFORM_LINUX && REX_ARCH_ARM64))
   plegar = true;
   {
     // Small speakers: the LFE goes into the fold too (it carries the engines' low end), with the usual
@@ -250,7 +252,7 @@ void SDLAudioDriver::Bomba() {
   while (bomba_activa_.load(std::memory_order_relaxed)) {
     const auto ahora = Reloj::now();
     if (ahora < plazo) {
-#if REX_PLATFORM_ANDROID
+#if (REX_PLATFORM_ANDROID || (REX_PLATFORM_LINUX && REX_ARCH_ARM64))
       // Busy-yielding here competes with the audio server on mobile CPUs.
       std::this_thread::sleep_until(plazo);
 #else
@@ -350,7 +352,7 @@ void SDLAudioDriver::SDLCallback(void* userdata, SDL_AudioStream* stream, int ad
   const float gain = GetOutputGain();
   const bool mute = REXCVAR_GET(audio_mute) || IsGameOutputSuppressed();
   // Android limits after folding, before any hard clipping. Other outputs retain their clamp.
-  constexpr bool clamp_fold = REX_PLATFORM_ANDROID == 0;
+  constexpr bool clamp_fold = !(REX_PLATFORM_ANDROID || (REX_PLATFORM_LINUX && REX_ARCH_ARM64));
   const int32_t rafaga = REXCVAR_GET(audio_sdl_rafaga_tramas);
   if (rafaga > 1) {
     // Diagnostic: up to N frames at once, each with its release, into a private buffer SDL feeds from.
@@ -374,7 +376,7 @@ void SDLAudioDriver::SDLCallback(void* userdata, SDL_AudioStream* stream, int ad
             conversion::sequential_6_BE_to_interleaved_6_LE(driver->rafaga_.data() + inicio, buffer,
                                                             channel_samples_, mix, gain);
           }
-#if REX_PLATFORM_ANDROID
+#if (REX_PLATFORM_ANDROID || (REX_PLATFORM_LINUX && REX_ARCH_ARM64))
           LimitOutput(driver->rafaga_.data() + inicio, channel_samples_, driver->sdl_device_channels_,
                       frame_frequency_, driver->limitador_ganancia_);
 #endif
@@ -450,7 +452,7 @@ void SDLAudioDriver::SDLCallback(void* userdata, SDL_AudioStream* stream, int ad
             assert_unhandled_case(driver->sdl_device_channels_);
             break;
         }
-#if REX_PLATFORM_ANDROID
+#if (REX_PLATFORM_ANDROID || (REX_PLATFORM_LINUX && REX_ARCH_ARM64))
         LimitOutput(data, channel_samples_, driver->sdl_device_channels_, frame_frequency_,
                     driver->limitador_ganancia_);
 #endif
