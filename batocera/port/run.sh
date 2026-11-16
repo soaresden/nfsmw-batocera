@@ -59,7 +59,10 @@ chmod +x "$GAMEDIR/nfsmw" 2>/dev/null
 } > "$GAMEDIR/nfsmw-stdout.log" 2>&1
 # ---- Options from EmulationStation (ADVANCED GAME OPTIONS > NFS MOST WANTED) ----
 # es_features_nfsmw.cfg adds the menu; it is copied where EmulationStation reads it (seen after its next restart).
+# The installation page writes it as es_features_nfsmw.cfg.txt: Chrome refuses to create .cfg files on a disk
+# (a "dangerous" extension on Windows); it is renamed here.
 ES_CFG_DIR="${NFSMW_ES_CFG_DIR:-/userdata/system/configs/emulationstation}"
+[ -f "$GAMEDIR/es_features_nfsmw.cfg.txt" ] && mv -f "$GAMEDIR/es_features_nfsmw.cfg.txt" "$GAMEDIR/es_features_nfsmw.cfg"
 if [ -f "$GAMEDIR/es_features_nfsmw.cfg" ] && [ -d "$ES_CFG_DIR" ] && \
    ! cmp -s "$GAMEDIR/es_features_nfsmw.cfg" "$ES_CFG_DIR/es_features_nfsmw.cfg"; then
     cp "$GAMEDIR/es_features_nfsmw.cfg" "$ES_CFG_DIR/es_features_nfsmw.cfg"

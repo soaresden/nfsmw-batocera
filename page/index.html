@@ -195,10 +195,12 @@ footer a { color: inherit; }
 
   <section id="s-dest" class="panel off">
     <h2><span class="n">2</span> <span data-i18n="h2x">Où l'installer</span></h2>
-    <p data-i18n="dest-p">Le dossier <code>roms/ports</code> de Batocera : sur la carte SD branchée au PC, ou le partage réseau
-      <code>\\BATOCERA\share\roms\ports</code> (connecté comme lecteur réseau).</p>
+    <p data-i18n="dest-p">N'importe quel dossier : la page y crée <code>NFS Most Wanted.sh</code>. Le plus simple est
+      le dossier <code>roms/ports</code> de Batocera (carte SD branchée au PC, ou partage réseau
+      <code>\\BATOCERA\share\roms\ports</code>) ; sinon, copiez ensuite le dossier dedans. Un dossier
+      <code>NFS Most Wanted.sh</code> existant peut aussi être choisi directement.</p>
     <div class="row">
-      <button id="pick-dest" disabled data-i18n="b-dest">Choisir le dossier ports</button>
+      <button id="pick-dest" disabled data-i18n="b-dest">Choisir le dossier de destination</button>
     </div>
     <label><input type="checkbox" id="copy-game" checked> <span data-i18n="copy">Copier aussi le jeu (extrait de l'ISO) dans
       <code>game_root/</code>, environ 7 Go ; les fichiers déjà présents et identiques sont sautés.</span></label>

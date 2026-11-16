@@ -332,15 +332,16 @@ $('pick-dest').onclick = async () => {
   try {
     const dir = await window.showDirectoryPicker({ id: 'nfsmw-ports', mode: 'readwrite' });
     $('dest-facts').replaceChildren();
-    if (/\.sh$/i.test(dir.name)) {
-      fact('dest-facts', L(`Choisissez le dossier <code>ports</code> lui-même, pas <code>${dir.name}</code>.`, `Choose the <code>ports</code> folder itself, not <code>${dir.name}</code>.`), 'bad');
-      return;
-    }
-    if (dir.name.toLowerCase() !== 'ports') {
-      fact('dest-facts', L(`Le dossier s'appelle <code>${dir.name}</code> : Batocera cherche les ports dans <code>roms/ports</code>.`, `This folder is <code>${dir.name}</code>: Batocera looks for ports in <code>roms/ports</code>.`), 'bad');
-    }
+    // Any folder: NFS Most Wanted.sh is created in it (roms/ports directly, or anywhere and copied later).
+    // An existing "NFS Most Wanted.sh" chosen itself is written into.
     state.dest = dir;
-    fact('dest-facts', `Destination : <code>${dir.name}/${PORT}/</code>`, 'ok');
+    state.base = dir.name === PORT ? '' : `${PORT}/`;
+    const where = state.base ? `${dir.name}/${PORT}/` : `${dir.name}/`;
+    fact('dest-facts', `${L('Destination', 'Destination')} : <code>${where}</code>`, 'ok');
+    if (state.base && dir.name.toLowerCase() !== 'ports') {
+      fact('dest-facts', L(`Une fois fini, copiez le dossier <code>${PORT}</code> dans <code>roms/ports</code> de Batocera.`,
+        `Once done, copy the <code>${PORT}</code> folder into Batocera's <code>roms/ports</code>.`), 'muted');
+    }
     $('s-run').classList.remove('off');
     $('run').disabled = false;
   } catch (e) {
@@ -483,7 +484,7 @@ async function runVf() {
   log(L('VF : début (1 à 3 heures ; gardez la page ouverte)', 'French dub: start (1 to 3 hours; keep the page open)'));
   const t0 = Date.now();
   await vfWorker({ type: 'run' }, async (rel, data) => {
-    await writeTo(state.dest, `${PORT}/game_root/${rel}`, data);
+    await writeTo(state.dest, `${state.base}game_root/${rel}`, data);
     log(`VF : ${rel} (${size(data.length)})`);
   });
   log(L(`VF : terminée en ${Math.round((Date.now() - t0) / 60000)} min`, `French dub: done in ${Math.round((Date.now() - t0) / 60000)} min`));
@@ -681,7 +682,14 @@ async function writeTo(root, path, data, onBytes) {
   }
 }
 
+// Extensions Chrome refuses to create on a real disk (Safe Browsing "dangerous" on Windows, plus .lnk/.scf/.url):
+// such a file is written with .txt added and renamed back by run.sh (es_features_nfsmw.cfg is the only one in the
+// port); a game file with one is reported.
+const REFUSED = /\.(cfg|dll|ini|manifest|scf|dng|lnk|url)$/i;  // download_file_types.asciipb, Chromium main
+const safeName = (path) => (REFUSED.test(path) ? `${path}.txt` : path);
+
 async function writeFile(root, path, data, onBytes) {
+  path = safeName(path);
   const parts = path.split('/');
   const dir = await dirOf(root, parts.slice(0, -1));
   const name = parts[parts.length - 1];
@@ -727,17 +735,17 @@ async function run() {
       const entries = Object.entries(out);
       let i = 0;
       for (const [p, d] of entries) {
-        await writeTo(state.dest, `${PORT}/${p}`, d);
+        await writeTo(state.dest, `${state.base}${p}`, d);
         progress(0.2 + 0.08 * (++i / entries.length), `${L('Écriture de', 'Writing')} ${p}…`);
       }
       log(`écrit : ${entries.length} fichiers dans ${PORT}/`);
       state.portWritten = true;
-      await writeTo(state.dest, `${PORT}/nfsmw_shaders.nfsp`, await shaders(state.game));
+      await writeTo(state.dest, `${state.base}nfsmw_shaders.nfsp`, await shaders(state.game));
       if ($('copy-game').checked) {
         let copied = 0, written = 0;
         for (const f of state.game.files) {
           const file = await f.get();
-          const isNew = await writeTo(state.dest, `${PORT}/game_root/${f.rel}`, file, (n) => {
+          const isNew = await writeTo(state.dest, `${state.base}game_root/${f.rel}`, file, (n) => {
             copied += n;
             progress(0.82 + 0.18 * (copied / state.total), `${L('Copie du jeu', 'Copying the game')} : ${size(copied)} / ${size(state.total)}`);
           });
