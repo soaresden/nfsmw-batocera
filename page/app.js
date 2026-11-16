@@ -482,6 +482,26 @@ zone.addEventListener('drop', async (e) => {
 
 // Movies an earlier run already dubbed: in the destination with another size than on the disc. Looked up before the
 // game copy (which would put the English ones back) and not converted again: a run stopped halfway resumes there.
+// A folder of the destination, without creating it (throws if it is not there).
+async function destDir(path) {
+  let dir = state.dest;
+  for (const p of path.split('/').filter(Boolean)) dir = await dir.getDirectoryHandle(p);
+  return dir;
+}
+
+// The shader library of an earlier run, if the destination holds the same edition (same default.xex): a resumed
+// run does not compile the shaders again.
+async function destLibrary() {
+  try {
+    const xex = new Uint8Array(await (await (await (await destDir(`${state.base}game_root`)).getFileHandle('default.xex')).getFile()).arrayBuffer());
+    if (await sha256(xex) !== state.xexSha) return null;
+    const lib = await (await (await destDir(state.base)).getFileHandle('nfsmw_shaders.nfsp')).getFile();
+    return lib.size > 24 ? lib : null;
+  } catch {
+    return null;
+  }
+}
+
 async function dubbedMovies() {
   const done = [];
   try {
@@ -504,10 +524,22 @@ async function runVf() {
   const t0 = Date.now();
   const done = state.vfDone || [];
   if (done.length) log(L(`VF : ${done.length} vidéos déjà converties par un essai précédent, sautées`, `French dub: ${done.length} movies already converted by an earlier run, skipped`));
-  await vfWorker({ type: 'run', done }, async (rel, data) => {
+  // Voice groups an earlier run encoded (game_root/vf-cache/): given back so they are not encoded again.
+  const cache = {};
+  let cacheDir = null;
+  try {
+    cacheDir = await destDir(`${state.base}game_root/vf-cache`);
+    for await (const [name, h] of cacheDir.entries()) {
+      if (h.kind === 'file' && /^voix-\d+-\d+\.bin$/.test(name)) cache[name] = new Uint8Array(await (await h.getFile()).arrayBuffer());
+    }
+  } catch { /* first run */ }
+  await vfWorker({ type: 'run', done, cache }, async (rel, data) => {
     await writeTo(state.dest, `${state.base}game_root/${rel}`, data);
-    log(`VF : ${rel} (${size(data.length)})`);
+    if (!rel.startsWith('vf-cache/')) log(`VF : ${rel} (${size(data.length)})`);
   });
+  try {  // finished: the cache is not needed any more
+    await (await destDir(`${state.base}game_root`)).removeEntry('vf-cache', { recursive: true });
+  } catch { /* nothing to remove */ }
   log(L(`VF : terminée en ${Math.round((Date.now() - t0) / 60000)} min`, `French dub: done in ${Math.round((Date.now() - t0) / 60000)} min`));
 }
 
@@ -761,7 +793,8 @@ async function run() {
       }
       log(`écrit : ${entries.length} fichiers dans ${PORT}/`);
       state.portWritten = true;
-      await writeTo(state.dest, `${state.base}nfsmw_shaders.nfsp`, await shaders(state.game));
+      if (await destLibrary()) log(L('shaders : déjà fabriqués par un essai précédent, gardés', 'shaders: already built by an earlier run, kept'));
+      else await writeTo(state.dest, `${state.base}nfsmw_shaders.nfsp`, await shaders(state.game));
       state.vfDone = state.vfXbox ? await dubbedMovies() : [];
       if ($('copy-game').checked) {
         let copied = 0, written = 0;

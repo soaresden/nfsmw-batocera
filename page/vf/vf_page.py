@@ -270,15 +270,43 @@ def speech_start():
     return (len(order) + GROUP - 1) // GROUP
 
 
+# Each encoded group is also handed to the page as game_root/vf-cache/voix-<total>-<group>.bin (u32 line index,
+# u32 length, stream, for each line), so a run stopped halfway (a reloaded tab) starts again where it was; the page
+# gives them back in /cache/ and removes the folder at the end. <total> keeps groups of another disc out.
+def _cache_name(g):
+    return 'voix-%d-%03d.bin' % (len(_S['lines']), g)
+
+
+def speech_cached(g):
+    return os.path.exists('/cache/' + _cache_name(g))
+
+
 def speech_group(g):
     import patch_speech as ps
     from ea_stream import stream
     lines, order, streams = _S['lines'], _S['order'], _S['streams']
     group = order[g * GROUP:(g + 1) * GROUP]
+    cached = '/cache/' + _cache_name(g)
+    if os.path.exists(cached):
+        data = open(cached, 'rb').read()
+        at = 0
+        while at < len(data):
+            i, n = struct.unpack_from('<II', data, at)
+            streams[i] = data[at + 8:at + 8 + n]
+            at += 8 + n
+        os.remove(cached)
+        if all(streams[i] is not None for i in group):
+            return min((g + 1) * GROUP, len(order))
     decoded = [ps.decode(lines[i][1], 'vgmstream-cli', 'ffmpeg', _S['folder']) for i in group]
     data = iter(ps.encode_all([s for channels, _ in decoded for s in channels]))
     for i, (channels, rate) in zip(group, decoded):
         streams[i] = stream(lines[i][2], [next(data) for _ in channels], len(channels[0]), rate)
+    os.makedirs(os.path.join(OUT, 'vf-cache'), exist_ok=True)
+    path = os.path.join(OUT, 'vf-cache', _cache_name(g))
+    with open(path, 'wb') as w:
+        for i in group:
+            w.write(struct.pack('<II', i, len(streams[i])) + streams[i])
+    flush(path, 'vf-cache/' + _cache_name(g))
     return min((g + 1) * GROUP, len(order))
 
 

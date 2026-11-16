@@ -160,7 +160,7 @@ const T = (fr, en) => (self.vf_lang === 'en' ? en : fr);
 const progress = (fraction, text) => post({ type: 'progress', fraction, text });
 
 // vf_page's steps one by one, as build_package.py runs them. done: movies an earlier run already converted.
-async function runAll(vf, done) {
+async function runAll(vf, done, cache) {
   const t0 = Date.now();
   vf.accept_modified_copy();
   progress(0, T('VF : textes', 'French dub: text'));
@@ -169,7 +169,9 @@ async function runAll(vf, done) {
   const movies = vf.movies_list().toJs();
   for (let k = 0; k < movies.length; k++) {
     progress(0.05 + 0.4 * k / movies.length, `${T('Vidéos', 'Movies')} : ${movies[k]} (${k + 1}/${movies.length})`);
-    if (ffmpegRuns >= FFMPEG_RUNS) await freshFFmpeg();
+    // a fresh ffmpeg for each movie: one that read a 150 MB movie keeps that memory, and a tab using too much is
+    // reloaded by Chrome
+    if (!done.has(movies[k]) && ffmpegRuns > 0) await freshFFmpeg();
     try {
       vf.movie(k, done.has(movies[k]));
     } catch (e) {  // a worn-out ffmpeg.wasm: once more with a fresh one
@@ -182,8 +184,12 @@ async function runAll(vf, done) {
   vf.movies_report();
 
   const groups = vf.speech_start();
+  // Groups an earlier run encoded (game_root/vf-cache/, see vf_page.speech_group): loaded instead of done again.
+  py.FS.mkdirTree('/cache');
+  for (const [name, data] of Object.entries(cache || {})) py.FS.writeFile(`/cache/${name}`, data);
+  if (Object.keys(cache || {}).length) post({ type: 'log', text: T(`voix : ${Object.keys(cache).length} groupes repris d'un essai précédent`, `voices: ${Object.keys(cache).length} groups taken from an earlier run`) });
   for (let g = 0; g < groups; g++) {
-    await freshFFmpeg();  // one ffmpeg run per line (resampling): a fresh instance for each group of 64 lines
+    if (!vf.speech_cached(g)) await freshFFmpeg();  // one ffmpeg run per line (resampling): a fresh instance for each group of 64 lines
     let lines;
     try {
       lines = vf.speech_group(g);
@@ -210,7 +216,7 @@ self.onmessage = async ({ data: m }) => {
       post({ type: 'result', problem: vf.check(), diagnostic: vf.diagnostic() });
     } else if (m.type === 'run') {
       await loadTools(m.ffmpeg);
-      await runAll(vf, new Set(m.done || []));
+      await runAll(vf, new Set(m.done || []), m.cache);
       post({ type: 'result', done: true });
     }
   } catch (e) {
