@@ -5,6 +5,10 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- Installation page (`page/`): from the player's game folder it decrypts the port with their `default.xex`, builds
+  the shaders, the icon sets and the gamelist pictures in the browser, and writes `NFS Most Wanted.sh/` to the SD card
+  or the network share. `batocera/make_paquet.py` makes the encrypted packages.
+- Icons: Pillow before 11 silently wrote uncompressed DDS; the numpy DXT5 encoder is used then (the browser).
 - Repository cleaned up: only the Batocera port remains. The Android app, the Switch build and their tools stay in
   their original repositories; `docs/` and `tools/` keep the shared nfsmw-nx documentation and scripts.
 - `batocera/build_shaders.sh` builds `nfsmw_shaders.nfsp` from your copy of the game, without the Android app.

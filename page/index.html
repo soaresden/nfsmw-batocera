@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NFSMW pour Batocera</title>
+<meta name="description" content="Prépare NFS Most Wanted (Xbox 360, recompilé) pour Batocera à partir de votre propre copie du jeu.">
+<style>
+:root {
+  --bg: #f4f4f1; --panel: #ffffff; --ink: #1b1b1b; --muted: #5d5d58; --line: #d9d8d2;
+  --accent: #c8501e; --accent-ink: #ffffff; --ok: #2f7d32; --bad: #b3261e; --code: #ecebe6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141414; --panel: #1e1e1d; --ink: #ececea; --muted: #a5a59f; --line: #34342f;
+    --accent: #ef7a3f; --accent-ink: #141414; --ok: #7cc47f; --bad: #f2867d; --code: #2a2a28;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141414; --panel: #1e1e1d; --ink: #ececea; --muted: #a5a59f; --line: #34342f;
+  --accent: #ef7a3f; --accent-ink: #141414; --ok: #7cc47f; --bad: #f2867d; --code: #2a2a28;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 1.7rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+.lead { color: var(--muted); margin: 0 0 28px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; }
+section h2 { font-size: 1.05rem; margin: 0 0 8px; display: flex; gap: 10px; align-items: baseline; }
+section h2 .n { color: var(--accent); font-variant-numeric: tabular-nums; }
+section p { margin: 6px 0; }
+section.off { opacity: .55; }
+button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 10px 16px; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink); }
+button.second { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+button:disabled { opacity: .45; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+.facts { margin: 10px 0 0; padding: 0; list-style: none; font-size: .95rem; }
+.facts li { padding: 3px 0; }
+.ok { color: var(--ok); } .bad { color: var(--bad); } .muted { color: var(--muted); }
+code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: .9em; overflow-wrap: anywhere; }
+label { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
+progress { width: 100%; height: 10px; accent-color: var(--accent); }
+#log { background: var(--code); border-radius: 8px; padding: 10px 12px; font: 12.5px/1.45 ui-monospace, Menlo, Consolas, monospace;
+  max-height: 260px; overflow: auto; white-space: pre-wrap; margin-top: 10px; display: none; }
+details { margin-top: 8px; } summary { cursor: pointer; color: var(--muted); }
+footer { color: var(--muted); font-size: .85rem; margin-top: 24px; }
+footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>NFS Most Wanted pour Batocera</h1>
+  <p class="lead">Cette page prépare le jeu pour Batocera (Retroid Pocket 5 et autres consoles ARM64) à partir de
+    <strong>votre</strong> copie Xbox 360. Tout se fait dans votre navigateur : aucun fichier du jeu n'est envoyé.</p>
+
+  <section id="s-browser" hidden>
+    <h2>Navigateur</h2>
+    <p>Pour écrire directement sur la carte SD ou le partage réseau, ouvrez cette page avec <strong>Chrome</strong> ou
+      <strong>Edge</strong> sur un ordinateur. Ici, la page fabrique un zip à décompresser vous-même, et vous copiez
+      les fichiers du jeu à la main.</p>
+  </section>
+
+  <section id="s-game">
+    <h2><span class="n">1</span> Votre jeu</h2>
+    <p>Le dossier du jeu extrait de l'ISO : celui qui contient <code>default.xex</code>, <code>NFS/</code> et
+      <code>Movies/</code>. Un dossier <code>NFS Most Wanted.sh</code> déjà installé convient aussi.</p>
+    <div class="row">
+      <button id="pick-game">Choisir le dossier du jeu</button>
+      <input id="pick-game-input" type="file" webkitdirectory hidden>
+    </div>
+    <ul class="facts" id="game-facts"></ul>
+  </section>
+
+  <section id="s-dest" class="off">
+    <h2><span class="n">2</span> Où l'installer</h2>
+    <p>Le dossier <code>roms/ports</code> de Batocera : sur la carte SD branchée au PC, ou le partage réseau
+      <code>\\BATOCERA\share\roms\ports</code> (connecté comme lecteur réseau).</p>
+    <div class="row">
+      <button id="pick-dest" disabled>Choisir le dossier ports</button>
+    </div>
+    <label><input type="checkbox" id="copy-game" checked> <span>Copier aussi les fichiers du jeu dans
+      <code>game_root/</code> (environ 7 Go ; les fichiers déjà présents et identiques sont sautés)</span></label>
+    <ul class="facts" id="dest-facts"></ul>
+  </section>
+
+  <section id="s-run" class="off">
+    <h2><span class="n">3</span> Préparer</h2>
+    <p>La page déchiffre le port avec votre <code>default.xex</code>, fabrique les shaders, les trois styles
+      d'icônes (PlayStation, GameCube, Xbox 360) et les images pour la fiche EmulationStation, puis écrit le
+      dossier <code>NFS Most Wanted.sh</code>. Comptez quelques minutes, plus la copie du jeu.</p>
+    <div class="row">
+      <button id="run" disabled>Tout préparer</button>
+    </div>
+    <div class="row" id="progress-row" hidden><progress id="progress" max="1" value="0"></progress></div>
+    <p id="status" class="muted"></p>
+    <div id="log"></div>
+  </section>
+
+  <section id="s-done" hidden>
+    <h2>Terminé</h2>
+    <p>Sur la console : redémarrez EmulationStation (ou la console), puis lancez <strong>NFS Most Wanted</strong>
+      dans <strong>Ports</strong>. Les options sont dans <strong>Options avancées du jeu → NFS MOST WANTED</strong>.
+      <strong>Hotkey + Start</strong> quitte le jeu, <strong>Hotkey + L1</strong> fait une capture.</p>
+    <p>Pour un retour : envoyez <code>nfsmw-stdout.log</code> et <code>data/logs/</code> du dossier du jeu.</p>
+  </section>
+
+  <footer>
+    Code source et explications : <a href="https://github.com/soaresden/nfsmw-batocera">nfsmw-batocera</a> (GPL-3.0).
+    Le port est chiffré : seul le <code>default.xex</code> de l'édition prise en charge l'ouvre.
+    Need for Speed est une marque d'Electronic Arts ; ce projet n'est ni affilié à EA ni approuvé par EA.
+  </footer>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

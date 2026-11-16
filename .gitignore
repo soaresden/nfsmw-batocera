@@ -43,3 +43,7 @@ __pycache__/
 # --- Batocera ---------------------------------------------------------------
 # The rest of sdk/thirdparty comes from tools/fetch_thirdparty.py: only the files this port changed are tracked.
 sdk/thirdparty/
+
+# Encrypted ports for the page: published only on purpose (git add -f), see page/paquets/LISEZMOI.md.
+page/paquets/*.pak
+page/paquets/index.json

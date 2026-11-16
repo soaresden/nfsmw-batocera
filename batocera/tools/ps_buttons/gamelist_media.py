@@ -26,8 +26,6 @@ import jdlz  # noqa: E402
 import ps_buttons as pb  # noqa: E402
 import xenos  # noqa: E402
 
-PORT = 'NFS Most Wanted.sh/forgamelist/'
-
 LISEZMOI = """Images pour la fiche EmulationStation de NFS Most Wanted
 
 Faites votre propre entree dans /userdata/roms/ports/gamelist.xml (ou avec l'editeur de metadonnees
@@ -87,25 +85,33 @@ def to_16_9(im):
     return im.crop((0, y, w, y + nh))
 
 
+def media(frontb):
+    """The forgamelist/ folder from FRONTB.LZC: {path under NFS Most Wanted.sh/: bytes}."""
+    fe = jdlz.decompress(frontb)
+    found = pb.find_textures(fe)
+    splash = picture(fe, found, 'DEMO_SPLASH')
+    pictures = {'image.png': to_16_9(crop_black(splash)).resize((1280, 720), Image.LANCZOS),
+                'fanart.png': crop_black(splash),
+                'thumbnail.png': picture(fe, found, 'WS_MWSPLASHBACK')}
+    out = {}
+    for name, im in pictures.items():
+        b = io.BytesIO()
+        im.save(b, 'PNG')
+        out['forgamelist/' + name] = b.getvalue()
+    out['forgamelist/screenshots/.garder'] = b''
+    out['forgamelist/LISEZMOI.txt'] = LISEZMOI.encode('utf-8')
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--frontb', required=True, help='FRONTEND/FRONTB.LZC')
     ap.add_argument('--zip', required=True, help='zip to extract over /userdata/roms/ports/')
     a = ap.parse_args()
-    fe = jdlz.decompress(open(a.frontb, 'rb').read())
-    found = pb.find_textures(fe)
-    splash = picture(fe, found, 'DEMO_SPLASH')
-    image = to_16_9(crop_black(splash)).resize((1280, 720), Image.LANCZOS)
-    thumb = picture(fe, found, 'WS_MWSPLASHBACK')
-    out = {'image.png': image, 'fanart.png': crop_black(splash), 'thumbnail.png': thumb}
     with zipfile.ZipFile(a.zip, 'w', zipfile.ZIP_DEFLATED) as z:
-        for name, im in out.items():
-            b = io.BytesIO()
-            im.save(b, 'PNG')
-            z.writestr(PORT + name, b.getvalue())
-            print(name, im.size)
-        z.writestr(PORT + 'screenshots/.garder', '')
-        z.writestr(PORT + 'LISEZMOI.txt', LISEZMOI)
+        for name, data in media(open(a.frontb, 'rb').read()).items():
+            z.writestr('NFS Most Wanted.sh/' + name, data)
+            print(name, len(data))
     print('zip:', a.zip)
 
 

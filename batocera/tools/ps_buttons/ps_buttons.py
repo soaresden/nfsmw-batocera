@@ -114,6 +114,10 @@ def dxt5_linear(img):
         import dxt  # older Pillow: the MX-5 project's own encoder
         return dxt.encode(img, 'DXT5')
     data = b.getvalue()
+    # Pillow before 11 writes uncompressed DDS and ignores pixel_format (Pyodide has 10.2): check the FourCC.
+    if data[84:88] not in (b'DXT5', b'DX10') or (data[84:88] == b'DX10' and data[128] not in (77, 78)):
+        import dxt
+        return dxt.encode(img, 'DXT5')
     off = 128 + (20 if data[84:88] == b'DX10' else 0)
     w, h = img.size
     return data[off:off + max(1, (w + 3) // 4) * max(1, (h + 3) // 4) * 16]
@@ -154,7 +158,8 @@ def encode(img, size, mips):
 # ---------------------------------------------------------------- drawing
 
 def font(px):
-    for path in ('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 'DejaVuSans-Bold.ttf', 'arialbd.ttf'):
+    here = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'DejaVuSans-Bold.ttf')  # the page's copy
+    for path in ('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', here, 'DejaVuSans-Bold.ttf', 'arialbd.ttf'):
         try:
             return ImageFont.truetype(path, px)
         except OSError:
@@ -412,6 +417,27 @@ def build_style(style, blob, mem, dyn, retroid=False, log=print):
     return files, shown, dshown
 
 
+def icon_sets(blob, mem, dyn, log=print):
+    """The three icon sets: {path under NFS Most Wanted.sh/: bytes}, previews included."""
+    import tempfile
+    out = {}
+    if mem:  # Xbox 360: the game's own icons; only the GLOBALMEMORYFILE.BIN to put back
+        out['mods/icones/xbox360/GLOBALMEMORYFILE.BIN'] = mem
+    for style in ('playstation', 'gamecube'):
+        log('== ' + style)
+        files, shown, dshown = build_style(style, blob, mem, dyn, log=log)
+        for name, data in files.items():
+            out['mods/icones/%s/%s' % (style, name)] = data
+        with tempfile.TemporaryDirectory() as t:
+            for tiles, name in ((shown, 'icones.png'), (dshown, 'manette.png')):
+                if tiles:
+                    preview(tiles, os.path.join(t, name))
+                    with open(os.path.join(t, name), 'rb') as f:
+                        out['mods/icones/%s/%s' % (style, name)] = f.read()
+    out['mods/icones/LISEZMOI.txt'] = LISEZMOI.encode('utf-8')
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--globalb', required=True, help='GLOBAL/GLOBALB.LZC (5018060 bytes)')
@@ -432,22 +458,10 @@ def main():
     mem = open(a.memfile, 'rb').read() if a.memfile else None
     dyn = open(a.dyntex, 'rb').read() if a.dyntex else None
     if a.icon_sets:
-        import tempfile
         import zipfile
         with zipfile.ZipFile(a.icon_sets, 'w', zipfile.ZIP_DEFLATED) as z:
-            if mem:  # Xbox 360: the game's own icons; only the GLOBALMEMORYFILE.BIN to put back
-                z.writestr(PORT + 'mods/icones/xbox360/GLOBALMEMORYFILE.BIN', mem)
-            for style in ('playstation', 'gamecube'):
-                print('==', style)
-                files, shown, dshown = build_style(style, blob, mem, dyn)
-                for name, data in files.items():
-                    z.writestr(PORT + 'mods/icones/%s/%s' % (style, name), data)
-                with tempfile.TemporaryDirectory() as t:
-                    for tiles, name in ((shown, 'icones.png'), (dshown, 'manette.png')):
-                        if tiles:
-                            preview(tiles, os.path.join(t, name))
-                            z.write(os.path.join(t, name), PORT + 'mods/icones/%s/%s' % (style, name))
-            z.writestr(PORT + 'mods/icones/LISEZMOI.txt', LISEZMOI)
+            for name, data in icon_sets(blob, mem, dyn).items():
+                z.writestr(PORT + name, data)
         print('icon sets for Batocera:', a.icon_sets)
         return
     if not a.out:
