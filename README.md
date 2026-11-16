@@ -94,7 +94,7 @@ Les journaux sont `nfsmw-stdout.log` (lanceur) et `logs/nfsmw_001.log` (jeu). **
 | Son des vidéos | Décodé par le jeu (`nfsmw_video_audio_nativo = false`) : le flux natif du port sortait mal en Bluetooth |
 | Sauvegardes | Dans `data/` (copie lisible dans `saves/`) |
 | Langue | Celle de Batocera ; avec la VF doublée de nfsmw-nx, le français |
-| Manette | Reconnue par le SDL du jeu (la correspondance de Batocera numérote autrement les boutons) ; boutons de gauche et du haut remis en place (`input_sdl_intercambiar_xy`) |
+| Manette | Reconnue par le SDL du jeu (la correspondance de Batocera est décalée d'un bouton pour lui : son SDL 3.4 et celui du jeu, 3.5, ne numérotent pas la manette pareil) ; boutons de gauche et du haut remis en place (`input_sdl_intercambiar_xy`) |
 | Quitter | Hotkey + Start |
 
 Le lanceur écrit en tête de `nfsmw-stdout.log` la version du port (`VERSION`), Batocera, les pilotes Vulkan et
@@ -117,7 +117,6 @@ redémarrage d'EmulationStation) :
 | Filtre jaune du jeu | original, doux, désactivé |
 | Anticrénelage | désactivé, FXAA |
 | Filtre d'image | aucun, cinéma, sépia, noir et blanc, froid, chaud, vif, Matrix, CRT |
-| Correspondance manette | Auto (SDL du jeu, conseillé) ou celle de Batocera |
 | Boutons A/B X/Y | **Par lettre** (défaut : la lettre affichée est celle du bouton de la Retroid, A à droite, B en bas) ou par position (comme une manette Xbox ou PlayStation). Avec le mod boutons PlayStation installé, le défaut devient par position |
 
 Les autres réglages sont dans `nfsmw.toml`.

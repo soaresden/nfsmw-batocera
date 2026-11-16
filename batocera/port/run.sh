@@ -104,13 +104,11 @@ case "$(conf_get nfsmw_buttons)" in
     *) [ -d "$GAMEDIR/mods/boutons-playstation" ] && ARGS+=("--no-input_sdl_por_letra") ;;
 esac
 # Controller: Batocera passes SDL_GAMECONTROLLERCONFIG built with ITS SDL3's button numbers (3.4.x); the game
-# carries its own SDL3 (3.5), whose numbering differs on the Retroid Pocket 5 (Start acted as Back, Home as Start).
-# By default the game's SDL maps the pad itself from the kernel's button codes (BTN_SOUTH, BTN_START...).
-case "$(conf_get nfsmw_pad)" in
-    batocera) echo "[batocera] controller: Batocera's mapping" >> "$GAMEDIR/nfsmw-stdout.log" ;;
-    *) unset SDL_GAMECONTROLLERCONFIG SDL_GAMECONTROLLERCONFIG_FILE
-       echo "[batocera] controller: SDL's own mapping (Batocera's ignored)" >> "$GAMEDIR/nfsmw-stdout.log" ;;
-esac
+# carries its own SDL3 (3.5), which numbers the Retroid Pocket 5 pad one lower (seen in the log with
+# input_sdl_diag: L1 arrived as x, Start as back, Home as start). The game's SDL maps the pad itself from the
+# kernel's button codes; an older nfsmw_pad = batocera setting is ignored.
+unset SDL_GAMECONTROLLERCONFIG SDL_GAMECONTROLLERCONFIG_FILE
+echo "[batocera] controller: SDL's own mapping (Batocera's ignored: its button numbers are off by one here)" >> "$GAMEDIR/nfsmw-stdout.log"
 echo "[batocera] options: ${ARGS[*]}" >> "$GAMEDIR/nfsmw-stdout.log"
 
 # Saves, profiles and caches next to the game (ports/nfsmw/data) instead of /userdata/system/.local/share/nfsmw.
