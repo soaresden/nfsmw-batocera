@@ -19,21 +19,44 @@ const LIBRARIES = {
   aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694:
     'b84602ca9bf6efd84f54ad1509297baccd57c04ffcda494c77f5780a433f95a7',
 };
+// Every known default.xex (tools/editions/regional/ediciones.json). plan: the port for that executable is
+// 'prevu' (planned: it needs that default.xex once to be compiled) or 'non'; vf: what the French dub option does.
 const EDITIONS = {
-  aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694: 'PAL Espagne',
-  aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c: 'USA',
-  '23af89d49a713ff948af7b9bc06557b06e94e8629adc40a29513ab6f5cafb33d': 'Japon',
-  '23ece29d18724ea28971d52f936964d127148bd2359ff24795da7442b9069bf4': 'PAL Allemagne',
-  acb09332bcafc15e8e21dc15062f1963804a3176fa4db48fea7f6c8afbdff066: 'PAL Italie',
-  '229c5ed5dcc67871982000fb923acfd59494f21f30996b25f36b30a8d85c9b7b': 'PAL France',
-  e2ea2ff11bf84cb30430d824d7bfe699a3acf3e7400d21b9a7c938e3d7a10474: 'PAL Royaume-Uni',
-  a2dd0156c26603cf32e33b52fa906422bde74e5065da87115d5b747aa5d90ff8: 'PAL Pologne (fans)',
-  '47683b515e5461a2e356c45a4417f30fe69c3f6c6ea0d3352829f35f1fb33abe': 'Corée',
-  '0cd7b9fa3957de085e298c91faa726116ad0079abaefead82c2f3337ee432e64': 'Asie (chinois traditionnel)',
+  aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c: { nom: 'USA (NTSC)', plan: 'prevu', vf: 'a verifier' },
+  e2ea2ff11bf84cb30430d824d7bfe699a3acf3e7400d21b9a7c938e3d7a10474: { nom: 'PAL Royaume-Uni (anglais)', plan: 'prevu', vf: 'oui' },
+  '229c5ed5dcc67871982000fb923acfd59494f21f30996b25f36b30a8d85c9b7b': { nom: 'PAL France', plan: 'prevu', vf: 'deja' },
+  aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694: { nom: 'PAL Espagne', plan: 'prevu', vf: 'non' },
+  '23ece29d18724ea28971d52f936964d127148bd2359ff24795da7442b9069bf4': { nom: 'PAL Allemagne', plan: 'prevu', vf: 'non' },
+  acb09332bcafc15e8e21dc15062f1963804a3176fa4db48fea7f6c8afbdff066: { nom: 'PAL Italie', plan: 'prevu', vf: 'non' },
+  '23af89d49a713ff948af7b9bc06557b06e94e8629adc40a29513ab6f5cafb33d': { nom: 'Japon', plan: 'non', vf: 'non' },
+  '47683b515e5461a2e356c45a4417f30fe69c3f6c6ea0d3352829f35f1fb33abe': { nom: 'Corée', plan: 'non', vf: 'non' },
+  '0cd7b9fa3957de085e298c91faa726116ad0079abaefead82c2f3337ee432e64': { nom: 'Asie (chinois traditionnel)', plan: 'non', vf: 'non' },
+  a2dd0156c26603cf32e33b52fa906422bde74e5065da87115d5b747aa5d90ff8: { nom: 'PAL Pologne (traduction de fans)', plan: 'non', vf: 'non' },
+};
+const VF_TEXT = {
+  oui: 'oui, avec l\'ISO Xbox d\'origine française', 'a verifier': 'à vérifier (avec l\'ISO Xbox d\'origine française)',
+  deja: 'déjà en français', non: '—',
 };
 const PY_FILES = ['jdlz.py', 'tpk.py', 'huff.py', 'xenos.py', 'dxt.py', 'ps_buttons.py', 'gamelist_media.py'];
 
 const state = { game: null, dest: null, xex: null, xexSha: null, paquet: null };
+let INDEX = { paquets: [] };
+
+async function editionsTable(highlight) {
+  const body = $('editions-body');
+  body.replaceChildren();
+  for (const [sha, e] of Object.entries(EDITIONS)) {
+    const ready = INDEX.paquets.some((p) => p.xex_sha256 === sha);
+    const tr = document.createElement('tr');
+    if (sha === highlight) tr.className = 'mine';
+    const port = ready ? '<span class="ok">prêt</span>'
+      : e.plan === 'prevu' ? 'bientôt' : '<span class="muted">pas prévu</span>';
+    tr.innerHTML = `<td>${e.nom}${sha === highlight ? ' <strong>← votre ISO</strong>' : ''}</td><td>${port}</td><td>${VF_TEXT[e.vf]}</td>`;
+    body.append(tr);
+  }
+}
+fetch('paquets/index.json').then((r) => (r.ok ? r.json() : { paquets: [] })).then((i) => { INDEX = i; editionsTable(); })
+  .catch(() => editionsTable());
 const canWrite = typeof window.showDirectoryPicker === 'function';
 
 // ------------------------------------------------------------------ small helpers
@@ -137,11 +160,12 @@ async function chooseGame(all) {
   }
   const xex = new Uint8Array(await (await game.byName.get('default.xex').get()).arrayBuffer());
   const xexSha = await sha256(xex);
-  const index = await fetch('paquets/index.json').then((r) => (r.ok ? r.json() : { paquets: [] }));
-  const paquet = index.paquets.find((p) => p.xex_sha256 === xexSha);
+  const paquet = INDEX.paquets.find((p) => p.xex_sha256 === xexSha);
+  editionsTable(xexSha);
   const total = (await Promise.all(game.files.map(async (f) => (await f.get()).size))).reduce((a, b) => a + b, 0);
   fact('game-facts', `${game.files.length} fichiers, ${size(total)}${game.root ? ` (dans <code>${game.root}</code>)` : ''}`);
-  fact('game-facts', `Édition : <strong>${EDITIONS[xexSha] || 'inconnue'}</strong>`, paquet ? 'ok' : 'bad');
+  const edition = EDITIONS[xexSha];
+  fact('game-facts', `Édition : <strong>${edition ? edition.nom : 'inconnue'}</strong>`, paquet ? 'ok' : 'bad');
   {  // default.xex alone, to identify a copy or to add an edition to the port
     const li = document.createElement('li');
     li.className = 'muted';
@@ -153,9 +177,11 @@ async function chooseGame(all) {
     $('game-facts').append(li);
   }
   if (!paquet) {
-    fact('game-facts', EDITIONS[xexSha]
-      ? 'Cette édition n\'est pas encore prise en charge par le port Batocera.'
-      : '<code>default.xex</code> modifié ou édition inconnue : le port ne peut pas l\'utiliser.', 'bad');
+    fact('game-facts', !edition
+      ? '<code>default.xex</code> modifié ou édition inconnue : le port ne peut pas l\'utiliser.'
+      : edition.plan === 'prevu'
+        ? 'Port pas encore prêt pour cette édition : il faut compiler son <code>default.xex</code> une fois. Voir le tableau ci-dessous.'
+        : 'Cette édition n\'est pas prévue pour l\'instant.', 'bad');
     return;
   }
   if (game.byName.has('movies/movies_report.txt') || game.byName.has('movies/rapport_films.txt')) {
