@@ -5,6 +5,10 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- Black Edition option (ES menu, cvar `nfsmw_black_edition`): tuhana's data patch written after the XEX is mapped.
+- USA (NTSC) port built with `batocera/build_edition.sh`.
+- Installation page redesigned: drop both ISOs at once (360 and original Xbox told apart by default.xex /
+  default.xbe), flags, a "what you get" summary, the PAL English + Xbox French route to the French dub spelled out.
 - French dub in the installation page: with the PAL English 360 ISO and the original Xbox French ISO, the
   nfsmw-nx french-dub tools run in the browser (Pyodide, ffmpeg.wasm, vgmstream for WASI). The icon sets start from
   the pack with its English text hidden, as the dub needs. Other 360 editions get a report of both discs.

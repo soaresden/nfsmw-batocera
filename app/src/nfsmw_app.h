@@ -23,6 +23,9 @@
 
 #if defined(NFSMW_NATIVE_SHADER_LIBRARY)
 #include "nfsmw_shader_hooks.h"
+
+namespace rex::memory { class Memory; }
+namespace nfsmw { void AplicarBlackEdition(rex::memory::Memory* memory); }
 #endif
 #include "nfsmw_ajustes_graficos.h"
 #include "nfsmw_entorno_mesa.h"
@@ -68,9 +71,14 @@ class NfsmwApp : public rex::ReXApp {
     nfsmw::prueba::EnvolverEntrada(config);
   }
 
+  // Data patches, once the XEX is mapped and before the game starts: the Black Edition content
+  // (nfsmw_black_edition, src/nfsmw_black_edition.cpp).
+  void OnPostLoadXexImage() override {
+    if (runtime()) nfsmw::AplicarBlackEdition(runtime()->memory());
+  }
+
   // Available hooks, unused:
   //   void OnLoadXexImage(std::string& xex_image) override {}
-  //   void OnPostLoadXexImage() override {}
   //   void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {}
   //   void OnShutdown() override {}
   //

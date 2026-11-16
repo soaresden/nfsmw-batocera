@@ -131,6 +131,8 @@ set(NFSMW_SOURCES
     src/nfsmw_ajustes_graficos.cpp
     # Profile dump of the instrumented build for PGO (NFSMW_PGO=generar; empty otherwise).
     src/nfsmw_pgo.cpp
+    # Black Edition content (cvar nfsmw_black_edition): tuhana's data patch, written after the XEX is mapped.
+    src/nfsmw_black_edition.cpp
 )
 
 if(ANDROID)

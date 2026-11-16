@@ -4,99 +4,184 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NFSMW pour Batocera</title>
-<meta name="description" content="Prépare NFS Most Wanted (Xbox 360, recompilé) pour Batocera à partir de votre propre copie du jeu.">
+<meta name="description" content="Prépare NFS Most Wanted (Xbox 360, recompilé) pour Batocera à partir de votre propre copie du jeu, dans le navigateur.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f4f4f1; --panel: #ffffff; --ink: #1b1b1b; --muted: #5d5d58; --line: #d9d8d2;
-  --accent: #c8501e; --accent-ink: #ffffff; --ok: #2f7d32; --bad: #b3261e; --code: #ecebe6;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #141414; --panel: #1e1e1d; --ink: #ececea; --muted: #a5a59f; --line: #34342f;
-    --accent: #ef7a3f; --accent-ink: #141414; --ok: #7cc47f; --bad: #f2867d; --code: #2a2a28;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #141414; --panel: #1e1e1d; --ink: #ececea; --muted: #a5a59f; --line: #34342f;
-  --accent: #ef7a3f; --accent-ink: #141414; --ok: #7cc47f; --bad: #f2867d; --code: #2a2a28;
+  --bg: #0b0c0e; --bg2: #121418; --panel: rgba(22, 24, 29, .86); --line: #2a2d34; --ink: #eceae4; --muted: #9a9890;
+  --accent: #ff8a1e; --accent2: #ffb347; --accent-ink: #160b00; --police-red: #ff2d3d; --police-blue: #2d7bff;
+  --ok: #7ee08a; --bad: #ff6b6b; --code: #1d2026; --chip: #23262d;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
-h1 { font-size: 1.7rem; margin: 0 0 4px; letter-spacing: -0.01em; }
-.lead { color: var(--muted); margin: 0 0 28px; }
-section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; }
-section h2 { font-size: 1.05rem; margin: 0 0 8px; display: flex; gap: 10px; align-items: baseline; }
-section h2 .n { color: var(--accent); font-variant-numeric: tabular-nums; }
-section h3 { font-size: .98rem; margin: 16px 0 4px; }
-section p { margin: 6px 0; }
-section.off { opacity: .55; }
-button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 10px 16px; cursor: pointer;
-  background: var(--accent); color: var(--accent-ink); }
-button.second { background: transparent; color: var(--ink); border: 1px solid var(--line); }
-button:disabled { opacity: .45; cursor: default; }
-.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
-.facts { margin: 10px 0 0; padding: 0; list-style: none; font-size: .95rem; }
-.facts li { padding: 3px 0; }
-.ok { color: var(--ok); } .bad { color: var(--bad); } .muted { color: var(--muted); }
-code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: .9em; overflow-wrap: anywhere; }
-label { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
-progress { width: 100%; height: 10px; accent-color: var(--accent); }
-#log { background: var(--code); border-radius: 8px; padding: 10px 12px; font: 12.5px/1.45 ui-monospace, Menlo, Consolas, monospace;
-  max-height: 260px; overflow: auto; white-space: pre-wrap; margin-top: 10px; display: none; }
-details { margin-top: 8px; } summary { cursor: pointer; color: var(--muted); }
-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .92rem; }
-th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { color: var(--muted); font-weight: 600; }
-tr.mine td { background: var(--code); }
-.small { font-size: .85rem; }
-a { color: var(--accent); }
-footer { color: var(--muted); font-size: .85rem; margin-top: 24px; }
+html { background: var(--bg); }
+body {
+  margin: 0; color: var(--ink); font: 16px/1.55 Barlow, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(900px 420px at 8% -8%, rgba(255, 45, 61, .20), transparent 60%),
+    radial-gradient(900px 420px at 92% -8%, rgba(45, 123, 255, .20), transparent 60%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, .018) 0 2px, transparent 2px 22px),
+    linear-gradient(180deg, var(--bg2), var(--bg) 420px);
+  background-color: var(--bg);
+  min-height: 100vh;
+}
+main { max-width: 900px; margin: 0 auto; padding: 0 16px 72px; }
+a { color: var(--accent2); }
+code { background: var(--code); padding: 1px 6px; border-radius: 4px; font-size: .88em; overflow-wrap: anywhere; }
+
+/* ---------------- hero */
+.hero { padding: 44px 0 18px; position: relative; }
+.tag { display: inline-block; font: 600 .78rem/1 Barlow, sans-serif; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--accent2); border: 1px solid rgba(255, 138, 30, .45); padding: 6px 10px; border-radius: 2px; }
+h1 { font: 700 clamp(3rem, 9vw, 5.6rem)/.86 Teko, sans-serif; letter-spacing: .01em; text-transform: uppercase;
+  margin: 18px 0 6px; transform: skewX(-8deg); transform-origin: left; }
+h1 .most { display: block; background: linear-gradient(90deg, var(--accent), var(--accent2) 60%, #fff3);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+h1 small { display: block; font-size: .42em; color: var(--muted); letter-spacing: .08em; margin-top: 8px; }
+.lead { color: #c9c6be; max-width: 640px; margin: 14px 0 0; font-size: 1.06rem; }
+.siren { position: absolute; top: 0; left: 0; right: 0; height: 3px; opacity: .9;
+  background: linear-gradient(90deg, var(--police-red) 0 50%, var(--police-blue) 50% 100%);
+  animation: siren 1.2s steps(1) infinite; }
+@keyframes siren { 50% { background: linear-gradient(90deg, var(--police-blue) 0 50%, var(--police-red) 50% 100%); } }
+@media (prefers-reduced-motion: reduce) { .siren { animation: none; } }
+
+.gets { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 26px 0 8px; }
+.get { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 14px; }
+.get b { display: block; font: 600 1.45rem/1 Teko, sans-serif; letter-spacing: .02em; text-transform: uppercase; }
+.get span { color: var(--muted); font-size: .9rem; }
+
+.callout { margin: 18px 0 0; padding: 14px 16px; border: 1px solid rgba(45, 123, 255, .5);
+  background: linear-gradient(90deg, rgba(45, 123, 255, .14), rgba(255, 45, 61, .08)); }
+.callout b { color: #fff; }
+
+/* ---------------- panels */
+section.panel { background: var(--panel); border: 1px solid var(--line); margin-top: 18px; padding: 20px 22px 22px;
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%); backdrop-filter: blur(4px); }
+section.panel.off { opacity: .5; }
+section h2 { margin: 0 0 8px; font: 600 1.9rem/1 Teko, sans-serif; text-transform: uppercase; letter-spacing: .03em;
+  display: flex; align-items: baseline; gap: 12px; }
+section h2 .n { font-size: 1.25em; color: var(--accent); transform: skewX(-8deg); display: inline-block; }
+section h3 { font: 600 1.35rem/1 Teko, sans-serif; text-transform: uppercase; letter-spacing: .03em; margin: 22px 0 6px; }
+section p { margin: 6px 0; color: #d3d0c8; }
+.muted { color: var(--muted); } .ok { color: var(--ok); } .bad { color: var(--bad); } .small { font-size: .86rem; }
+
+button { font: 600 1rem/1 Barlow, sans-serif; letter-spacing: .04em; text-transform: uppercase; border: 0; cursor: pointer;
+  padding: 13px 20px; color: var(--accent-ink); background: linear-gradient(180deg, var(--accent2), var(--accent));
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); transition: filter .15s, transform .15s; }
+button:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+button.second { background: var(--chip); color: var(--ink); box-shadow: inset 0 0 0 1px #3a3e46; }
+button:disabled { opacity: .4; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+
+/* ---------------- drop zone */
+#drop { margin-top: 14px; border: 2px dashed #3a3e46; padding: 26px 18px; text-align: center; position: relative;
+  background: repeating-linear-gradient(-45deg, rgba(255, 138, 30, .03) 0 12px, transparent 12px 24px); transition: .15s; }
+#drop.over { border-color: var(--accent); background-color: rgba(255, 138, 30, .08); }
+#drop .big { font: 600 1.7rem/1.1 Teko, sans-serif; text-transform: uppercase; letter-spacing: .03em; }
+#drop .row { justify-content: center; }
+.slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 14px; text-align: left; }
+.slot { background: var(--code); border: 1px solid var(--line); padding: 10px 12px; min-height: 64px; }
+.slot .k { font: 600 .74rem/1 Barlow, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.slot .v { margin-top: 6px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.slot.filled { border-color: rgba(126, 224, 138, .5); }
+
+.facts { list-style: none; margin: 12px 0 0; padding: 0; }
+.facts li { padding: 4px 0 4px 16px; position: relative; }
+.facts li::before { content: ""; position: absolute; left: 0; top: .78em; width: 7px; height: 2px; background: var(--accent); }
+
+/* ---------------- output */
+#output { margin-top: 16px; border-left: 3px solid var(--ok); padding: 10px 14px; background: rgba(126, 224, 138, .06); }
+#output h3 { margin: 0 0 6px; color: var(--ok); }
+#output ul { margin: 0; padding-left: 18px; }
+
+/* ---------------- editions */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; margin-top: 10px; }
+.ed { display: grid; grid-template-columns: 34px 1fr; gap: 4px 10px; align-items: center; padding: 10px;
+  background: var(--code); border: 1px solid var(--line); }
+.ed.mine { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.ed svg { width: 34px; height: 23px; display: block; box-shadow: 0 0 0 1px #0006; }
+.ed .name { font-weight: 600; line-height: 1.2; }
+.ed .chips { grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font: 600 .7rem/1 Barlow, sans-serif; letter-spacing: .08em; text-transform: uppercase; padding: 4px 6px;
+  background: var(--chip); color: var(--muted); }
+.chip.ready { background: rgba(126, 224, 138, .16); color: var(--ok); }
+.chip.soon { background: rgba(255, 179, 71, .14); color: var(--accent2); }
+.chip.vf { background: rgba(45, 123, 255, .18); color: #9dc1ff; }
+.flag { width: 30px; height: 20px; vertical-align: -4px; box-shadow: 0 0 0 1px #0006; }
+
+label { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; }
+input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; margin-top: 3px; }
+progress { width: 100%; height: 12px; appearance: none; border: 0; background: var(--code); }
+progress::-webkit-progress-bar { background: var(--code); }
+progress::-webkit-progress-value { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+progress::-moz-progress-bar { background: var(--accent); }
+#log { background: #08090b; border: 1px solid var(--line); padding: 10px 12px; font: 12.5px/1.45 ui-monospace, Menlo, Consolas, monospace;
+  max-height: 260px; overflow: auto; white-space: pre-wrap; margin-top: 12px; display: none; color: #bdb9b0; }
+details { margin-top: 10px; } summary { cursor: pointer; color: var(--muted); }
+#s-done { border-color: rgba(126, 224, 138, .5); }
+footer { color: var(--muted); font-size: .84rem; margin-top: 28px; }
 footer a { color: inherit; }
+@media (max-width: 520px) { section.panel { padding: 16px; } .hero { padding-top: 32px; } }
 </style>
 </head>
 <body>
+<div class="siren" aria-hidden="true"></div>
 <main>
-  <h1>NFS Most Wanted pour Batocera</h1>
-  <p class="lead">Cette page prépare le jeu pour Batocera (Retroid Pocket 5 et autres consoles ARM64) à partir de
-    <strong>votre</strong> copie Xbox 360. Tout se fait dans votre navigateur : aucun fichier du jeu n'est envoyé.</p>
+  <header class="hero">
+    <span class="tag">Port natif · Batocera ARM64 · Retroid Pocket 5</span>
+    <h1><span class="most">NFS Most Wanted</span><small>Xbox 360 recompilé, pour Batocera</small></h1>
+    <p class="lead">Glissez votre ISO Xbox 360 : la page reconnaît l'édition et prépare tout le dossier du jeu, prêt à
+      copier sur la console. Tout se passe dans votre navigateur, aucun fichier du jeu n'est envoyé.</p>
+    <div class="gets">
+      <div class="get"><b>60 FPS</b><span>en course, 1280x720 sur Retroid Pocket 5</span></div>
+      <div class="get"><b>VF complète</b><span>textes, vidéos et voix, avec l'ISO Xbox française</span></div>
+      <div class="get"><b>Vos boutons</b><span>icônes PlayStation, GameCube ou Xbox 360</span></div>
+      <div class="get"><b>Prêt à jouer</b><span>options dans EmulationStation, sauvegardes, vibration</span></div>
+      <div class="get"><b>Black Edition</b><span>M3 GTR de route, Camaro SS, 8 voitures tunées, 4 épreuves en plus</span></div>
+    </div>
+    <p class="callout"><b>Vous voulez le jeu en français ?</b> La version française Xbox 360 est rare et chère, mais
+      pas besoin : <b>votre ISO 360 anglaise + l'ISO de la première Xbox en français</b> donnent la VF complète
+      (textes, 32 des 36 vidéos et toutes les voix de la police). La page fait la conversion elle-même, c'est
+      juste plus long (1 à 3 heures).</p>
+  </header>
 
-  <section id="s-browser" hidden>
+  <section id="s-browser" class="panel" hidden>
     <h2>Navigateur</h2>
-    <p>Pour écrire directement sur la carte SD ou le partage réseau, ouvrez cette page avec <strong>Chrome</strong> ou
-      <strong>Edge</strong> sur un ordinateur. Ici, la page fabrique un zip à décompresser vous-même, et vous copiez
+    <p>Pour écrire directement sur la carte SD ou le partage réseau, et pour la VF, ouvrez cette page avec
+      <strong>Chrome</strong> ou <strong>Edge</strong> sur un ordinateur. Ici, la page fabrique un zip et vous copiez
       les fichiers du jeu à la main (il faut alors le dossier extrait de l'ISO).</p>
   </section>
 
-  <section id="s-game">
+  <section id="s-game" class="panel">
     <h2><span class="n">1</span> Votre jeu</h2>
-    <p>L'<strong>ISO</strong> Xbox 360 du jeu, telle quelle. Un dossier déjà extrait (avec <code>default.xex</code>,
-      <code>NFS/</code> et <code>Movies/</code>) ou un dossier <code>NFS Most Wanted.sh</code> déjà installé
-      conviennent aussi.</p>
-    <div class="row">
-      <button id="pick-iso">Choisir l'ISO</button>
-      <button id="pick-game" class="second">ou un dossier extrait</button>
+    <div id="drop">
+      <div class="big">Déposez ici vos ISO</div>
+      <p class="muted">L'ISO Xbox 360, et si vous voulez la VF, l'ISO de la Xbox d'origine en français. Les deux d'un
+        coup, c'est possible : la page reconnaît laquelle est laquelle. Un dossier déjà extrait marche aussi.</p>
+      <div class="row">
+        <button id="pick-iso">Choisir l'ISO 360</button>
+        <button id="pick-xbox" class="second">ISO Xbox française (VF)</button>
+        <button id="pick-game" class="second">Dossier extrait</button>
+      </div>
       <input id="pick-iso-input" type="file" accept=".iso,.xiso" hidden>
+      <input id="pick-xbox-input" type="file" accept=".iso,.xiso" hidden>
       <input id="pick-game-input" type="file" webkitdirectory hidden>
+      <div class="slots">
+        <div class="slot" id="slot-360"><div class="k">Xbox 360</div><div class="v muted">aucune</div></div>
+        <div class="slot" id="slot-xbox"><div class="k">Xbox d'origine, française (facultatif)</div><div class="v muted">aucune</div></div>
+      </div>
     </div>
     <ul class="facts" id="game-facts"></ul>
     <div id="vf" hidden>
-      <h3>VF (facultatif)</h3>
-      <p>Avec l'ISO de la <strong>Xbox d'origine en français</strong>, la page passe le jeu en VF : textes, 32 des
-        36 vidéos et les voix en jeu. Outil french-dub de nfsmw-nx, exécuté dans le navigateur.</p>
-      <div class="row">
-        <button id="pick-xbox" class="second" disabled>Choisir l'ISO Xbox française</button>
-        <input id="pick-xbox-input" type="file" accept=".iso,.xiso" hidden>
-      </div>
       <ul class="facts" id="vf-facts"></ul>
     </div>
+    <div id="output" hidden></div>
     <details id="editions" open>
       <summary>Éditions reconnues</summary>
-      <table>
-        <thead><tr><th>Édition Xbox 360</th><th>Port Batocera</th><th>VF</th></tr></thead>
-        <tbody id="editions-body"></tbody>
-      </table>
+      <div class="grid" id="editions-grid"></div>
       <p class="muted small">« Bientôt » : le port d'une édition se compile une fois à partir de son
         <code>default.xex</code>. Si vous avez une de ces éditions, ouvrez un ticket sur
         <a href="https://github.com/soaresden/nfsmw-batocera/issues">la page du projet</a> (sans joindre le
@@ -104,23 +189,23 @@ footer a { color: inherit; }
     </details>
   </section>
 
-  <section id="s-dest" class="off">
+  <section id="s-dest" class="panel off">
     <h2><span class="n">2</span> Où l'installer</h2>
     <p>Le dossier <code>roms/ports</code> de Batocera : sur la carte SD branchée au PC, ou le partage réseau
       <code>\\BATOCERA\share\roms\ports</code> (connecté comme lecteur réseau).</p>
     <div class="row">
       <button id="pick-dest" disabled>Choisir le dossier ports</button>
     </div>
-    <label><input type="checkbox" id="copy-game" checked> <span>Copier aussi le jeu (extrait de l'ISO s'il le faut) dans
-      <code>game_root/</code> (environ 7 Go ; les fichiers déjà présents et identiques sont sautés)</span></label>
+    <label><input type="checkbox" id="copy-game" checked> <span>Copier aussi le jeu (extrait de l'ISO) dans
+      <code>game_root/</code>, environ 7 Go ; les fichiers déjà présents et identiques sont sautés.</span></label>
     <ul class="facts" id="dest-facts"></ul>
   </section>
 
-  <section id="s-run" class="off">
+  <section id="s-run" class="panel off">
     <h2><span class="n">3</span> Préparer</h2>
     <p>La page déchiffre le port avec votre <code>default.xex</code>, fabrique les shaders, les trois styles
-      d'icônes (PlayStation, GameCube, Xbox 360) et les images pour la fiche EmulationStation, puis écrit le
-      dossier <code>NFS Most Wanted.sh</code>. Comptez quelques minutes, plus la copie du jeu.</p>
+      d'icônes et les images de la fiche EmulationStation, écrit le dossier <code>NFS Most Wanted.sh</code>, copie
+      le jeu, puis fait la VF si vous l'avez demandée.</p>
     <div class="row">
       <button id="run" disabled>Tout préparer</button>
     </div>
@@ -129,7 +214,7 @@ footer a { color: inherit; }
     <div id="log"></div>
   </section>
 
-  <section id="s-done" hidden>
+  <section id="s-done" class="panel" hidden>
     <h2>Terminé</h2>
     <p>Sur la console : redémarrez EmulationStation (ou la console), puis lancez <strong>NFS Most Wanted</strong>
       dans <strong>Ports</strong>. Les options sont dans <strong>Options avancées du jeu → NFS MOST WANTED</strong>.
@@ -138,9 +223,11 @@ footer a { color: inherit; }
   </section>
 
   <footer>
-    Code source et explications : <a href="https://github.com/soaresden/nfsmw-batocera">nfsmw-batocera</a> (GPL-3.0).
-    Le port est chiffré : seul le <code>default.xex</code> de l'édition prise en charge l'ouvre.
-    Need for Speed est une marque d'Electronic Arts ; ce projet n'est ni affilié à EA ni approuvé par EA.
+    Code source et explications : <a href="https://github.com/soaresden/nfsmw-batocera">nfsmw-batocera</a> (GPL-3.0),
+    à partir de nfsmw-nx et NFSMW Android Evolved. Black Edition : patch de tuhana (xenia-canary/game-patches),
+    repris par Epix Digital Studio. VF : outil french-dub de nfsmw-nx. Le port est chiffré : seul le <code>default.xex</code> de
+    l'édition l'ouvre. Need for Speed est une marque d'Electronic Arts ; ce projet n'est ni affilié à EA ni approuvé
+    par EA.
   </footer>
 </main>
 <script type="module" src="app.js"></script>

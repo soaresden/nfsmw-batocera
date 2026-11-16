@@ -147,6 +147,16 @@ redémarrage d'EmulationStation) :
 
 Les autres réglages sont dans `nfsmw.toml`.
 
+### Black Edition
+
+L'option **BLACK EDITION** du menu NFS MOST WANTED débloque le contenu de la Black Edition, présent sur tous les
+disques mais verrouillé hors de cette édition : BMW M3 GTR de route, Camaro SS, huit voitures tunées, l'épreuve 70
+du Challenge Series et trois courses (City Perimeter, NFS World Loop, Seaside & Power Station). C'est le patch de
+tuhana (`xenia-canary/game-patches`, une valeur de `.data` à `0x82A2CE04`), repris par
+[Epix Digital Studio](https://github.com/Pixelplix93/NFS-Most-Wanted-Black-Edition-Xbox-360) dans ses XEX
+modifiés ; ici pas de XEX modifié : le port écrit la valeur au démarrage (`app/src/nfsmw_black_edition.cpp`).
+À activer avant de commencer une carrière.
+
 ### Icônes des boutons : PlayStation, GameCube, Xbox 360
 
 `batocera/tools/ps_buttons/` fabrique, à partir de vos fichiers (sortis des archives par

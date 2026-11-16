@@ -141,6 +141,10 @@ case "$(conf_get nfsmw_rumble)" in
     on) ARGS+=("--input_vibracion") ;;
     off) ARGS+=("--no-input_vibracion") ;;
 esac
+# Black Edition content (tuhana's patch, src/nfsmw_black_edition.cpp): off unless asked for.
+case "$(conf_get nfsmw_black_edition)" in
+    on) ARGS+=("--nfsmw_black_edition") ;;
+esac
 echo "[batocera] options: ${ARGS[*]}" >> "$GAMEDIR/nfsmw-stdout.log"
 
 # Saves, profiles and caches next to the game (ports/nfsmw/data) instead of /userdata/system/.local/share/nfsmw.

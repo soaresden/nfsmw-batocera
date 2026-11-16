@@ -23,37 +23,56 @@ const LIBRARIES = {
 // Every known default.xex (tools/editions/regional/ediciones.json). plan: the port for that executable is
 // 'prevu' (planned: it needs that default.xex once to be compiled) or 'non'; vf: what the French dub option does.
 const EDITIONS = {
-  aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c: { nom: 'USA (NTSC)', plan: 'prevu', vf: 'a verifier' },
-  e2ea2ff11bf84cb30430d824d7bfe699a3acf3e7400d21b9a7c938e3d7a10474: { nom: 'PAL Royaume-Uni (anglais)', plan: 'prevu', vf: 'oui' },
-  '229c5ed5dcc67871982000fb923acfd59494f21f30996b25f36b30a8d85c9b7b': { nom: 'PAL France', plan: 'prevu', vf: 'deja' },
-  aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694: { nom: 'PAL Espagne', plan: 'prevu', vf: 'non' },
-  '23ece29d18724ea28971d52f936964d127148bd2359ff24795da7442b9069bf4': { nom: 'PAL Allemagne', plan: 'prevu', vf: 'non' },
-  acb09332bcafc15e8e21dc15062f1963804a3176fa4db48fea7f6c8afbdff066: { nom: 'PAL Italie', plan: 'prevu', vf: 'non' },
-  '23af89d49a713ff948af7b9bc06557b06e94e8629adc40a29513ab6f5cafb33d': { nom: 'Japon', plan: 'non', vf: 'non' },
-  '47683b515e5461a2e356c45a4417f30fe69c3f6c6ea0d3352829f35f1fb33abe': { nom: 'Corée', plan: 'non', vf: 'non' },
-  '0cd7b9fa3957de085e298c91faa726116ad0079abaefead82c2f3337ee432e64': { nom: 'Asie (chinois traditionnel)', plan: 'non', vf: 'non' },
-  a2dd0156c26603cf32e33b52fa906422bde74e5065da87115d5b747aa5d90ff8: { nom: 'PAL Pologne (traduction de fans)', plan: 'non', vf: 'non' },
+  aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c: { nom: 'USA (NTSC)', pays: 'us', plan: 'prevu', vf: 'a verifier', langue: 'anglais' },
+  e2ea2ff11bf84cb30430d824d7bfe699a3acf3e7400d21b9a7c938e3d7a10474: { nom: 'PAL anglaise (UK)', pays: 'gb', plan: 'prevu', vf: 'oui', langue: 'anglais' },
+  '229c5ed5dcc67871982000fb923acfd59494f21f30996b25f36b30a8d85c9b7b': { nom: 'PAL France', pays: 'fr', plan: 'prevu', vf: 'deja', langue: 'français' },
+  aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694: { nom: 'PAL Espagne', pays: 'es', plan: 'prevu', vf: 'non', langue: 'espagnol' },
+  '23ece29d18724ea28971d52f936964d127148bd2359ff24795da7442b9069bf4': { nom: 'PAL Allemagne', pays: 'de', plan: 'prevu', vf: 'non', langue: 'allemand' },
+  acb09332bcafc15e8e21dc15062f1963804a3176fa4db48fea7f6c8afbdff066: { nom: 'PAL Italie', pays: 'it', plan: 'prevu', vf: 'non', langue: 'italien' },
+  '23af89d49a713ff948af7b9bc06557b06e94e8629adc40a29513ab6f5cafb33d': { nom: 'Japon', pays: 'jp', plan: 'non', vf: 'non', langue: 'japonais' },
+  '47683b515e5461a2e356c45a4417f30fe69c3f6c6ea0d3352829f35f1fb33abe': { nom: 'Corée', pays: 'kr', plan: 'non', vf: 'non', langue: 'coréen' },
+  '0cd7b9fa3957de085e298c91faa726116ad0079abaefead82c2f3337ee432e64': { nom: 'Asie (chinois trad.)', pays: 'tw', plan: 'non', vf: 'non', langue: 'chinois' },
+  a2dd0156c26603cf32e33b52fa906422bde74e5065da87115d5b747aa5d90ff8: { nom: 'Pologne (fans)', pays: 'pl', plan: 'non', vf: 'non', langue: 'polonais' },
 };
-const VF_TEXT = {
-  oui: 'oui, avec l\'ISO Xbox d\'origine française', 'a verifier': 'à vérifier (avec l\'ISO Xbox d\'origine française)',
-  deja: 'déjà en français', non: '—',
-};
+const VF_CHIP = { oui: 'VF avec Xbox FR', 'a verifier': 'VF à vérifier', deja: 'déjà en VF', non: '' };
+
+// Small flags, drawn here (emoji flags do not show on Windows). viewBox 30x20.
+function flag(code) {
+  const v = (a, b, c) => `<rect width="10" height="20" fill="${a}"/><rect x="10" width="10" height="20" fill="${b}"/><rect x="20" width="10" height="20" fill="${c}"/>`;
+  const h = (a, b, c) => `<rect width="30" height="7" fill="${a}"/><rect y="7" width="30" height="6" fill="${b}"/><rect y="13" width="30" height="7" fill="${c}"/>`;
+  const body = {
+    fr: v('#0055a4', '#fff', '#ef4135'),
+    it: v('#009246', '#fff', '#ce2b37'),
+    de: h('#000', '#dd0000', '#ffce00'),
+    es: '<rect width="30" height="20" fill="#aa151b"/><rect y="5" width="30" height="10" fill="#f1bf00"/>',
+    pl: '<rect width="30" height="10" fill="#fff"/><rect y="10" width="30" height="10" fill="#dc143c"/>',
+    jp: '<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="6" fill="#bc002d"/>',
+    kr: '<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="5.5" fill="#0047a0"/><path d="M9.5 10a5.5 5.5 0 0 1 11 0a2.75 2.75 0 0 1-5.5 0a2.75 2.75 0 0 0-5.5 0" fill="#cd2e3a"/><g stroke="#000" stroke-width="1.2"><path d="M3 4l3 3M24 13l3 3M3 16l3-3M24 7l3-3"/></g>',
+    tw: '<rect width="30" height="20" fill="#fe0000"/><rect width="15" height="10" fill="#000095"/><circle cx="7.5" cy="5" r="2.6" fill="#fff"/>',
+    gb: '<rect width="30" height="20" fill="#012169"/><path d="M0 0l30 20M30 0L0 20" stroke="#fff" stroke-width="4"/><path d="M0 0l30 20M30 0L0 20" stroke="#c8102e" stroke-width="1.6"/><path d="M15 0v20M0 10h30" stroke="#fff" stroke-width="6"/><path d="M15 0v20M0 10h30" stroke="#c8102e" stroke-width="3.4"/>',
+    us: `${Array.from({ length: 7 }, (_, i) => `<rect y="${i * 20 / 6.5}" width="30" height="${20 / 13}" fill="#b22234"/>`).join('')}<rect width="13" height="${20 * 7 / 13}" fill="#3c3b6e"/><g fill="#fff">${Array.from({ length: 12 }, (_, i) => `<circle cx="${1.8 + (i % 4) * 3.1}" cy="${1.8 + Math.floor(i / 4) * 3.4}" r=".7"/>`).join('')}</g>`,
+    xbox: '<rect width="30" height="20" fill="#0a0a0a"/><circle cx="15" cy="10" r="7" fill="none" stroke="#7ee08a" stroke-width="2"/><path d="M11 6l8 8M19 6l-8 8" stroke="#7ee08a" stroke-width="2"/>',
+  }[code] || '<rect width="30" height="20" fill="#555"/>';
+  return `<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">${body}</svg>`;
+}
 const PY_FILES = ['jdlz.py', 'tpk.py', 'huff.py', 'xenos.py', 'dxt.py', 'ps_buttons.py', 'gamelist_media.py'];
 
 const state = { game: null, dest: null, xex: null, xexSha: null, paquet: null };
 let INDEX = { paquets: [] };
 
+const ready = (sha) => INDEX.paquets.some((p) => p.xex_sha256 === sha);
+
 async function editionsTable(highlight) {
-  const body = $('editions-body');
-  body.replaceChildren();
+  const grid = $('editions-grid');
+  grid.replaceChildren();
   for (const [sha, e] of Object.entries(EDITIONS)) {
-    const ready = INDEX.paquets.some((p) => p.xex_sha256 === sha);
-    const tr = document.createElement('tr');
-    if (sha === highlight) tr.className = 'mine';
-    const port = ready ? '<span class="ok">prêt</span>'
-      : e.plan === 'prevu' ? 'bientôt' : '<span class="muted">pas prévu</span>';
-    tr.innerHTML = `<td>${e.nom}${sha === highlight ? ' <strong>← votre ISO</strong>' : ''}</td><td>${port}</td><td>${VF_TEXT[e.vf]}</td>`;
-    body.append(tr);
+    const card = document.createElement('div');
+    card.className = `ed${sha === highlight ? ' mine' : ''}`;
+    const port = ready(sha) ? '<span class="chip ready">Prêt</span>'
+      : e.plan === 'prevu' ? '<span class="chip soon">Bientôt</span>' : '<span class="chip">Pas prévu</span>';
+    const vf = VF_CHIP[e.vf] ? `<span class="chip vf">${VF_CHIP[e.vf]}</span>` : '';
+    card.innerHTML = `${flag(e.pays)}<div class="name">${e.nom}${sha === highlight ? ' · <span class="ok">votre ISO</span>' : ''}</div><div class="chips">${port}${vf}</div>`;
+    grid.append(card);
   }
 }
 fetch('paquets/index.json').then((r) => (r.ok ? r.json() : { paquets: [] })).then((i) => { INDEX = i; editionsTable(); })
@@ -65,6 +84,35 @@ const canWrite = typeof window.showDirectoryPicker === 'function';
 const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
 const sha256 = async (bytes) => hex(await crypto.subtle.digest('SHA-256', bytes));
 const size = (n) => n >= 1e9 ? `${(n / 1e9).toFixed(2)} Go` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} Mo` : `${Math.round(n / 1e3)} ko`;
+
+function slot(id, html, filled) {
+  const el = $(id);
+  el.classList.toggle('filled', !!filled);
+  el.querySelector('.v').className = `v${filled ? '' : ' muted'}`;
+  el.querySelector('.v').innerHTML = html;
+}
+
+// What the player will get, from the edition, the dub and what the folder already holds.
+function announce() {
+  const out = $('output');
+  const e = EDITIONS[state.xexSha];
+  if (!state.paquet || !e) { out.hidden = true; return; }
+  const items = [`${flag(e.pays)} NFS Most Wanted ${e.nom}, port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5`];
+  if (state.vfXbox) items.push('<b>VF complète</b> : textes, 32 des 36 vidéos et toutes les voix en jeu, en français');
+  else if (state.dubbed) items.push('<b>VF</b> : le doublage français déjà présent dans votre dossier est gardé');
+  else if (e.vf === 'deja') items.push('Jeu en français (votre disque)');
+  else {
+    items.push(`Textes et voix : ${e.langue}, ou la langue de Batocera si le disque l'a`);
+    if (e.vf === 'oui') items.push('<span class="muted">Ajoutez l\'ISO Xbox française pour la VF complète</span>');
+  }
+  items.push('Icônes PlayStation (par défaut), GameCube ou Xbox 360, au choix dans EmulationStation');
+  items.push('Shaders fabriqués à partir de votre disque, images de l\'écran titre pour la fiche du jeu');
+  items.push('<b>Black Edition</b> à activer dans les options : BMW M3 GTR de route, Camaro SS, 8 voitures tunées, l\'épreuve 70 du Challenge Series et 3 courses en plus');
+  items.push('Options dans EmulationStation, sauvegardes, vibration, Hotkey + Start pour quitter');
+  const time = state.vfXbox ? 'quelques minutes, plus la copie du jeu, plus 1 à 3 heures de VF' : 'quelques minutes, plus la copie du jeu (7 Go)';
+  out.innerHTML = `<h3>Ce que vous obtenez</h3><ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul><p class="muted small">Durée : ${time}.</p>`;
+  out.hidden = false;
+}
 
 function fact(list, text, cls = '') {
   const li = document.createElement('li');
@@ -166,7 +214,8 @@ async function chooseGame(all) {
   const total = (await Promise.all(game.files.map(async (f) => (await f.get()).size))).reduce((a, b) => a + b, 0);
   fact('game-facts', `${game.files.length} fichiers, ${size(total)}${game.root ? ` (dans <code>${game.root}</code>)` : ''}`);
   const edition = EDITIONS[xexSha];
-  fact('game-facts', `Édition : <strong>${edition ? edition.nom : 'inconnue'}</strong>`, paquet ? 'ok' : 'bad');
+  fact('game-facts', `Édition : ${edition ? `${flag(edition.pays)} <strong>${edition.nom}</strong>` : '<strong>inconnue</strong>'}`, paquet ? 'ok' : 'bad');
+  slot('slot-360', `${edition ? flag(edition.pays) : ''}<strong>${edition ? edition.nom : 'édition inconnue'}</strong> <span class="muted">${state.iso ? state.iso.name : 'dossier'}</span>`, true);
   {  // default.xex alone, to identify a copy or to add an edition to the port
     const li = document.createElement('li');
     li.className = 'muted';
@@ -178,6 +227,8 @@ async function chooseGame(all) {
     $('game-facts').append(li);
   }
   if (!paquet) {
+    state.paquet = null;
+    announce();
     fact('game-facts', !edition
       ? '<code>default.xex</code> modifié ou édition inconnue : le port ne peut pas l\'utiliser.'
       : edition.plan === 'prevu'
@@ -185,7 +236,8 @@ async function chooseGame(all) {
         : 'Cette édition n\'est pas prévue pour l\'instant.', 'bad');
     return;
   }
-  if (game.byName.has('movies/movies_report.txt') || game.byName.has('movies/rapport_films.txt')) {
+  state.dubbed = game.byName.has('movies/movies_report.txt') || game.byName.has('movies/rapport_films.txt');
+  if (state.dubbed) {
     fact('game-facts', 'Doublage français de nfsmw-nx détecté : le jeu sera en VF.', 'ok');
   }
   if (game.byName.has('global/globalmemoryfile.bin')) {
@@ -193,6 +245,7 @@ async function chooseGame(all) {
   }
   Object.assign(state, { game, xex, xexSha, paquet, total });
   offerVf(edition);
+  announce();
   $('s-dest').classList.remove('off');
   $('pick-dest').disabled = !canWrite;
   if (!canWrite) {
@@ -231,7 +284,11 @@ async function chooseIso(file) {
   }
 }
 $('pick-iso').onclick = () => $('pick-iso-input').click();
-$('pick-iso-input').onchange = (e) => e.target.files[0] && chooseIso(e.target.files[0]);
+$('pick-iso-input').onchange = async (e) => {
+  if (!e.target.files[0]) return;
+  await chooseIso(e.target.files[0]);
+  if (state.pendingXbox && state.paquet && !state.vfXbox) await checkXbox(state.pendingXbox);
+};
 $('pick-game-input').onchange = (e) => ($('game-facts').replaceChildren(), state.iso = null, chooseGame(walkInput(e.target.files))).catch((x) => fact('game-facts', String(x.message || x), 'bad'));
 
 $('pick-dest').onclick = async () => {
@@ -272,11 +329,10 @@ function hideTextCopies(pack) {
 
 function offerVf(edition) {
   state.vfXbox = null;
-  $('vf').hidden = !(edition && ['oui', 'a verifier'].includes(edition.vf));
+  $('vf').hidden = false;
   $('vf-facts').replaceChildren();
-  $('pick-xbox').disabled = !state.iso || !canWrite;
-  if (!state.iso) fact('vf-facts', 'La VF a besoin de l\'ISO Xbox 360 (pas d\'un dossier extrait).', 'muted');
-  else if (!canWrite) fact('vf-facts', 'La VF a besoin de Chrome ou Edge (écriture directe des fichiers).', 'muted');
+  if (state.pendingXbox) checkXbox(state.pendingXbox);
+  else if (edition && edition.vf === 'oui') fact('vf-facts', 'VF possible : ajoutez l\'ISO de la Xbox d\'origine en français.', 'muted');
 }
 
 function vfWorker(message, onFile) {
@@ -296,11 +352,22 @@ function vfWorker(message, onFile) {
 }
 
 $('pick-xbox').onclick = () => $('pick-xbox-input').click();
-$('pick-xbox-input').onchange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+$('pick-xbox-input').onchange = (e) => e.target.files[0] && checkXbox(e.target.files[0]);
+
+async function checkXbox(file) {
+  state.pendingXbox = file;
   state.vfXbox = null;
+  $('vf').hidden = false;
   $('vf-facts').replaceChildren();
+  slot('slot-xbox', `${flag('fr')}<strong>${file.name}</strong>`, false);
+  if (!state.iso || !state.paquet) {
+    fact('vf-facts', 'ISO Xbox gardée : elle sera vérifiée dès que l\'ISO 360 (d\'une édition prise en charge) sera choisie.', 'muted');
+    return;
+  }
+  if (!canWrite) {
+    fact('vf-facts', 'La VF a besoin de Chrome ou Edge sur un ordinateur.', 'bad');
+    return;
+  }
   fact('vf-facts', `Vérification de <code>${file.name}</code> avec l'ISO Xbox 360 (une minute)…`, 'muted');
   try {
     const r = await vfWorker({ type: 'check', xbox: file }, async () => {});
@@ -311,10 +378,14 @@ $('pick-xbox-input').onchange = async (e) => {
       href: URL.createObjectURL(new Blob([report], { type: 'text/plain' })), download: 'nfsmw-vf-rapport.txt',
       textContent: 'Enregistrer le rapport',
     }), ' (noms et tailles de fichiers seulement)');
+    announce();
     if (r.problem) {
+      slot('slot-xbox', `${flag('fr')}<strong>${file.name}</strong> <span class="bad">pas encore pour cette édition</span>`, false);
       fact('vf-facts', 'Ces deux ISO ne sont pas encore prises en charge pour la VF : l\'outil a été mis au point avec la PAL anglaise. Le rapport ci-dessous dit ce qu\'il faut adapter.', 'bad');
     } else {
       state.vfXbox = file;
+      slot('slot-xbox', `${flag('fr')}<strong>Xbox, française</strong> <span class="muted">${file.name}</span>`, true);
+      announce();
       fact('vf-facts', 'ISO Xbox française reconnue : la VF (textes, vidéos, voix) sera ajoutée après la copie du jeu. Comptez 1 à 3 heures, page ouverte.', 'ok');
     }
     $('vf-facts').append(li);
@@ -322,7 +393,49 @@ $('pick-xbox-input').onchange = async (e) => {
     $('vf-facts').replaceChildren();
     fact('vf-facts', String(x.message || x), 'bad');
   }
-};
+}
+
+// ------------------------------------------------------------------ drag and drop
+
+// Which disc is it: a 360 one has default.xex, an original Xbox one default.xbe.
+async function dropped(file) {
+  let names;
+  try {
+    names = (await readXiso(file)).map((f) => f.path.toLowerCase());
+  } catch {
+    fact('game-facts', `<code>${file.name}</code> n'est pas une ISO Xbox ou Xbox 360.`, 'bad');
+    return;
+  }
+  if (names.includes('default.xex')) {
+    await chooseIso(file);
+    if (state.pendingXbox && state.paquet && !state.vfXbox) await checkXbox(state.pendingXbox);
+  } else if (names.includes('default.xbe')) await checkXbox(file);
+  else fact('game-facts', `<code>${file.name}</code> : ni default.xex ni default.xbe.`, 'bad');
+}
+
+const zone = $('drop');
+zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+zone.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  zone.classList.remove('over');
+  // Handles must be asked for during the event; folders come through them (Chrome, Edge).
+  const items = [...e.dataTransfer.items].filter((i) => i.kind === 'file');
+  const handles = await Promise.all(items.map((i) => (i.getAsFileSystemHandle ? i.getAsFileSystemHandle() : null)));
+  const files = items.map((i) => i.getAsFile());
+  // 360 disc first, so the Xbox one is checked against it
+  const order = [];
+  for (let k = 0; k < items.length; k++) {
+    if (handles[k] && handles[k].kind === 'directory') {
+      $('game-facts').replaceChildren();
+      state.iso = null;
+      await chooseGame(await walkHandle(handles[k]));
+      slot('slot-360', `${$('slot-360').querySelector('.v').innerHTML}`, !!state.paquet);
+    } else if (files[k]) order.push(files[k]);
+  }
+  order.sort((a, b) => b.size - a.size);  // the 360 disc (7-8 GB) is larger than the Xbox one (about 4 GB)
+  for (const f of order) await dropped(f);
+});
 
 async function runVf() {
   log('VF : début (1 à 3 heures ; gardez la page ouverte)');
@@ -543,6 +656,7 @@ async function run() {
   $('run').disabled = true;
   $('pick-game').disabled = true;
   $('pick-iso').disabled = true;
+  $('pick-xbox').disabled = true;
   $('pick-dest').disabled = true;
   $('log').textContent = '';
   $('status').className = 'muted';
@@ -598,6 +712,7 @@ async function run() {
   } finally {
     $('pick-game').disabled = false;
     $('pick-iso').disabled = false;
+    $('pick-xbox').disabled = false;
     $('run').disabled = false;
     $('pick-dest').disabled = !canWrite;
   }
