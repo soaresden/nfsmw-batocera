@@ -5,7 +5,7 @@
 The game's widescreen title background (WS_MWSPLASHBACK, 512x512, stretched to 16:9 by the game) in silver black and
 white, as the Black Edition cover is the regular one in black and white; a light steel blue on the M3's paint; the
 police lights red and blue, gently; a sprayed "Black Edition" tag (Sedgwick Ave Display, OFL, with drips and a red
-overspray) on the black ink at the top right. --out is the 1280x720 view, --texture the 512x512 picture to put back in
+overspray) under the logo the game draws over the top right. --out is the 1280x720 view, --texture the 512x512 picture to put back in
 FRONTB.LZC.
 
 The Xbox 360 game shows WS_XENON_SPLASHBACK of GLOBAL/GLOBALB.LZC (1024x512 DXT5, the picture in 900x480 at 62,16)
@@ -97,8 +97,8 @@ def title(frontb):
     fe = jdlz.decompress(frontb)
     src = gm.picture(fe, pb.find_textures(fe), 'WS_MWSPLASHBACK').convert('RGB').resize((W, H), Image.LANCZOS)
     img = blue_car_and_police(black_and_white(src)).convert('RGBA')
-    t = tag()
-    img.alpha_composite(t, (W - t.width - 30, 25))
+    t = tag(440)  # under the game's own logo, which it draws over the top right of this picture
+    img.alpha_composite(t, (W - t.width - 60, 200))
     return img.convert('RGB')
 
 
