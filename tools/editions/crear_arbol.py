@@ -132,15 +132,17 @@ def main():
             escribir(rel, nuevo)
 
     # the rest of app/ that the build uses
-    for rel in ('CMakeLists.txt', 'CMakePresets.json', 'nfsmw.toml', 'orden_funciones.ld', 'overrides.toml',
-                os.path.join('generated', 'rexglue.cmake')):
+    for rel in ('CMakeLists.txt', 'CMakePresets.json', 'nfsmw.toml', 'orden_funciones.ld', 'orden_funciones_lld.txt',
+                'overrides.toml', os.path.join('generated', 'rexglue.cmake')):
+        if not os.path.exists(os.path.join(APP, rel)):
+            continue
         texto = open(os.path.join(APP, rel), encoding='utf-8', newline='').read()
         if rel == 'CMakeLists.txt':
             # PGO profile translated to this edition (tools/editions/pgo/traducir_perfil.py)
             if texto.count('/../pgo/pal_es"') != 1:
                 raise SystemExit('CMakeLists.txt: profile folder not found')
             texto = texto.replace('/../pgo/pal_es"', '/../pgo/%s"' % edicion)
-        if rel == 'orden_funciones.ld':
+        if rel in ('orden_funciones.ld', 'orden_funciones_lld.txt'):
             # it only orders hot functions; a doubtful entry does no harm (the linker ignores a name that
             # does not exist), so the doubtful translation is acceptable too
             escribir(rel, traducir_texto(texto, {**todas, **seguras}, set()))

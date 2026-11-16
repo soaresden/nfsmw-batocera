@@ -198,6 +198,13 @@ versionné), compile pour aarch64 et prépare `out/batocera/`. Il faut environ 1
 | `app/src/nfsmw_nucleos_grandes.cpp` | Les threads du jeu sur les cœurs rapides (A77), repris du port Android |
 | `app/orden_funciones_lld.txt` | Les fonctions chaudes en tête du code (ordre de la Switch), avec ThinLTO |
 
+### Autres éditions
+
+`batocera/build_edition.sh <édition> <default.xex>` compile le port d'une autre édition (`usa`, `pal_en`,
+`pal_fr`, `pal_de`, `pal_it`) à partir de la PAL Espagne déjà construite : correspondance des adresses entre les
+deux exécutables, arbre `app_<édition>` (outils de nfsmw-nx dans `tools/editions/`), génération du code,
+compilation, paquet chiffré pour la page. Testé de bout en bout en passant la PAL Espagne pour une autre édition.
+
 ## Licence
 
 GPL-3.0, héritée de NFSMW Recompiled, nfsmw-nx et NFSMW Android Evolved (voir [LICENSE](LICENSE) et
