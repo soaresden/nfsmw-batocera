@@ -1,11 +1,13 @@
 // NFS Most Wanted for Batocera: prepares "NFS Most Wanted.sh/" from the player's own copy, in the browser.
-//  1. the game folder is read (File System Access API, or <input webkitdirectory> elsewhere);
+//  1. the game is read from its ISO (iso.js, nothing extracted) or a folder (File System Access API, or
+//     <input webkitdirectory> elsewhere);
 //  2. default.xex picks the package (paquets/index.json) and gives its key: SHA-256("nfsmw-batocera/paquet/1\0" +
 //     default.xex), AES-256-GCM, see batocera/make_paquet.py;
 //  3. the shader library is built with the nfsmw-nx installer's modules (shaders/), the icon sets and the gamelist
 //     pictures with the repository's Python tools under Pyodide (outils/);
 //  4. everything is written into the chosen ports/ folder (or a zip without the game files).
 import { writeZip } from './zip.js';
+import { readXiso } from './iso.js';
 
 const $ = (id) => document.getElementById(id);
 const PORT = 'NFS Most Wanted.sh';
@@ -122,7 +124,6 @@ async function fromArchives(game, path) {
 }
 
 async function chooseGame(all) {
-  $('game-facts').replaceChildren();
   const game = gameFrom(all);
   if (!game) {
     fact('game-facts', 'Pas de <code>default.xex</code> dans ce dossier.', 'bad');
@@ -170,13 +171,28 @@ $('pick-game').onclick = async () => {
   try {
     const dir = await window.showDirectoryPicker({ id: 'nfsmw-jeu' });
     $('game-facts').replaceChildren();
-    fact('game-facts', 'Lecture du dossier…', 'muted');
-    await chooseGame(await walkHandle(dir));
+    const all = await walkHandle(dir);
+    await chooseGame(all);
   } catch (e) {
     if (e.name !== 'AbortError') fact('game-facts', String(e.message || e), 'bad');
   }
 };
-$('pick-game-input').onchange = (e) => chooseGame(walkInput(e.target.files)).catch((x) => fact('game-facts', String(x.message || x), 'bad'));
+async function chooseIso(file) {
+  $('game-facts').replaceChildren();
+  fact('game-facts', `Lecture de <code>${file.name}</code>…`, 'muted');
+  try {
+    const all = await readXiso(file);
+    $('game-facts').replaceChildren();
+    fact('game-facts', `ISO : <code>${file.name}</code>`);
+    await chooseGame(all);
+  } catch (e) {
+    $('game-facts').replaceChildren();
+    fact('game-facts', String(e.message || e), 'bad');
+  }
+}
+$('pick-iso').onclick = () => $('pick-iso-input').click();
+$('pick-iso-input').onchange = (e) => e.target.files[0] && chooseIso(e.target.files[0]);
+$('pick-game-input').onchange = (e) => ($('game-facts').replaceChildren(), chooseGame(walkInput(e.target.files))).catch((x) => fact('game-facts', String(x.message || x), 'bad'));
 
 $('pick-dest').onclick = async () => {
   try {
@@ -404,6 +420,7 @@ async function writeTo(root, path, data, onBytes) {
 async function run() {
   $('run').disabled = true;
   $('pick-game').disabled = true;
+  $('pick-iso').disabled = true;
   $('pick-dest').disabled = true;
   $('log').textContent = '';
   $('status').className = 'muted';
@@ -457,6 +474,7 @@ async function run() {
     }
   } finally {
     $('pick-game').disabled = false;
+    $('pick-iso').disabled = false;
     $('run').disabled = false;
     $('pick-dest').disabled = !canWrite;
   }

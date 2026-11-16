@@ -17,15 +17,16 @@ renderer Vulkan natif du port.
 
 ## Installation facile : la page web
 
-`page/` est une page à ouvrir dans **Chrome ou Edge sur un PC**. Elle demande le dossier du jeu extrait, puis le
-dossier `roms/ports` de Batocera (carte SD ou partage réseau), et elle prépare tout sans rien envoyer :
+`page/` est une page à ouvrir dans **Chrome ou Edge sur un PC**. Elle demande l'**ISO** Xbox 360 du jeu (ou un
+dossier extrait), puis le dossier `roms/ports` de Batocera (carte SD ou partage réseau), et elle prépare tout sans rien envoyer :
 
 - elle reconnaît l'édition par le SHA-256 du `default.xex` ;
 - elle déchiffre le port compilé avec ce `default.xex` (le paquet chiffré ne sert à rien sans le jeu, voir
   `batocera/make_paquet.py`) ;
 - elle fabrique `nfsmw_shaders.nfsp` avec les modules de l'installeur nfsmw-nx, les trois styles d'icônes et les
   images `forgamelist/` avec les outils Python du dépôt (exécutés par Pyodide dans le navigateur) ;
-- elle écrit `NFS Most Wanted.sh/` et copie le jeu dans `game_root/` (les fichiers déjà là sont sautés).
+- elle écrit `NFS Most Wanted.sh/` et extrait le jeu dans `game_root/` (les fichiers déjà là sont sautés) : l'ISO
+  est lue directement (XDVDFS, `page/iso.js`), sans outil d'extraction.
 
 Sans Chrome ni Edge, elle fabrique un zip et le jeu se copie à la main. `page/build_site.sh` assemble le site,
 `.github/workflows/page.yml` le publie sur GitHub Pages (réglage unique : Settings → Pages → Source : GitHub

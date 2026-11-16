@@ -58,15 +58,18 @@ footer a { color: inherit; }
     <h2>Navigateur</h2>
     <p>Pour écrire directement sur la carte SD ou le partage réseau, ouvrez cette page avec <strong>Chrome</strong> ou
       <strong>Edge</strong> sur un ordinateur. Ici, la page fabrique un zip à décompresser vous-même, et vous copiez
-      les fichiers du jeu à la main.</p>
+      les fichiers du jeu à la main (il faut alors le dossier extrait de l'ISO).</p>
   </section>
 
   <section id="s-game">
     <h2><span class="n">1</span> Votre jeu</h2>
-    <p>Le dossier du jeu extrait de l'ISO : celui qui contient <code>default.xex</code>, <code>NFS/</code> et
-      <code>Movies/</code>. Un dossier <code>NFS Most Wanted.sh</code> déjà installé convient aussi.</p>
+    <p>L'<strong>ISO</strong> Xbox 360 du jeu, telle quelle. Un dossier déjà extrait (avec <code>default.xex</code>,
+      <code>NFS/</code> et <code>Movies/</code>) ou un dossier <code>NFS Most Wanted.sh</code> déjà installé
+      conviennent aussi.</p>
     <div class="row">
-      <button id="pick-game">Choisir le dossier du jeu</button>
+      <button id="pick-iso">Choisir l'ISO</button>
+      <button id="pick-game" class="second">ou un dossier extrait</button>
+      <input id="pick-iso-input" type="file" accept=".iso,.xiso" hidden>
       <input id="pick-game-input" type="file" webkitdirectory hidden>
     </div>
     <ul class="facts" id="game-facts"></ul>
@@ -79,7 +82,7 @@ footer a { color: inherit; }
     <div class="row">
       <button id="pick-dest" disabled>Choisir le dossier ports</button>
     </div>
-    <label><input type="checkbox" id="copy-game" checked> <span>Copier aussi les fichiers du jeu dans
+    <label><input type="checkbox" id="copy-game" checked> <span>Copier aussi le jeu (extrait de l'ISO s'il le faut) dans
       <code>game_root/</code> (environ 7 Go ; les fichiers déjà présents et identiques sont sautés)</span></label>
     <ul class="facts" id="dest-facts"></ul>
   </section>

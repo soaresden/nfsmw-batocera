@@ -5,6 +5,7 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- The installation page takes the Xbox 360 ISO directly (XDVDFS read in the browser, XGD2 disc images and xiso).
 - Installation page (`page/`): from the player's game folder it decrypts the port with their `default.xex`, builds
   the shaders, the icon sets and the gamelist pictures in the browser, and writes `NFS Most Wanted.sh/` to the SD card
   or the network share. `batocera/make_paquet.py` makes the encrypted packages.
