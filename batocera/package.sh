@@ -31,6 +31,7 @@ echo "nfsmw-batocera $(git -C "$RAIZ" describe --always --dirty 2>/dev/null || e
 # The NFS MOST WANTED submenu of EmulationStation's advanced game options (the launcher installs it).
 cp "$RAIZ/batocera/port/es_features_nfsmw.cfg" "$PKG/es_features_nfsmw.cfg"
 cp "$RAIZ/batocera/port/run.sh" "$RAIZ/batocera/port/padto.keys" "$RAIZ/batocera/port/mods.py" "$PKG/"
+cp "$RAIZ/batocera/tools/ps_buttons/jdlz.py" "$PKG/"  # for mods.py: the .patch textures of FRONTB.LZC / GLOBALB.LZC
 chmod +x "$PKG/run.sh" "$PKG/nfsmw"
 
 # Shared libraries the binary needs and Batocera does not always carry (X11/XCB client libraries, used only

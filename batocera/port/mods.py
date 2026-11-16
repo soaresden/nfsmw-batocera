@@ -12,8 +12,14 @@ data/mods-state.json), so a removed mod folder means the base game again. apply 
 game_root/. A mod's GLOBAL/GLOBALMEMORYFILE.BIN (a pack the game preloads) gets the chosen icon style's changes: every
 pack entry the style's copy changes against mods/icones/xbox360/ (the player's own pack) is copied into the mod's
 pack when it holds the same entry with the same size; and with the French dub (Movies/movies_report.txt) the pack's
-copies of the English text are hidden as french-dub's patch_text.py does. Python standard library only.
+copies of the English text are hidden as french-dub's patch_text.py does.
+
+A mod file <file>.patch (black_edition_title.py writes them) replaces textures inside a JDLZ file (FRONTB.LZC,
+GLOBALB.LZC) instead of the whole file: it is applied over game_root/<file> as the icons and the earlier mods left it,
+with jdlz.py (next to mods.py); the result is kept in data/mods-cache/ for the next starts. When game_root has no such
+file (the game reads it from its archives), the mod's own whole <file> is copied instead. Python standard library only.
 """
+import hashlib
 import json
 import zipfile
 import os
@@ -123,6 +129,41 @@ def mod_files(path):
     return out
 
 
+PATCH_MAGIC = b'NFSMWPAT'
+
+
+def patched(port, base, patch):
+    """`base` (a JDLZ file) with the textures of `patch` put in, or None if it does not apply."""
+    if patch[:8] != PATCH_MAGIC or base[:4] != b'JDLZ':
+        return None
+    size, count = struct.unpack_from('<II', patch, 8)
+    if struct.unpack_from('<I', base, 8)[0] != size:
+        return None
+    cache = os.path.join(port, 'data', 'mods-cache')
+    key = os.path.join(cache, hashlib.sha1(base + patch).hexdigest())
+    done = read(key)
+    if done:
+        os.utime(key)
+        return done
+    import jdlz
+    data = bytearray(jdlz.decompress(base))
+    ranges, p = [], 16
+    for _ in range(count):
+        off, n = struct.unpack_from('<II', patch, p)
+        data[off:off + n] = patch[p + 8:p + 8 + n]
+        ranges.append((off, off + n))
+        p += 8 + n
+    out = jdlz.splice_to_fit(base, bytes(data), ranges, len(base))
+    if out:
+        os.makedirs(cache, exist_ok=True)
+        old = sorted((os.path.getmtime(os.path.join(cache, f)), f) for f in os.listdir(cache))
+        for _, f in old[:-5]:  # keep the last few combinations (icons x mods)
+            os.remove(os.path.join(cache, f))
+        with open(key, 'wb') as w:
+            w.write(out)
+    return out
+
+
 BLACK = 'black-edition'  # only with the BLACK EDITION option, and last (its FRONTB.LZC is built on the others')
 
 
@@ -146,7 +187,21 @@ def apply(port, style, black=False):
         except (OSError, zipfile.BadZipFile) as e:
             print('[mods] %s: unreadable (%s)' % (name, e))
             continue
+        patches = [rel[:-6] for rel, _ in files if rel.lower().endswith('.patch')]
+        present = {rel for rel in patches if os.path.exists(os.path.join(root, rel))}
         for rel, get in files:
+            if rel in present:
+                continue  # its .patch goes over what is there
+            if rel.lower().endswith('.patch') and rel[:-6] in patches:
+                rel = rel[:-6]
+                if rel not in present:
+                    continue  # not in game_root: the mod's whole file is copied instead
+                data = patched(port, read(os.path.join(root, rel)), get())
+                if data is None:
+                    print('[mods] %s: %s.patch does not fit this %s' % (name, rel, rel))
+                    continue
+                get = lambda data=data: data
+                print('[mods] %s: %s patched' % (name, rel))
             dst = os.path.join(root, rel)
             if rel not in state:  # keep what the game had, once
                 state[rel] = os.path.exists(dst)
