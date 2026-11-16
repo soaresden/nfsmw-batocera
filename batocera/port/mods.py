@@ -164,6 +164,30 @@ def patched(port, base, patch):
     return out
 
 
+def into_pack(port, root, rel, patch, name, keep):
+    """A .patch also goes in the pack's preloaded copy of the file (GLOBALB.LZC is one: the game never reads the
+    loose file then), padded to the entry's size."""
+    pf = os.path.join(root, PACK)
+    pack = read(pf)
+    e = entries(pack or b'')
+    h = bstringhash(rel.replace('/', '\\').upper())
+    if h not in e:
+        return
+    _, off, stored = e[h]
+    base = pack[off:off + stored]
+    comp = struct.unpack_from('<I', base, 12)[0] if base[:4] == b'JDLZ' else 0
+    data = patched(port, base[:comp], patch) if 0 < comp <= stored else None
+    if data is None or len(data) > stored:
+        print('[mods] %s: %s.patch does not fit the copy of %s in %s' % (name, rel, rel, PACK))
+        return
+    keep(PACK)
+    pack = bytearray(pack)
+    pack[off:off + stored] = data + bytes(stored - len(data))
+    with open(pf, 'wb') as w:
+        w.write(pack)
+    print('[mods] %s: %s patched in %s' % (name, rel, PACK))
+
+
 BLACK = 'black-edition'  # only with the BLACK EDITION option, and last (its FRONTB.LZC is built on the others')
 
 
@@ -181,6 +205,15 @@ def apply(port, style, black=False):
     be = [n for n in names if is_black(n)]
     names = [n for n in names if n not in be] + (be if black else [])
     dubbed = os.path.exists(os.path.join(root, 'Movies', 'movies_report.txt'))
+
+    def keep(rel):  # what the game had, once
+        if rel not in state:
+            dst = os.path.join(root, rel)
+            state[rel] = os.path.exists(dst)
+            if state[rel]:
+                os.makedirs(os.path.dirname(os.path.join(backup, rel)), exist_ok=True)
+                shutil.copyfile(dst, os.path.join(backup, rel))
+
     for name in names:
         try:
             files = mod_files(os.path.join(mods, name))
@@ -203,11 +236,7 @@ def apply(port, style, black=False):
                 get = lambda data=data: data
                 print('[mods] %s: %s patched' % (name, rel))
             dst = os.path.join(root, rel)
-            if rel not in state:  # keep what the game had, once
-                state[rel] = os.path.exists(dst)
-                if state[rel]:
-                    os.makedirs(os.path.dirname(os.path.join(backup, rel)), exist_ok=True)
-                    shutil.copyfile(dst, os.path.join(backup, rel))
+            keep(rel)
             data = get()
             if rel.upper() == PACK:
                 icons = os.path.join(mods, 'icones')
@@ -219,6 +248,9 @@ def apply(port, style, black=False):
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             with open(dst, 'wb') as w:
                 w.write(data)
+        for rel, get in files:
+            if rel.lower().endswith('.patch') and rel[:-6] in patches:
+                into_pack(port, root, rel[:-6], get(), name, keep)
         print('[mods] %s applied' % name)
     if state:
         os.makedirs(os.path.join(port, 'data'), exist_ok=True)
