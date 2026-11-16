@@ -352,7 +352,11 @@ void SDLAudioDriver::SDLCallback(void* userdata, SDL_AudioStream* stream, int ad
   const float gain = GetOutputGain();
   const bool mute = REXCVAR_GET(audio_mute) || IsGameOutputSuppressed();
   // Android limits after folding, before any hard clipping. Other outputs retain their clamp.
-  constexpr bool clamp_fold = !(REX_PLATFORM_ANDROID || (REX_PLATFORM_LINUX && REX_ARCH_ARM64));
+#if (REX_PLATFORM_ANDROID || (REX_PLATFORM_LINUX && REX_ARCH_ARM64))
+  constexpr bool clamp_fold = false;  // REX_ARCH_ARM64 is only defined on ARM64: test it in #if, not in C++
+#else
+  constexpr bool clamp_fold = true;
+#endif
   const int32_t rafaga = REXCVAR_GET(audio_sdl_rafaga_tramas);
   if (rafaga > 1) {
     // Diagnostic: up to N frames at once, each with its release, into a private buffer SDL feeds from.
