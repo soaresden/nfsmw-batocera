@@ -23,10 +23,10 @@
 
 #if defined(NFSMW_NATIVE_SHADER_LIBRARY)
 #include "nfsmw_shader_hooks.h"
+#endif
 
 namespace rex::memory { class Memory; }
-namespace nfsmw { void AplicarBlackEdition(rex::memory::Memory* memory); }
-#endif
+namespace nfsmw { void AplicarBlackEdition(rex::memory::Memory* memory); }  // nfsmw_black_edition.cpp
 #include "nfsmw_ajustes_graficos.h"
 #include "nfsmw_entorno_mesa.h"
 #include "nfsmw_nativo_captura.h"

@@ -15,7 +15,7 @@
 
 REXCVAR_DEFINE_BOOL(nfsmw_black_edition, false, "NFSMW",
                     "Black Edition: coches extra (M3 GTR de calle, Camaro SS, 8 coches tuneados), evento 70 del "
-                    "Challenge Series y tres carreras mas (parche de tuhana)")
+                    "Challenge Series y tres carreras mas (parche de tuhana)");
 
 namespace nfsmw {
 
