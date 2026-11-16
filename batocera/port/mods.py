@@ -1,5 +1,6 @@
 """Mods for NFS Most Wanted on Batocera: NFS Most Wanted.sh/mods/<name>/ (any name but icones) holds files laid out
-as game_root/ (CARS/..., GLOBAL/...), e.g. the MX-5 from MazdaMx5-nd-rf-ingames in mods/mx5/.
+as game_root/ (CARS/..., GLOBAL/...) or a zip of them, read as it is without extracting it: e.g. mods/mx5/ with the
+zip of the MX-5 page (MazdaMx5-nd-rf-ingames) inside (its game_root/ prefix is skipped). mods/<name>.zip works too.
 
 run.sh calls, at every start:
     python3 mods.py restore <NFS Most Wanted.sh>          before the button icons are put in place
@@ -13,6 +14,7 @@ pack when it holds the same entry with the same size; and with the French dub (M
 copies of the English text are hidden as french-dub's patch_text.py does. Python standard library only.
 """
 import json
+import zipfile
 import os
 import shutil
 import struct
@@ -91,37 +93,66 @@ def restore(port):
     print('[mods] restored %d file(s)' % len(state))
 
 
+SKIP = ('LISEZMOI.TXT', 'README.TXT', 'README.MD')
+
+
+def mod_files(path):
+    """[(path under game_root, function giving its bytes)] of a mod folder or zip."""
+    out = []
+    if os.path.isdir(path):  # loose files, and any zip in the folder read as it is (mods/mx5/mx5.zip)
+        for d, _, files in os.walk(path):
+            for f in sorted(files):
+                p = os.path.join(d, f)
+                if f.lower().endswith('.zip'):
+                    out += mod_files(p)
+                elif f.upper() not in SKIP:
+                    out.append((os.path.relpath(p, path).replace(os.sep, '/'), lambda p=p: read(p)))
+        return out
+    z = zipfile.ZipFile(path)
+    for info in z.infolist():
+        if info.is_dir():
+            continue
+        rel = info.filename.replace('\\', '/')
+        if 'game_root/' in rel:  # the MX-5 page's zip: game_root/CARS/...
+            rel = rel.split('game_root/', 1)[1]
+        elif '/mods/' in rel:    # NFS Most Wanted.sh/mods/<name>/CARS/...
+            rel = rel.split('/mods/', 1)[1].split('/', 1)[-1]
+        if rel and os.path.basename(rel).upper() not in SKIP:
+            out.append((rel, lambda n=info.filename: z.read(n)))
+    return out
+
+
 def apply(port, style):
     root, mods = os.path.join(port, 'game_root'), os.path.join(port, 'mods')
     backup = os.path.join(port, 'data', 'mods-originals')
     state = {}
     names = sorted(n for n in os.listdir(mods) if n not in ('icones', 'boutons-playstation')
-                   and os.path.isdir(os.path.join(mods, n))) if os.path.isdir(mods) else []
+                   and (os.path.isdir(os.path.join(mods, n)) or n.lower().endswith('.zip'))) if os.path.isdir(mods) else []
     dubbed = os.path.exists(os.path.join(root, 'Movies', 'movies_report.txt'))
     for name in names:
-        top = os.path.join(mods, name)
-        for d, _, files in os.walk(top):
-            for f in files:
-                rel = os.path.relpath(os.path.join(d, f), top).replace(os.sep, '/')
-                if f.upper() in ('LISEZMOI.TXT', 'README.TXT', 'README.MD'):
-                    continue
-                dst = os.path.join(root, rel)
-                if rel not in state:  # keep what the game had, once
-                    state[rel] = os.path.exists(dst)
-                    if state[rel]:
-                        os.makedirs(os.path.dirname(os.path.join(backup, rel)), exist_ok=True)
-                        shutil.copyfile(dst, os.path.join(backup, rel))
-                data = read(os.path.join(d, f))
-                if rel.upper() == PACK:
-                    icons = os.path.join(mods, 'icones')
-                    data, copied, hidden = merge_pack(
-                        data, read(os.path.join(icons, style, 'GLOBALMEMORYFILE.BIN')) if style != 'xbox360' else None,
-                        read(os.path.join(icons, 'xbox360', 'GLOBALMEMORYFILE.BIN')), dubbed)
-                    print('[mods] %s: %s with %d icon entries (%s), %d English text copies hidden'
-                          % (name, rel, copied, style or 'none', hidden))
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                with open(dst, 'wb') as w:
-                    w.write(data)
+        try:
+            files = mod_files(os.path.join(mods, name))
+        except (OSError, zipfile.BadZipFile) as e:
+            print('[mods] %s: unreadable (%s)' % (name, e))
+            continue
+        for rel, get in files:
+            dst = os.path.join(root, rel)
+            if rel not in state:  # keep what the game had, once
+                state[rel] = os.path.exists(dst)
+                if state[rel]:
+                    os.makedirs(os.path.dirname(os.path.join(backup, rel)), exist_ok=True)
+                    shutil.copyfile(dst, os.path.join(backup, rel))
+            data = get()
+            if rel.upper() == PACK:
+                icons = os.path.join(mods, 'icones')
+                data, copied, hidden = merge_pack(
+                    data, read(os.path.join(icons, style, 'GLOBALMEMORYFILE.BIN')) if style != 'xbox360' else None,
+                    read(os.path.join(icons, 'xbox360', 'GLOBALMEMORYFILE.BIN')), dubbed)
+                print('[mods] %s: %s with %d icon entries (%s), %d English text copies hidden'
+                      % (name, rel, copied, style or 'none', hidden))
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(dst, 'wb') as w:
+                w.write(data)
         print('[mods] %s applied' % name)
     if state:
         os.makedirs(os.path.join(port, 'data'), exist_ok=True)

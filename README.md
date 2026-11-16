@@ -150,8 +150,8 @@ Les autres réglages sont dans `nfsmw.toml`.
 ### Mods (la MX-5…)
 
 Un dossier `NFS Most Wanted.sh/mods/<nom>/`, rangé comme `game_root/` (`CARS/…`, `GLOBAL/…`), est appliqué à chaque
-lancement par `mods.py` : par exemple `mods/mx5/` avec le contenu de `game_root/` du zip de la page MX-5
-(MazdaMx5-nd-rf-ingames). Les fichiers d'origine sont gardés dans `data/mods-originals/` : supprimer le dossier du
+lancement par `mods.py`, ou un zip posé dedans tel quel : par exemple `mods/mx5/mx5.zip`, le zip de la page
+MX-5 (MazdaMx5-nd-rf-ingames), sans le décompresser. Les fichiers d'origine sont gardés dans `data/mods-originals/` : supprimer le dossier du
 mod rend le jeu de base au lancement suivant. Le `GLOBALMEMORYFILE.BIN` d'un mod reçoit les icônes du style choisi
 (et, avec la VF, les textes anglais y sont masqués comme le fait french-dub).
 
