@@ -14,7 +14,10 @@ with the three pictures (FRONTB's WS_MWSPLASHBACK and DEMO_SPLASH, GLOBALB's WS_
 (<file>.patch, applied by mods.py over whatever file the icons and the other mods left there) and as whole files
 made from the player's own FRONTB.LZC and GLOBALB.LZC (used when the game reads them from its archives).
 
-    python3 black_edition_title.py --frontb FRONTB.LZC --globalb GLOBALB.LZC --zip black-edition.zip
+    python3 black_edition_title.py --frontb FRONTB.LZC --globalb GLOBALB.LZC [--globala GLOBALA.BUN] --zip be.zip
+
+With --globala (GLOBAL/GLOBALA.BUN, cut from NFS/ZZDATA0.BIN), "Black Edition" goes under the game's own logo
+(MW_LOGO), shown on the title screen and in the menus, and the title picture goes without its own tag.
 """
 import argparse
 import io
@@ -93,13 +96,51 @@ def tag(width=500):
     return layer.resize((width, int(layer.height * width / layer.width)), Image.LANCZOS)
 
 
-def title(frontb):
+def title(frontb, with_tag=True):
+    """The picture; without the tag when the game's logo carries it (logo())."""
     fe = jdlz.decompress(frontb)
     src = gm.picture(fe, pb.find_textures(fe), 'WS_MWSPLASHBACK').convert('RGB').resize((W, H), Image.LANCZOS)
     img = blue_car_and_police(black_and_white(src)).convert('RGBA')
-    t = tag(440)  # under the game's own logo, which it draws over the top right of this picture
-    img.alpha_composite(t, (W - t.width - 60, 200))
+    if with_tag:
+        t = tag(440)  # under the game's own logo, which it draws over the top right of this picture
+        img.alpha_composite(t, (W - t.width - 60, 200))
     return img.convert('RGB')
+
+
+def bun_size(bun):
+    """A .BUN without what follows its last chunk (a copy cut from ZZDATA0.BIN with dd ends on a whole sector)."""
+    o = end = 0
+    while o + 8 <= len(bun):
+        cid, size = struct.unpack_from('<II', bun, o)
+        o += 8 + size
+        if cid or size:
+            end = o
+    return bun[:end]
+
+
+def logo(globala):
+    """GLOBAL/GLOBALA.BUN with "Black Edition" sprayed under the game's logo (MW_LOGO, 512x128 ARGB, 4 mips): the
+    logo at 86 % on the left, the tag at the bottom right. The game draws it over the title screen and the menus."""
+    bun = bytearray(bun_size(globala))
+    t = pb.find_textures(bun)['MW_LOGO']
+    px = bytes(bun[t['start']:t['start'] + t['size']])
+    w, h = t['w'], t['h']
+    old = pb.argb_preview(px, w, h).convert('RGBA')
+    new = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    new.alpha_composite(old.resize((int(w * 0.86), int(h * 0.86)), Image.LANCZOS), (int(w * 0.07), 0))
+    big = tag(900)
+    big = big.crop(big.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox())
+    tw = int(w * 0.39)
+    small = big.resize((tw, int(big.height * tw / big.width)), Image.LANCZOS)
+    new.alpha_composite(small, (w - small.width - 4, h - small.height - 2))
+    out, off, lw, lh = bytearray(px), 0, w, h
+    while min(lw, lh) >= 32:  # the levels below 32 texels are packed in the tail, kept as they are
+        lv = pb.argb32_level(new, lw, lh)
+        out[off:off + len(lv)] = lv
+        off += len(lv)
+        lw, lh = lw // 2, lh // 2
+    bun[t['start']:t['start'] + t['size']] = out
+    return bytes(bun), new
 
 
 def dxt_linear(img, fmt):
@@ -153,9 +194,9 @@ def patch(data, pictures):
     return out
 
 
-def textures(frontb, globalb, log=print):
+def textures(frontb, globalb, log=print, with_tag=True):
     """{file: (its JDLZ blob, its decompressed data, [(offset, new texture bytes)])} of the three pictures."""
-    be = title(frontb)
+    be = title(frontb, with_tag)
     out = {}
     fe = jdlz.decompress(frontb)
     f = pb.find_textures(fe)
@@ -175,15 +216,19 @@ LISEZMOI = """Ecran titre Black Edition pour NFS Most Wanted (Batocera)
 
 Ce zip tel quel (sans le decompresser) dans NFS Most Wanted.sh/mods/black-edition/
 Applique seulement avec l'option BLACK EDITION, par-dessus les icones et les autres mods (MX-5...).
+Le logo du jeu (GLOBAL/GLOBALA.BUN) porte la mention Black Edition, sur l'ecran titre et dans les menus.
 Le premier lancement avec une nouvelle combinaison (icones, mods) prend quelques secondes de plus.
 Fait a partir de VOTRE copie du jeu : ne le partagez pas.
 """
 
 
-def mod_zip(frontb, globalb, log=print):
+def mod_zip(frontb, globalb, globala=None, log=print):
+    """The mod; with GLOBALA.BUN, the logo carries the tag (and the title picture goes without it)."""
     b = io.BytesIO()
     with zipfile.ZipFile(b, 'w', zipfile.ZIP_DEFLATED) as z:
-        for name, (blob, data, pics) in textures(frontb, globalb, log).items():
+        if globala:
+            z.writestr('GLOBAL/GLOBALA.BUN', logo(globala)[0])  # read loose by the game; no other mod changes it
+        for name, (blob, data, pics) in textures(frontb, globalb, log, not globala).items():
             new = bytearray(data)
             for off, t in pics:
                 new[off:off + len(t)] = t
@@ -201,12 +246,14 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--frontb', required=True)
     ap.add_argument('--globalb', help='GLOBAL/GLOBALB.LZC, for --zip')
+    ap.add_argument('--globala', help='GLOBAL/GLOBALA.BUN (the logo), for --zip')
     ap.add_argument('--zip', help='the mods/black-edition/ zip to write')
     ap.add_argument('--out', help='1280x720 view')
     ap.add_argument('--texture', help='512x512 picture for WS_MWSPLASHBACK')
     a = ap.parse_args()
     if a.zip:
-        open(a.zip, 'wb').write(mod_zip(open(a.frontb, 'rb').read(), open(a.globalb, 'rb').read()))
+        open(a.zip, 'wb').write(mod_zip(open(a.frontb, 'rb').read(), open(a.globalb, 'rb').read(),
+                                        open(a.globala, 'rb').read() if a.globala else None))
         print(a.zip)
     if not a.out:
         return
