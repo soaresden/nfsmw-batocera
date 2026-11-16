@@ -14,7 +14,7 @@ const post = (m, transfer) => self.postMessage(m, transfer || []);
 
 async function loadPython(pyodideURL) {
   if (py) return;
-  post({ type: 'progress', fraction: 0, text: 'VF : chargement de Python…' });
+  post({ type: 'progress', fraction: 0, text: self.vf_lang === 'en' ? 'French dub: loading Python…' : 'VF : chargement de Python…' });
   const { loadPyodide } = await import(pyodideURL + 'pyodide.mjs');
   py = await loadPyodide({ indexURL: pyodideURL, stdout: (text) => post({ type: 'log', text }), stderr: (text) => post({ type: 'log', text }) });
   await py.loadPackage(['numpy'], { messageCallback: () => {} });
@@ -30,7 +30,7 @@ async function loadPython(pyodideURL) {
 
 async function loadTools(ffmpegURL) {
   if (!core) {
-    post({ type: 'progress', fraction: 0, text: 'VF : chargement de ffmpeg…' });
+    post({ type: 'progress', fraction: 0, text: self.vf_lang === 'en' ? 'French dub: loading ffmpeg…' : 'VF : chargement de ffmpeg…' });
     const { default: createFFmpegCore } = await import(ffmpegURL + 'ffmpeg-core.js');
     const hash = btoa(JSON.stringify({ wasmURL: ffmpegURL + 'ffmpeg-core.wasm' }));
     core = await createFFmpegCore({ mainScriptUrlOrBlob: `${ffmpegURL}ffmpeg-core.js#${hash}` });
@@ -138,6 +138,7 @@ self.vf_progress = (fraction, text) => post({ type: 'progress', fraction, text }
 
 self.onmessage = async ({ data: m }) => {
   try {
+    self.vf_lang = m.lang || 'fr';
     await loadPython(m.pyodide);
     mountDiscs(m.x360, m.xbox);
     const vf = py.pyimport('vf_page');

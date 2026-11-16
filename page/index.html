@@ -42,13 +42,16 @@ h1 .most { display: block; background: linear-gradient(90deg, var(--accent), var
   -webkit-background-clip: text; background-clip: text; color: transparent; }
 h1 small { display: block; font-size: .42em; color: var(--muted); letter-spacing: .08em; margin-top: 8px; }
 .lead { color: #c9c6be; max-width: 640px; margin: 14px 0 0; font-size: 1.06rem; }
+.lang { position: absolute; top: 18px; right: 0; display: flex; gap: 2px; }
+.lang a { font: 600 .8rem/1 Barlow, sans-serif; letter-spacing: .12em; padding: 7px 10px; color: var(--muted); text-decoration: none; background: var(--chip); }
+.lang a.on { color: var(--accent-ink); background: var(--accent); }
 .siren { position: absolute; top: 0; left: 0; right: 0; height: 3px; opacity: .9;
   background: linear-gradient(90deg, var(--police-red) 0 50%, var(--police-blue) 50% 100%);
   animation: siren 1.2s steps(1) infinite; }
 @keyframes siren { 50% { background: linear-gradient(90deg, var(--police-blue) 0 50%, var(--police-red) 50% 100%); } }
 @media (prefers-reduced-motion: reduce) { .siren { animation: none; } }
 
-.gets { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 26px 0 8px; }
+.gets { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 26px 0 8px; }
 .get { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 12px 14px; }
 .get b { display: block; font: 600 1.45rem/1 Teko, sans-serif; letter-spacing: .02em; text-transform: uppercase; }
 .get span { color: var(--muted); font-size: .9rem; }
@@ -131,47 +134,48 @@ footer a { color: inherit; }
 <div class="siren" aria-hidden="true"></div>
 <main>
   <header class="hero">
-    <span class="tag">Port natif · Batocera ARM64 · Retroid Pocket 5</span>
-    <h1><span class="most">NFS Most Wanted</span><small>Xbox 360 recompilé, pour Batocera</small></h1>
-    <p class="lead">Glissez votre ISO Xbox 360 : la page reconnaît l'édition et prépare tout le dossier du jeu, prêt à
+    <nav class="lang" aria-label="Langue / Language"><a href="?lang=fr" data-lang="fr">FR</a><a href="?lang=en" data-lang="en">EN</a></nav>
+    <span class="tag" data-i18n="tag">Port natif · Batocera ARM64 · Retroid Pocket 5</span>
+    <h1><span class="most">NFS Most Wanted</span><small data-i18n="sub">Xbox 360 recompilé, pour Batocera</small></h1>
+    <p class="lead" data-i18n="lead">Glissez votre ISO Xbox 360 : la page reconnaît l'édition et prépare tout le dossier du jeu, prêt à
       copier sur la console. Tout se passe dans votre navigateur, aucun fichier du jeu n'est envoyé.</p>
     <div class="gets">
-      <div class="get"><b>60 FPS</b><span>en course, 1280x720 sur Retroid Pocket 5</span></div>
-      <div class="get"><b>VF complète</b><span>textes, vidéos et voix, avec l'ISO Xbox française</span></div>
-      <div class="get"><b>Vos boutons</b><span>icônes PlayStation, GameCube ou Xbox 360</span></div>
-      <div class="get"><b>Prêt à jouer</b><span>options dans EmulationStation, sauvegardes, vibration</span></div>
-      <div class="get"><b>Black Edition</b><span>M3 GTR de route, Camaro SS, 8 voitures tunées, 4 épreuves en plus</span></div>
+      <div class="get" data-i18n="get0"><b>60 FPS</b><span>en course, 1280x720 sur Retroid Pocket 5</span></div>
+      <div class="get" data-i18n="get1"><b>VF complète</b><span>textes, vidéos et voix, avec l'ISO Xbox française</span></div>
+      <div class="get" data-i18n="get2"><b>Vos boutons</b><span>icônes PlayStation, GameCube ou Xbox 360</span></div>
+      <div class="get" data-i18n="get3"><b>Prêt à jouer</b><span>options dans EmulationStation, sauvegardes, vibration</span></div>
+      <div class="get" data-i18n="get4"><b>Black Edition</b><span>M3 GTR de route, Camaro SS, 8 voitures tunées, 4 épreuves en plus</span></div>
     </div>
-    <p class="callout"><b>Vous voulez le jeu en français ?</b> La version française Xbox 360 est rare et chère, mais
+    <p class="callout" data-i18n="callout"><b>Vous voulez le jeu en français ?</b> La version française Xbox 360 est rare et chère, mais
       pas besoin : <b>votre ISO 360 anglaise + l'ISO de la première Xbox en français</b> donnent la VF complète
       (textes, 32 des 36 vidéos et toutes les voix de la police). La page fait la conversion elle-même, c'est
       juste plus long (1 à 3 heures).</p>
   </header>
 
   <section id="s-browser" class="panel" hidden>
-    <h2>Navigateur</h2>
-    <p>Pour écrire directement sur la carte SD ou le partage réseau, et pour la VF, ouvrez cette page avec
+    <h2 data-i18n="browser-h">Navigateur</h2>
+    <p data-i18n="browser-p">Pour écrire directement sur la carte SD ou le partage réseau, et pour la VF, ouvrez cette page avec
       <strong>Chrome</strong> ou <strong>Edge</strong> sur un ordinateur. Ici, la page fabrique un zip et vous copiez
       les fichiers du jeu à la main (il faut alors le dossier extrait de l'ISO).</p>
   </section>
 
   <section id="s-game" class="panel">
-    <h2><span class="n">1</span> Votre jeu</h2>
+    <h2><span class="n">1</span> <span data-i18n="h1x">Votre jeu</span></h2>
     <div id="drop">
-      <div class="big">Déposez ici vos ISO</div>
-      <p class="muted">L'ISO Xbox 360, et si vous voulez la VF, l'ISO de la Xbox d'origine en français. Les deux d'un
+      <div class="big" data-i18n="drop-big">Déposez ici vos ISO</div>
+      <p class="muted" data-i18n="drop-p">L'ISO Xbox 360, et si vous voulez la VF, l'ISO de la Xbox d'origine en français. Les deux d'un
         coup, c'est possible : la page reconnaît laquelle est laquelle. Un dossier déjà extrait marche aussi.</p>
       <div class="row">
-        <button id="pick-iso">Choisir l'ISO 360</button>
-        <button id="pick-xbox" class="second">ISO Xbox française (VF)</button>
-        <button id="pick-game" class="second">Dossier extrait</button>
+        <button id="pick-iso" data-i18n="b-iso">Choisir l'ISO 360</button>
+        <button id="pick-xbox" class="second" data-i18n="b-xbox">ISO Xbox française (VF)</button>
+        <button id="pick-game" class="second" data-i18n="b-dir">Dossier extrait</button>
       </div>
       <input id="pick-iso-input" type="file" accept=".iso,.xiso" hidden>
       <input id="pick-xbox-input" type="file" accept=".iso,.xiso" hidden>
       <input id="pick-game-input" type="file" webkitdirectory hidden>
       <div class="slots">
-        <div class="slot" id="slot-360"><div class="k">Xbox 360</div><div class="v muted">aucune</div></div>
-        <div class="slot" id="slot-xbox"><div class="k">Xbox d'origine, française (facultatif)</div><div class="v muted">aucune</div></div>
+        <div class="slot" id="slot-360"><div class="k">Xbox 360</div><div class="v muted" data-i18n="none">aucune</div></div>
+        <div class="slot" id="slot-xbox"><div class="k" data-i18n="k-xbox">Xbox d'origine, française (facultatif)</div><div class="v muted" data-i18n="none">aucune</div></div>
       </div>
     </div>
     <ul class="facts" id="game-facts"></ul>
@@ -180,9 +184,9 @@ footer a { color: inherit; }
     </div>
     <div id="output" hidden></div>
     <details id="editions" open>
-      <summary>Éditions reconnues</summary>
+      <summary data-i18n="ed-sum">Éditions reconnues</summary>
       <div class="grid" id="editions-grid"></div>
-      <p class="muted small">« Bientôt » : le port d'une édition se compile une fois à partir de son
+      <p class="muted small" data-i18n="ed-note">« Bientôt » : le port d'une édition se compile une fois à partir de son
         <code>default.xex</code>. Si vous avez une de ces éditions, ouvrez un ticket sur
         <a href="https://github.com/soaresden/nfsmw-batocera/issues">la page du projet</a> (sans joindre le
         fichier : c'est le jeu).</p>
@@ -190,24 +194,24 @@ footer a { color: inherit; }
   </section>
 
   <section id="s-dest" class="panel off">
-    <h2><span class="n">2</span> Où l'installer</h2>
-    <p>Le dossier <code>roms/ports</code> de Batocera : sur la carte SD branchée au PC, ou le partage réseau
+    <h2><span class="n">2</span> <span data-i18n="h2x">Où l'installer</span></h2>
+    <p data-i18n="dest-p">Le dossier <code>roms/ports</code> de Batocera : sur la carte SD branchée au PC, ou le partage réseau
       <code>\\BATOCERA\share\roms\ports</code> (connecté comme lecteur réseau).</p>
     <div class="row">
-      <button id="pick-dest" disabled>Choisir le dossier ports</button>
+      <button id="pick-dest" disabled data-i18n="b-dest">Choisir le dossier ports</button>
     </div>
-    <label><input type="checkbox" id="copy-game" checked> <span>Copier aussi le jeu (extrait de l'ISO) dans
+    <label><input type="checkbox" id="copy-game" checked> <span data-i18n="copy">Copier aussi le jeu (extrait de l'ISO) dans
       <code>game_root/</code>, environ 7 Go ; les fichiers déjà présents et identiques sont sautés.</span></label>
     <ul class="facts" id="dest-facts"></ul>
   </section>
 
   <section id="s-run" class="panel off">
-    <h2><span class="n">3</span> Préparer</h2>
-    <p>La page déchiffre le port avec votre <code>default.xex</code>, fabrique les shaders, les trois styles
+    <h2><span class="n">3</span> <span data-i18n="h3x">Préparer</span></h2>
+    <p data-i18n="run-p">La page déchiffre le port avec votre <code>default.xex</code>, fabrique les shaders, les trois styles
       d'icônes et les images de la fiche EmulationStation, écrit le dossier <code>NFS Most Wanted.sh</code>, copie
       le jeu, puis fait la VF si vous l'avez demandée.</p>
     <div class="row">
-      <button id="run" disabled>Tout préparer</button>
+      <button id="run" disabled data-i18n="b-run">Tout préparer</button>
     </div>
     <div class="row" id="progress-row" hidden><progress id="progress" max="1" value="0"></progress></div>
     <p id="status" class="muted"></p>
@@ -215,14 +219,14 @@ footer a { color: inherit; }
   </section>
 
   <section id="s-done" class="panel" hidden>
-    <h2>Terminé</h2>
-    <p>Sur la console : redémarrez EmulationStation (ou la console), puis lancez <strong>NFS Most Wanted</strong>
+    <h2 data-i18n="done-h">Terminé</h2>
+    <p data-i18n="done-p">Sur la console : redémarrez EmulationStation (ou la console), puis lancez <strong>NFS Most Wanted</strong>
       dans <strong>Ports</strong>. Les options sont dans <strong>Options avancées du jeu → NFS MOST WANTED</strong>.
       <strong>Hotkey + Start</strong> quitte le jeu, <strong>Hotkey + L1</strong> fait une capture.</p>
-    <p>Pour un retour : envoyez <code>nfsmw-stdout.log</code> et <code>data/logs/</code> du dossier du jeu.</p>
+    <p data-i18n="done-p2">Pour un retour : envoyez <code>nfsmw-stdout.log</code> et <code>data/logs/</code> du dossier du jeu.</p>
   </section>
 
-  <footer>
+  <footer data-i18n="footer">
     Code source et explications : <a href="https://github.com/soaresden/nfsmw-batocera">nfsmw-batocera</a> (GPL-3.0),
     à partir de nfsmw-nx et NFSMW Android Evolved. Black Edition : patch de tuhana (xenia-canary/game-patches),
     repris par Epix Digital Studio. VF : outil french-dub de nfsmw-nx. Le port est chiffré : seul le <code>default.xex</code> de

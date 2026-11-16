@@ -8,8 +8,11 @@
 //  4. everything is written into the chosen ports/ folder (or a zip without the game files).
 import { writeZip } from './zip.js';
 import { readXiso } from './iso.js';
+// Page language: ?lang=, else the last choice, else the browser's; the switch reloads the page (i18n.js).
+import { LANG, L } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
+
 const PORT = 'NFS Most Wanted.sh';
 const params = new URLSearchParams(location.search);
 const PYODIDE = new URL(params.get('pyodide') || 'https://cdn.jsdelivr.net/pyodide/v0.27.7/full/', location.href).href;
@@ -23,18 +26,23 @@ const LIBRARIES = {
 // Every known default.xex (tools/editions/regional/ediciones.json). plan: the port for that executable is
 // 'prevu' (planned: it needs that default.xex once to be compiled) or 'non'; vf: what the French dub option does.
 const EDITIONS = {
-  aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c: { nom: 'USA (NTSC)', pays: 'us', plan: 'prevu', vf: 'a verifier', langue: 'anglais' },
-  e2ea2ff11bf84cb30430d824d7bfe699a3acf3e7400d21b9a7c938e3d7a10474: { nom: 'PAL anglaise (UK)', pays: 'gb', plan: 'prevu', vf: 'oui', langue: 'anglais' },
-  '229c5ed5dcc67871982000fb923acfd59494f21f30996b25f36b30a8d85c9b7b': { nom: 'PAL France', pays: 'fr', plan: 'prevu', vf: 'deja', langue: 'français' },
-  aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694: { nom: 'PAL Espagne', pays: 'es', plan: 'prevu', vf: 'non', langue: 'espagnol' },
-  '23ece29d18724ea28971d52f936964d127148bd2359ff24795da7442b9069bf4': { nom: 'PAL Allemagne', pays: 'de', plan: 'prevu', vf: 'non', langue: 'allemand' },
-  acb09332bcafc15e8e21dc15062f1963804a3176fa4db48fea7f6c8afbdff066: { nom: 'PAL Italie', pays: 'it', plan: 'prevu', vf: 'non', langue: 'italien' },
-  '23af89d49a713ff948af7b9bc06557b06e94e8629adc40a29513ab6f5cafb33d': { nom: 'Japon', pays: 'jp', plan: 'non', vf: 'non', langue: 'japonais' },
-  '47683b515e5461a2e356c45a4417f30fe69c3f6c6ea0d3352829f35f1fb33abe': { nom: 'Corée', pays: 'kr', plan: 'non', vf: 'non', langue: 'coréen' },
-  '0cd7b9fa3957de085e298c91faa726116ad0079abaefead82c2f3337ee432e64': { nom: 'Asie (chinois trad.)', pays: 'tw', plan: 'non', vf: 'non', langue: 'chinois' },
-  a2dd0156c26603cf32e33b52fa906422bde74e5065da87115d5b747aa5d90ff8: { nom: 'Pologne (fans)', pays: 'pl', plan: 'non', vf: 'non', langue: 'polonais' },
+  aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c: { nom: 'USA (NTSC)', en: 'USA (NTSC)', pays: 'us', plan: 'prevu', vf: 'a verifier', langue: 'anglais' },
+  e2ea2ff11bf84cb30430d824d7bfe699a3acf3e7400d21b9a7c938e3d7a10474: { nom: 'PAL anglaise (UK)', en: 'PAL English (UK)', pays: 'gb', plan: 'prevu', vf: 'oui', langue: 'anglais' },
+  '229c5ed5dcc67871982000fb923acfd59494f21f30996b25f36b30a8d85c9b7b': { nom: 'PAL France', en: 'PAL France', pays: 'fr', plan: 'prevu', vf: 'deja', langue: 'français' },
+  aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694: { nom: 'PAL Espagne', en: 'PAL Spain', pays: 'es', plan: 'prevu', vf: 'non', langue: 'espagnol' },
+  '23ece29d18724ea28971d52f936964d127148bd2359ff24795da7442b9069bf4': { nom: 'PAL Allemagne', en: 'PAL Germany', pays: 'de', plan: 'prevu', vf: 'non', langue: 'allemand' },
+  acb09332bcafc15e8e21dc15062f1963804a3176fa4db48fea7f6c8afbdff066: { nom: 'PAL Italie', en: 'PAL Italy', pays: 'it', plan: 'prevu', vf: 'non', langue: 'italien' },
+  '23af89d49a713ff948af7b9bc06557b06e94e8629adc40a29513ab6f5cafb33d': { nom: 'Japon', en: 'Japan', pays: 'jp', plan: 'non', vf: 'non', langue: 'japonais' },
+  '47683b515e5461a2e356c45a4417f30fe69c3f6c6ea0d3352829f35f1fb33abe': { nom: 'Corée', en: 'Korea', pays: 'kr', plan: 'non', vf: 'non', langue: 'coréen' },
+  '0cd7b9fa3957de085e298c91faa726116ad0079abaefead82c2f3337ee432e64': { nom: 'Asie (chinois trad.)', en: 'Asia (trad. Chinese)', pays: 'tw', plan: 'non', vf: 'non', langue: 'chinois' },
+  a2dd0156c26603cf32e33b52fa906422bde74e5065da87115d5b747aa5d90ff8: { nom: 'Pologne (fans)', en: 'Poland (fans)', pays: 'pl', plan: 'non', vf: 'non', langue: 'polonais' },
 };
-const VF_CHIP = { oui: 'VF avec Xbox FR', 'a verifier': 'VF à vérifier', deja: 'déjà en VF', non: '' };
+const VF_CHIP = { oui: L('VF avec Xbox FR', 'French with Xbox FR'), 'a verifier': L('VF à vérifier', 'French: to check'),
+  deja: L('déjà en VF', 'already French'), non: '' };
+const LANGUE_EN = { anglais: 'English', 'français': 'French', espagnol: 'Spanish', allemand: 'German', italien: 'Italian',
+  japonais: 'Japanese', 'coréen': 'Korean', chinois: 'Chinese', polonais: 'Polish' };
+const edName = (e) => (LANG === 'en' ? e.en : e.nom);
+const langName = (l) => (LANG === 'en' ? LANGUE_EN[l] || l : l);
 
 // Small flags, drawn here (emoji flags do not show on Windows). viewBox 30x20.
 function flag(code) {
@@ -59,6 +67,21 @@ const PY_FILES = ['jdlz.py', 'tpk.py', 'huff.py', 'xenos.py', 'dxt.py', 'ps_butt
 
 const state = { game: null, dest: null, xex: null, xexSha: null, paquet: null };
 let INDEX = { paquets: [] };
+// Size of NFS/ZZDATA0.BIN by disc (the nfsmw-nx installer manifest): tells where the data comes from when the
+// default.xex was swapped (a PAL English disc with the Spanish executable, as the Android port wanted).
+const DISC_DATA = {
+  381569024: L('anglais (PAL UK ou USA)', 'English (PAL UK or USA)'), 387301706: L('traduction russe (fans, base PAL anglaise)', 'Russian fan translation (PAL English based)'),
+  369948672: L('PAL Espagne, France ou Italie', 'PAL Spain, France or Italy'), 363659264: L('PAL Espagne', 'PAL Spain'),
+  375844864: L('PAL Allemagne', 'PAL Germany'), 355878912: L('Japon', 'Japan'),
+};
+const XEX_DATA = {  // the data sizes that go with each default.xex
+  aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694: [369948672, 363659264],
+  aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c: [381569024],
+  e2ea2ff11bf84cb30430d824d7bfe699a3acf3e7400d21b9a7c938e3d7a10474: [381569024],
+  '229c5ed5dcc67871982000fb923acfd59494f21f30996b25f36b30a8d85c9b7b': [369948672],
+  acb09332bcafc15e8e21dc15062f1963804a3176fa4db48fea7f6c8afbdff066: [369948672],
+  '23ece29d18724ea28971d52f936964d127148bd2359ff24795da7442b9069bf4': [375844864],
+};
 
 const ready = (sha) => INDEX.paquets.some((p) => p.xex_sha256 === sha);
 
@@ -68,10 +91,10 @@ async function editionsTable(highlight) {
   for (const [sha, e] of Object.entries(EDITIONS)) {
     const card = document.createElement('div');
     card.className = `ed${sha === highlight ? ' mine' : ''}`;
-    const port = ready(sha) ? '<span class="chip ready">Prêt</span>'
-      : e.plan === 'prevu' ? '<span class="chip soon">Bientôt</span>' : '<span class="chip">Pas prévu</span>';
+    const port = ready(sha) ? `<span class="chip ready">${L('Prêt', 'Ready')}</span>`
+      : e.plan === 'prevu' ? `<span class="chip soon">${L('Bientôt', 'Soon')}</span>` : `<span class="chip">${L('Pas prévu', 'Not planned')}</span>`;
     const vf = VF_CHIP[e.vf] ? `<span class="chip vf">${VF_CHIP[e.vf]}</span>` : '';
-    card.innerHTML = `${flag(e.pays)}<div class="name">${e.nom}${sha === highlight ? ' · <span class="ok">votre ISO</span>' : ''}</div><div class="chips">${port}${vf}</div>`;
+    card.innerHTML = `${flag(e.pays)}<div class="name">${edName(e)}${sha === highlight ? ` · <span class="ok">${L('votre ISO', 'your ISO')}</span>` : ''}</div><div class="chips">${port}${vf}</div>`;
     grid.append(card);
   }
 }
@@ -83,7 +106,7 @@ const canWrite = typeof window.showDirectoryPicker === 'function';
 
 const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
 const sha256 = async (bytes) => hex(await crypto.subtle.digest('SHA-256', bytes));
-const size = (n) => n >= 1e9 ? `${(n / 1e9).toFixed(2)} Go` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} Mo` : `${Math.round(n / 1e3)} ko`;
+const size = (n) => n >= 1e9 ? `${(n / 1e9).toFixed(2)} ${L('Go', 'GB')}` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} ${L('Mo', 'MB')}` : `${Math.round(n / 1e3)} ${L('ko', 'kB')}`;
 
 function slot(id, html, filled) {
   const el = $(id);
@@ -97,20 +120,22 @@ function announce() {
   const out = $('output');
   const e = EDITIONS[state.xexSha];
   if (!state.paquet || !e) { out.hidden = true; return; }
-  const items = [`${flag(e.pays)} NFS Most Wanted ${e.nom}, port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5`];
-  if (state.vfXbox) items.push('<b>VF complète</b> : textes, 32 des 36 vidéos et toutes les voix en jeu, en français');
-  else if (state.dubbed) items.push('<b>VF</b> : le doublage français déjà présent dans votre dossier est gardé');
-  else if (e.vf === 'deja') items.push('Jeu en français (votre disque)');
+  const items = [`${flag(e.pays)} NFS Most Wanted ${edName(e)}, ${L('port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5', 'native Batocera port: 60 FPS in races at 1280x720 on the Retroid Pocket 5')}`];
+  if (state.vfXbox) items.push(L('<b>VF complète</b> : textes, 32 des 36 vidéos et toutes les voix en jeu, en français', '<b>Full French dub</b>: text, 32 of the 36 movies and all in-game voices in French'));
+  else if (state.dubbed) items.push(L('<b>VF</b> : le doublage français déjà présent dans votre dossier est gardé', '<b>French dub</b>: the one already in your folder is kept'));
+  else if (e.vf === 'deja') items.push(L('Jeu en français (votre disque)', 'Game in French (your disc)'));
   else {
-    items.push(`Textes et voix : ${e.langue}, ou la langue de Batocera si le disque l'a`);
-    if (e.vf === 'oui') items.push('<span class="muted">Ajoutez l\'ISO Xbox française pour la VF complète</span>');
+    const lg = langName(state.englishData ? 'anglais' : e.langue);
+    items.push(L(`Textes et voix : ${lg}, ou la langue de Batocera si le disque l'a`, `Text and voices: ${lg}, or Batocera's language if the disc has it`));
+    if (e.vf === 'oui' || state.englishData) items.push(`<span class="muted">${L('Ajoutez l\'ISO Xbox française pour la VF complète', 'Add the French original Xbox ISO for the full French dub')}</span>`);
   }
-  items.push('Icônes PlayStation (par défaut), GameCube ou Xbox 360, au choix dans EmulationStation');
-  items.push('Shaders fabriqués à partir de votre disque, images de l\'écran titre pour la fiche du jeu');
-  items.push('<b>Black Edition</b> à activer dans les options : BMW M3 GTR de route, Camaro SS, 8 voitures tunées, l\'épreuve 70 du Challenge Series et 3 courses en plus');
-  items.push('Options dans EmulationStation, sauvegardes, vibration, Hotkey + Start pour quitter');
-  const time = state.vfXbox ? 'quelques minutes, plus la copie du jeu, plus 1 à 3 heures de VF' : 'quelques minutes, plus la copie du jeu (7 Go)';
-  out.innerHTML = `<h3>Ce que vous obtenez</h3><ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul><p class="muted small">Durée : ${time}.</p>`;
+  items.push(L('Icônes PlayStation (par défaut), GameCube ou Xbox 360, au choix dans EmulationStation', 'PlayStation (default), GameCube or Xbox 360 button icons, chosen in EmulationStation'));
+  items.push(L('Shaders fabriqués à partir de votre disque, images de l\'écran titre pour la fiche du jeu', 'Shaders built from your disc, title screen pictures for the game\'s entry'));
+  items.push(L('<b>Black Edition</b> à activer dans les options : BMW M3 GTR de route, Camaro SS, 8 voitures tunées, l\'épreuve 70 du Challenge Series et 3 courses en plus', '<b>Black Edition</b> in the options: road BMW M3 GTR, Camaro SS, 8 tuned cars, Challenge Series event 70 and 3 more races'));
+  items.push(L('Options dans EmulationStation, sauvegardes, vibration, Hotkey + Start pour quitter', 'Options in EmulationStation, saves, rumble, Hotkey + Start to quit'));
+  const time = state.vfXbox ? L('quelques minutes, plus la copie du jeu, plus 1 à 3 heures de VF', 'a few minutes, plus the game copy, plus 1 to 3 hours for the French dub')
+    : L('quelques minutes, plus la copie du jeu (7 Go)', 'a few minutes, plus the game copy (7 GB)');
+  out.innerHTML = `<h3>${L('Ce que vous obtenez', 'What you get')}</h3><ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul><p class="muted small">${L('Durée', 'Time')} : ${time}.</p>`;
   out.hidden = false;
 }
 
@@ -187,23 +212,23 @@ async function fromArchives(game, path) {
     if (zdir.getUint32(o, true) !== want) continue;
     const archive = zdir.getUint32(o + 4, true), sector = zdir.getUint32(o + 8, true), n = zdir.getUint32(o + 16, true);
     const zz = game.byName.get(`nfs/zzdata${archive}.bin`);
-    if (!zz) throw new Error(`NFS/ZZDATA${archive}.BIN manque`);
+    if (!zz) throw new Error(L(`NFS/ZZDATA${archive}.BIN manque`, `NFS/ZZDATA${archive}.BIN is missing`));
     const file = await zz.get();
     return new Uint8Array(await file.slice(sector * 2048, sector * 2048 + n).arrayBuffer());
   }
   if (loose) return new Uint8Array(await (await loose.get()).arrayBuffer());
-  throw new Error(`${path} introuvable dans NFS/ZDIR.BIN`);
+  throw new Error(L(`${path} introuvable dans NFS/ZDIR.BIN`, `${path} not found in NFS/ZDIR.BIN`));
 }
 
 async function chooseGame(all) {
   const game = gameFrom(all);
   if (!game) {
-    fact('game-facts', 'Pas de <code>default.xex</code> dans ce dossier.', 'bad');
+    fact('game-facts', L('Pas de <code>default.xex</code> dans ce dossier.', 'No <code>default.xex</code> in this folder.'), 'bad');
     return;
   }
   for (const need of ['nfs/zdir.bin', 'nfs/zzdata0.bin']) {
     if (!game.byName.has(need)) {
-      fact('game-facts', `Il manque <code>${need.toUpperCase()}</code> : est-ce bien le jeu extrait ?`, 'bad');
+      fact('game-facts', L(`Il manque <code>${need.toUpperCase()}</code> : est-ce bien le jeu extrait ?`, `<code>${need.toUpperCase()}</code> is missing: is this the extracted game?`), 'bad');
       return;
     }
   }
@@ -212,36 +237,43 @@ async function chooseGame(all) {
   const paquet = INDEX.paquets.find((p) => p.xex_sha256 === xexSha);
   editionsTable(xexSha);
   const total = (await Promise.all(game.files.map(async (f) => (await f.get()).size))).reduce((a, b) => a + b, 0);
-  fact('game-facts', `${game.files.length} fichiers, ${size(total)}${game.root ? ` (dans <code>${game.root}</code>)` : ''}`);
+  fact('game-facts', `${game.files.length} ${L('fichiers', 'files')}, ${size(total)}${game.root ? ` (${L('dans', 'in')} <code>${game.root}</code>)` : ''}`);
   const edition = EDITIONS[xexSha];
-  fact('game-facts', `Édition : ${edition ? `${flag(edition.pays)} <strong>${edition.nom}</strong>` : '<strong>inconnue</strong>'}`, paquet ? 'ok' : 'bad');
-  slot('slot-360', `${edition ? flag(edition.pays) : ''}<strong>${edition ? edition.nom : 'édition inconnue'}</strong> <span class="muted">${state.iso ? state.iso.name : 'dossier'}</span>`, true);
+  fact('game-facts', `${L('Édition', 'Edition')} : ${edition ? `${flag(edition.pays)} <strong>${edName(edition)}</strong>` : `<strong>${L('inconnue', 'unknown')}</strong>`}`, paquet ? 'ok' : 'bad');
+  slot('slot-360', `${edition ? flag(edition.pays) : ''}<strong>${edition ? edName(edition) : L('édition inconnue', 'unknown edition')}</strong> <span class="muted">${state.iso ? state.iso.name : L('dossier', 'folder')}</span>`, true);
+  // A swapped default.xex: say where the data comes from (the port follows the executable, the language the data).
+  const zz0 = await (await game.byName.get('nfs/zzdata0.bin').get()).size;
+  state.englishData = zz0 === 381569024;
+  if (XEX_DATA[xexSha] && DISC_DATA[zz0] && !XEX_DATA[xexSha].includes(zz0)) {
+    fact('game-facts', L(`Copie modifiée : exécutable ${edName(edition)}, données du disque <strong>${DISC_DATA[zz0]}</strong>. Le port suit l'exécutable (${edName(edition)}) ; la langue et la VF suivent les données.`,
+      `Modified copy: ${edName(edition)} executable, disc data <strong>${DISC_DATA[zz0]}</strong>. The port follows the executable (${edName(edition)}); the language and the French dub follow the data.`));
+  }
   {  // default.xex alone, to identify a copy or to add an edition to the port
     const li = document.createElement('li');
     li.className = 'muted';
     const link = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(new Blob([xex])), download: 'default.xex', textContent: 'Enregistrer default.xex seul',
+      href: URL.createObjectURL(new Blob([xex])), download: 'default.xex', textContent: L('Enregistrer default.xex seul', 'Save default.xex alone'),
     });
     link.style.color = 'inherit';
-    li.append(link, ` (empreinte ${xexSha.slice(0, 8)}…, pour un rapport ou une nouvelle édition)`);
+    li.append(link, L(` (empreinte ${xexSha.slice(0, 8)}…, pour un rapport ou une nouvelle édition)`, ` (fingerprint ${xexSha.slice(0, 8)}…, for a report or a new edition)`));
     $('game-facts').append(li);
   }
   if (!paquet) {
     state.paquet = null;
     announce();
     fact('game-facts', !edition
-      ? '<code>default.xex</code> modifié ou édition inconnue : le port ne peut pas l\'utiliser.'
+      ? L('<code>default.xex</code> modifié ou édition inconnue : le port ne peut pas l\'utiliser.', 'Modified <code>default.xex</code> or unknown edition: the port cannot use it.')
       : edition.plan === 'prevu'
-        ? 'Port pas encore prêt pour cette édition : il faut compiler son <code>default.xex</code> une fois. Voir le tableau ci-dessous.'
-        : 'Cette édition n\'est pas prévue pour l\'instant.', 'bad');
+        ? L('Port pas encore prêt pour cette édition : il faut compiler son <code>default.xex</code> une fois. Voir le tableau ci-dessous.', 'No port for this edition yet: its <code>default.xex</code> has to be compiled once. See the table below.')
+        : L('Cette édition n\'est pas prévue pour l\'instant.', 'This edition is not planned for now.'), 'bad');
     return;
   }
   state.dubbed = game.byName.has('movies/movies_report.txt') || game.byName.has('movies/rapport_films.txt');
   if (state.dubbed) {
-    fact('game-facts', 'Doublage français de nfsmw-nx détecté : le jeu sera en VF.', 'ok');
+    fact('game-facts', L('Doublage français de nfsmw-nx détecté : le jeu sera en VF.', 'nfsmw-nx French dub found: the game will be in French.'), 'ok');
   }
   if (game.byName.has('global/globalmemoryfile.bin')) {
-    fact('game-facts', 'Mod détecté (<code>GLOBAL/GLOBALMEMORYFILE.BIN</code>) : il est gardé par les icônes.');
+    fact('game-facts', L('Mod détecté (<code>GLOBAL/GLOBALMEMORYFILE.BIN</code>) : il est gardé par les icônes.', 'Mod found (<code>GLOBAL/GLOBALMEMORYFILE.BIN</code>): the icon sets keep it.'));
   }
   Object.assign(state, { game, xex, xexSha, paquet, total });
   offerVf(edition);
@@ -253,7 +285,7 @@ async function chooseGame(all) {
     $('copy-game').disabled = true;
     $('s-run').classList.remove('off');
     $('run').disabled = false;
-    $('run').textContent = 'Fabriquer le zip';
+    $('run').textContent = L('Fabriquer le zip', 'Make the zip');
   }
 }
 
@@ -271,7 +303,7 @@ $('pick-game').onclick = async () => {
 };
 async function chooseIso(file) {
   $('game-facts').replaceChildren();
-  fact('game-facts', `Lecture de <code>${file.name}</code>…`, 'muted');
+  fact('game-facts', `${L('Lecture de', 'Reading')} <code>${file.name}</code>…`, 'muted');
   try {
     const all = await readXiso(file);
     state.iso = file;
@@ -296,11 +328,11 @@ $('pick-dest').onclick = async () => {
     const dir = await window.showDirectoryPicker({ id: 'nfsmw-ports', mode: 'readwrite' });
     $('dest-facts').replaceChildren();
     if (/\.sh$/i.test(dir.name)) {
-      fact('dest-facts', `Choisissez le dossier <code>ports</code> lui-même, pas <code>${dir.name}</code>.`, 'bad');
+      fact('dest-facts', L(`Choisissez le dossier <code>ports</code> lui-même, pas <code>${dir.name}</code>.`, `Choose the <code>ports</code> folder itself, not <code>${dir.name}</code>.`), 'bad');
       return;
     }
     if (dir.name.toLowerCase() !== 'ports') {
-      fact('dest-facts', `Le dossier s'appelle <code>${dir.name}</code> : Batocera cherche les ports dans <code>roms/ports</code>.`, 'bad');
+      fact('dest-facts', L(`Le dossier s'appelle <code>${dir.name}</code> : Batocera cherche les ports dans <code>roms/ports</code>.`, `This folder is <code>${dir.name}</code>: Batocera looks for ports in <code>roms/ports</code>.`), 'bad');
     }
     state.dest = dir;
     fact('dest-facts', `Destination : <code>${dir.name}/${PORT}/</code>`, 'ok');
@@ -332,7 +364,7 @@ function offerVf(edition) {
   $('vf').hidden = false;
   $('vf-facts').replaceChildren();
   if (state.pendingXbox) checkXbox(state.pendingXbox);
-  else if (edition && edition.vf === 'oui') fact('vf-facts', 'VF possible : ajoutez l\'ISO de la Xbox d\'origine en français.', 'muted');
+  else if ((edition && edition.vf === 'oui') || state.englishData) fact('vf-facts', L('VF possible : ajoutez l\'ISO de la Xbox d\'origine en français.', 'French dub possible: add the French original Xbox ISO.'), 'muted');
 }
 
 function vfWorker(message, onFile) {
@@ -347,7 +379,7 @@ function vfWorker(message, onFile) {
       else if (m.type === 'result') writes.then(() => { worker.terminate(); resolve(m); }, reject);
     };
     worker.onerror = (e) => { worker.terminate(); reject(new Error(e.message || 'VF : erreur du worker')); };
-    worker.postMessage({ ...message, x360: state.iso, xbox: state.vfXbox || message.xbox, pyodide: PYODIDE, ffmpeg: FFMPEG });
+    worker.postMessage({ ...message, lang: LANG, x360: state.iso, xbox: state.vfXbox || message.xbox, pyodide: PYODIDE, ffmpeg: FFMPEG });
   });
 }
 
@@ -361,14 +393,14 @@ async function checkXbox(file) {
   $('vf-facts').replaceChildren();
   slot('slot-xbox', `${flag('fr')}<strong>${file.name}</strong>`, false);
   if (!state.iso || !state.paquet) {
-    fact('vf-facts', 'ISO Xbox gardée : elle sera vérifiée dès que l\'ISO 360 (d\'une édition prise en charge) sera choisie.', 'muted');
+    fact('vf-facts', L('ISO Xbox gardée : elle sera vérifiée dès que l\'ISO 360 (d\'une édition prise en charge) sera choisie.', 'Xbox ISO kept: it is checked as soon as the 360 ISO (of a supported edition) is chosen.'), 'muted');
     return;
   }
   if (!canWrite) {
-    fact('vf-facts', 'La VF a besoin de Chrome ou Edge sur un ordinateur.', 'bad');
+    fact('vf-facts', L('La VF a besoin de Chrome ou Edge sur un ordinateur.', 'The French dub needs Chrome or Edge on a computer.'), 'bad');
     return;
   }
-  fact('vf-facts', `Vérification de <code>${file.name}</code> avec l'ISO Xbox 360 (une minute)…`, 'muted');
+  fact('vf-facts', L(`Vérification de <code>${file.name}</code> avec l'ISO Xbox 360 (une minute)…`, `Checking <code>${file.name}</code> with the Xbox 360 ISO (a minute)…`), 'muted');
   try {
     const r = await vfWorker({ type: 'check', xbox: file }, async () => {});
     $('vf-facts').replaceChildren();
@@ -376,17 +408,19 @@ async function checkXbox(file) {
     const li = document.createElement('li');
     li.append(Object.assign(document.createElement('a'), {
       href: URL.createObjectURL(new Blob([report], { type: 'text/plain' })), download: 'nfsmw-vf-rapport.txt',
-      textContent: 'Enregistrer le rapport',
-    }), ' (noms et tailles de fichiers seulement)');
+      textContent: L('Enregistrer le rapport', 'Save the report'),
+    }), L(' (noms et tailles de fichiers seulement)', ' (file names and sizes only)'));
     announce();
     if (r.problem) {
-      slot('slot-xbox', `${flag('fr')}<strong>${file.name}</strong> <span class="bad">pas encore pour cette édition</span>`, false);
-      fact('vf-facts', 'Ces deux ISO ne sont pas encore prises en charge pour la VF : l\'outil a été mis au point avec la PAL anglaise. Le rapport ci-dessous dit ce qu\'il faut adapter.', 'bad');
+      slot('slot-xbox', `${flag('fr')}<strong>${file.name}</strong> <span class="bad">${L('pas utilisable', 'not usable')}</span>`, false);
+      const why = /not the French edition/.test(r.problem) ? L('cette ISO Xbox n\'est pas la version française', 'this Xbox ISO is not the French edition')
+        : /PAL \(English\)/.test(r.problem) ? L('la VF part des données d\'un disque 360 PAL anglais', 'the dub starts from the data of a PAL English 360 disc') : r.problem;
+      fact('vf-facts', L(`VF pas possible avec ces deux ISO : ${why}. Le rapport ci-dessous dit ce qu'il y a dedans.`, `No French dub with these two ISOs: ${why}. The report below says what they hold.`), 'bad');
     } else {
       state.vfXbox = file;
-      slot('slot-xbox', `${flag('fr')}<strong>Xbox, française</strong> <span class="muted">${file.name}</span>`, true);
+      slot('slot-xbox', `${flag('fr')}<strong>${L('Xbox, française', 'Xbox, French')}</strong> <span class="muted">${file.name}</span>`, true);
       announce();
-      fact('vf-facts', 'ISO Xbox française reconnue : la VF (textes, vidéos, voix) sera ajoutée après la copie du jeu. Comptez 1 à 3 heures, page ouverte.', 'ok');
+      fact('vf-facts', L('ISO Xbox française reconnue : la VF (textes, vidéos, voix) sera ajoutée après la copie du jeu. Comptez 1 à 3 heures, page ouverte.', 'French Xbox ISO recognised: the French dub (text, movies, voices) is added after the game copy. 1 to 3 hours, keep the page open.'), 'ok');
     }
     $('vf-facts').append(li);
   } catch (x) {
@@ -403,14 +437,14 @@ async function dropped(file) {
   try {
     names = (await readXiso(file)).map((f) => f.path.toLowerCase());
   } catch {
-    fact('game-facts', `<code>${file.name}</code> n'est pas une ISO Xbox ou Xbox 360.`, 'bad');
+    fact('game-facts', L(`<code>${file.name}</code> n'est pas une ISO Xbox ou Xbox 360.`, `<code>${file.name}</code> is not an Xbox or Xbox 360 ISO.`), 'bad');
     return;
   }
   if (names.includes('default.xex')) {
     await chooseIso(file);
     if (state.pendingXbox && state.paquet && !state.vfXbox) await checkXbox(state.pendingXbox);
   } else if (names.includes('default.xbe')) await checkXbox(file);
-  else fact('game-facts', `<code>${file.name}</code> : ni default.xex ni default.xbe.`, 'bad');
+  else fact('game-facts', L(`<code>${file.name}</code> : ni default.xex ni default.xbe.`, `<code>${file.name}</code>: neither default.xex nor default.xbe.`), 'bad');
 }
 
 const zone = $('drop');
@@ -438,13 +472,13 @@ zone.addEventListener('drop', async (e) => {
 });
 
 async function runVf() {
-  log('VF : début (1 à 3 heures ; gardez la page ouverte)');
+  log(L('VF : début (1 à 3 heures ; gardez la page ouverte)', 'French dub: start (1 to 3 hours; keep the page open)'));
   const t0 = Date.now();
   await vfWorker({ type: 'run' }, async (rel, data) => {
     await writeTo(state.dest, `${PORT}/game_root/${rel}`, data);
     log(`VF : ${rel} (${size(data.length)})`);
   });
-  log(`VF : terminée en ${Math.round((Date.now() - t0) / 60000)} min`);
+  log(L(`VF : terminée en ${Math.round((Date.now() - t0) / 60000)} min`, `French dub: done in ${Math.round((Date.now() - t0) / 60000)} min`));
 }
 
 // ------------------------------------------------------------------ the package
@@ -456,11 +490,11 @@ async function gunzip(bytes) {
 
 async function openPaquet() {
   const p = state.paquet;
-  progress(0.01, 'Téléchargement du port…');
+  progress(0.01, L('Téléchargement du port…', 'Downloading the port…'));
   const blob = await fetchBytes(`paquets/${p.fichier}`);
-  if (await sha256(blob) !== p.sha256) throw new Error('le port téléchargé est abîmé : rechargez la page');
+  if (await sha256(blob) !== p.sha256) throw new Error(L('le port téléchargé est abîmé : rechargez la page', 'the downloaded port is damaged: reload the page'));
   const magic = new TextDecoder().decode(blob.subarray(0, 8));
-  if (magic !== 'NFSMWPK1') throw new Error('port illisible');
+  if (magic !== 'NFSMWPK1') throw new Error(L('port illisible', 'unreadable port'));
   const keyBytes = await crypto.subtle.digest('SHA-256', concat(SALT, state.xex));
   const key = await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['decrypt']);
   let plain;
@@ -468,7 +502,7 @@ async function openPaquet() {
     plain = new Uint8Array(await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: blob.subarray(8, 20), additionalData: blob.subarray(0, 8) }, key, blob.subarray(20)));
   } catch {
-    throw new Error('ce default.xex n\'ouvre pas le port');
+    throw new Error(L('ce default.xex n\'ouvre pas le port', 'this default.xex does not open the port'));
   }
   const data = await gunzip(plain);
   const n = new DataView(data.buffer).getUint32(0, true);
@@ -493,14 +527,14 @@ function concat(a, b) {
 // ------------------------------------------------------------------ icons and gamelist pictures (Pyodide)
 
 async function pythonTools(game) {
-  progress(0.08, 'Chargement de Python dans le navigateur…');
+  progress(0.08, L('Chargement de Python dans le navigateur…', 'Loading Python in the browser…'));
   const { loadPyodide } = await import(PYODIDE + 'pyodide.mjs');
   const py = await loadPyodide({ indexURL: PYODIDE });
   await py.loadPackage(['numpy', 'pillow'], { messageCallback: () => {} });
   py.FS.mkdirTree('/outils');
   for (const f of [...PY_FILES, 'DejaVuSans-Bold.ttf']) py.FS.writeFile(`/outils/${f}`, await fetchBytes(`outils/${f}`));
 
-  progress(0.12, 'Lecture des textures du jeu…');
+  progress(0.12, L('Lecture des textures du jeu…', 'Reading the game\'s textures…'));
   const globalb = await fromArchives(game, 'GLOBAL/GLOBALB.LZC');
   const dyntex = await fromArchives(game, 'GLOBAL/DYNTEX.BIN');
   const frontb = await fromArchives(game, 'FRONTEND/FRONTB.LZC');
@@ -514,7 +548,7 @@ async function pythonTools(game) {
   const pack = state.vfXbox ? hideTextCopies(memfile) : memfile;
   for (const [n, b] of Object.entries({ globalb, dyntex, frontb, memfile: pack })) py.FS.writeFile(`/in_${n}`, b);
 
-  progress(0.16, 'Icônes PlayStation, GameCube et Xbox 360…');
+  progress(0.16, L('Icônes PlayStation, GameCube et Xbox 360…', 'PlayStation, GameCube and Xbox 360 icons…'));
   py.globals.set('js_log', (t) => log(t));
   await py.runPythonAsync(`
 import os, sys
@@ -561,7 +595,7 @@ async function shaders(game) {
     log('shaders : nfsmw_shaders.nfsp déjà là et correct, repris tel quel');
     return ready;
   }
-  progress(0.3, 'Chargement du compilateur de shaders…');
+  progress(0.3, L('Chargement du compilateur de shaders…', 'Loading the shader compiler…'));
   const S = './shaders/';
   const [{ default: createHlsl }, { default: createDxc }, { default: createPack }, { default: createLzx },
     { readXexImage }, { ContainerScanner }, { buildShaderLibrary }, i18n] = await Promise.all([
@@ -600,7 +634,7 @@ async function shaders(game) {
       const piece = new Uint8Array(await file.slice(at, at + CHUNK).arrayBuffer());
       disc.push(piece, at + CHUNK >= file.size);
       read += piece.length;
-      progress(0.32 + 0.18 * (read / total), `Recherche des shaders dans ${rel}…`);
+      progress(0.32 + 0.18 * (read / total), L(`Recherche des shaders dans ${rel}…`, `Looking for shaders in ${rel}…`));
     }
   }
   const containers = [...disc.found, ...exe.found];
@@ -609,16 +643,16 @@ async function shaders(game) {
   for (const c of containers) {
     if (await sha256(c.bytes) === blurSha) { blur = c.name.slice(0, -4); break; }
   }
-  if (!blur) throw new Error('shader de composition introuvable : la copie du jeu est-elle complète ?');
+  if (!blur) throw new Error(L('shader de composition introuvable : la copie du jeu est-elle complète ?', 'composition shader not found: is the copy of the game complete?'));
   log(`shaders : ${containers.length} trouvés, compilation…`);
   let done = 0;
   const library = await buildShaderLibrary(containers, { hlsl, dxc, pack }, shaderCommon, (t) => {
     if (/^Compil/.test(t)) done += 25;
-    progress(0.5 + 0.3 * Math.min(1, done / containers.length), 'Compilation des shaders…');
+    progress(0.5 + 0.3 * Math.min(1, done / containers.length), L('Compilation des shaders…', 'Compiling the shaders…'));
   }, blur);
   const got = await sha256(library);
   const want = LIBRARIES[state.xexSha];
-  if (want && got !== want) throw new Error(`bibliothèque de shaders inattendue (${got.slice(0, 12)}…)`);
+  if (want && got !== want) throw new Error(L(`bibliothèque de shaders inattendue (${got.slice(0, 12)}…)`, `unexpected shader library (${got.slice(0, 12)}…)`));
   log(`shaders : ${size(library.length)}, vérifiés`);
   return library;
 }
@@ -667,18 +701,18 @@ async function run() {
     Object.assign(out, await pythonTools(state.game));
     if (!canWrite) {
       out['nfsmw_shaders.nfsp'] = await shaders(state.game);
-      progress(0.85, 'Fabrication du zip…');
+      progress(0.85, L('Fabrication du zip…', 'Making the zip…'));
       const zip = writeZip(Object.entries(out).map(([p, d]) => [`${PORT}/${p}`, d]));
       const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(zip), download: 'nfsmw-batocera.zip' });
       a.click();
-      log(`zip : ${size(zip.size)}. Décompressez-le dans roms/ports/, puis copiez default.xex, NFS/ et Movies/ dans ${PORT}/game_root/.`);
+      log(L(`zip : ${size(zip.size)}. Décompressez-le dans roms/ports/, puis copiez default.xex, NFS/ et Movies/ dans ${PORT}/game_root/.`, `zip: ${size(zip.size)}. Extract it into roms/ports/, then copy default.xex, NFS/ and Movies/ into ${PORT}/game_root/.`));
     } else {
       // The port first: if the shaders fail, the rest is in place and the error says what is missing.
       const entries = Object.entries(out);
       let i = 0;
       for (const [p, d] of entries) {
         await writeTo(state.dest, `${PORT}/${p}`, d);
-        progress(0.2 + 0.08 * (++i / entries.length), `Écriture de ${p}…`);
+        progress(0.2 + 0.08 * (++i / entries.length), `${L('Écriture de', 'Writing')} ${p}…`);
       }
       log(`écrit : ${entries.length} fichiers dans ${PORT}/`);
       state.portWritten = true;
@@ -689,25 +723,25 @@ async function run() {
           const file = await f.get();
           const isNew = await writeTo(state.dest, `${PORT}/game_root/${f.rel}`, file, (n) => {
             copied += n;
-            progress(0.82 + 0.18 * (copied / state.total), `Copie du jeu : ${size(copied)} / ${size(state.total)}`);
+            progress(0.82 + 0.18 * (copied / state.total), `${L('Copie du jeu', 'Copying the game')} : ${size(copied)} / ${size(state.total)}`);
           });
           if (isNew) written++;
         }
         log(`jeu : ${written} fichiers copiés, ${state.game.files.length - written} déjà présents`);
       } else {
-        log(`copiez default.xex, NFS/ et Movies/ dans ${PORT}/game_root/`);
+        log(L(`copiez default.xex, NFS/ et Movies/ dans ${PORT}/game_root/`, `copy default.xex, NFS/ and Movies/ into ${PORT}/game_root/`));
       }
       if (state.vfXbox) await runVf();
     }
-    progress(1, 'Terminé.');
+    progress(1, L('Terminé.', 'Done.'));
     $('s-done').hidden = false;
   } catch (e) {
     console.error(e);
     $('status').className = 'bad';
-    $('status').textContent = `Erreur : ${e.message || e}`;
+    $('status').textContent = `${L('Erreur', 'Error')} : ${e.message || e}`;
     log(String(e.stack || e));
     if (state.portWritten) {
-      log(`Le port est écrit dans ${PORT}/ ; il ne manque que la suite. Relancez une fois le problème réglé : les fichiers déjà copiés sont sautés.`);
+      log(L(`Le port est écrit dans ${PORT}/ ; il ne manque que la suite. Relancez une fois le problème réglé : les fichiers déjà copiés sont sautés.`, `The port is written in ${PORT}/; only the rest is missing. Run again once the problem is fixed: files already copied are skipped.`));
     }
   } finally {
     $('pick-game').disabled = false;

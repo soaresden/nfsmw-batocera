@@ -49,6 +49,11 @@ def progress(fraction, text):
     js.vf_progress(fraction, text)
 
 
+def L(fr, en):
+    """The page's language (vf-worker.js sets vf_lang)."""
+    return en if str(getattr(js, 'vf_lang', 'fr')) == 'en' else fr
+
+
 def flush(path, rel):
     """Hands a finished file to the page (written into game_root/<rel>) and frees it here."""
     js.vf_flush(path, rel)
@@ -89,9 +94,28 @@ def diagnostic():
     return '\n'.join(lines)
 
 
+def accept_modified_copy():
+    """A PAL (English) disc whose default.xex was swapped, e.g. for the PAL Spanish one as the Android port wanted:
+    the dub only reads the disc's data files, so it is accepted when those are the official PAL (English) ones
+    (the size of NFS/ZZDATA0.BIN, which also keeps the fan translations out, and the PAL English movies)."""
+    import hashlib
+    import zzdata
+    x360 = zzdata.Disc(X360)
+    if x360.files.get('NFS/ZZDATA0.BIN', (0, 0))[0] != zzdata.PAL_ENGLISH_ZZDATA0:
+        return False
+    if not any(p.startswith('MOVIES/') and p.endswith('_ENGLISH_PAL.WMV') for p in x360.files):
+        return False
+    xex = hashlib.sha256(x360.read_file('default.xex')).hexdigest()
+    if xex != zzdata.PAL_ENGLISH_XEX:
+        print('PAL (English) data with another default.xex (%s...): accepted for the dub' % xex[:8])
+        zzdata.PAL_ENGLISH_XEX = xex
+    return True
+
+
 def check():
-    """The tool's own check: official PAL (English) Xbox 360 image and French Xbox image."""
+    """The tool's own check: official PAL (English) Xbox 360 data and French Xbox image."""
     from zzdata import open_discs
+    accept_modified_copy()
     try:
         open_discs(X360, XBOX)
     except SystemExit as e:
@@ -124,7 +148,7 @@ def movies_step(start, span):
     report = []
     for k, file_path in enumerate(movies):
         name = file_path[len('MOVIES/'):-len(suffix)]
-        progress(start + span * k / len(movies), 'Vidéos : %s (%d/%d)' % (name.lower(), k + 1, len(movies)))
+        progress(start + span * k / len(movies), L('Vidéos : %s (%d/%d)', 'Movies: %s (%d/%d)') % (name.lower(), k + 1, len(movies)))
         vp6 = path('MOVIES', '%s_FRENCH_PAL.VP6' % name)
         if xbox.has(vp6):
             line = patch_movies.convert(x360, xbox, file_path, vp6, output, 'ffmpeg')
@@ -170,14 +194,14 @@ def speech_step(start, span):
         for g in range(0, len(order), GROUP):
             group = order[g:g + GROUP]
             progress(start + span * 0.95 * g / len(order),
-                     'Voix : %d / %d répliques' % (g, len(lines)))
+                     L('Voix : %d / %d répliques', 'Voices: %d / %d lines') % (g, len(lines)))
             decoded = [ps.decode(lines[i][1], 'vgmstream-cli', 'ffmpeg', folder) for i in group]
             data = iter(ps.encode_all([s for channels, _ in decoded for s in channels]))
             for i, (channels, rate) in zip(group, decoded):
                 streams[i] = stream(lines[i][2], [next(data) for _ in channels], len(channels[0]), rate)
             del decoded, data
     streams = [ps.canonical_header(s) for s in streams]
-    progress(start + span * 0.96, 'Voix : reconstruction de COPSPEECH')
+    progress(start + span * 0.96, L('Voix : reconstruction de COPSPEECH', 'Voices: rebuilding COPSPEECH'))
     big, idx = ps.rebuild(idx, [p for p, _, _ in lines], streams)
     del streams
 
@@ -224,10 +248,11 @@ def speech_step(start, span):
 def run_all():
     import time
     t = time.time()
-    progress(0.0, 'VF : textes')
+    accept_modified_copy()
+    progress(0.0, L('VF : textes', 'French dub: text'))
     text_step()
     movies_step(0.05, 0.4)
     speech_step(0.45, 0.55)
     flush(os.path.join(OUT, 'NFS', 'ZDIR.BIN'), 'NFS/ZDIR.BIN')
-    progress(1.0, 'VF terminée')
+    progress(1.0, L('VF terminée', 'French dub done'))
     print('VF: %.0f min' % ((time.time() - t) / 60))
