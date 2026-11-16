@@ -417,7 +417,10 @@ async function checkXbox(file) {
     }), L(' (noms et tailles de fichiers seulement)', ' (file names and sizes only)'));
     announce();
     if (r.problem) {
-      slot('slot-xbox', `${flag('fr')}<strong>${file.name}</strong> <span class="bad">${L('pas utilisable', 'not usable')}</span>`, false);
+      // Say which disc is the problem: the Xbox one, or the 360 one (the dub needs PAL English data).
+      const xboxBad = /not the French edition/.test(r.problem);
+      slot('slot-xbox', `${flag('fr')}<strong>${file.name}</strong> <span class="${xboxBad ? 'bad' : 'muted'}">${xboxBad
+        ? L('pas la version française', 'not the French edition') : L('en attente d\'une ISO 360 PAL anglaise', 'waiting for a PAL English 360 ISO')}</span>`, false);
       const why = /not the French edition/.test(r.problem) ? L('cette ISO Xbox n\'est pas la version française', 'this Xbox ISO is not the French edition')
         : /PAL \(English\)/.test(r.problem) ? L('la VF part des données d\'un disque 360 PAL anglais', 'the dub starts from the data of a PAL English 360 disc') : r.problem;
       fact('vf-facts', L(`VF pas possible avec ces deux ISO : ${why}. Le rapport ci-dessous dit ce qu'il y a dedans.`, `No French dub with these two ISOs: ${why}. The report below says what they hold.`), 'bad');
