@@ -281,6 +281,10 @@ def speech_cached(g):
     return os.path.exists('/cache/' + _cache_name(g))
 
 
+def speech_lines():
+    return len(_S['lines'])
+
+
 def speech_group(g):
     import patch_speech as ps
     from ea_stream import stream

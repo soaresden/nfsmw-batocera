@@ -184,6 +184,7 @@ async function runAll(vf, done, cache) {
   vf.movies_report();
 
   const groups = vf.speech_start();
+  const total = vf.speech_lines();
   // Groups an earlier run encoded (game_root/vf-cache/, see vf_page.speech_group): loaded instead of done again.
   py.FS.mkdirTree('/cache');
   for (const [name, data] of Object.entries(cache || {})) py.FS.writeFile(`/cache/${name}`, data);
@@ -198,7 +199,7 @@ async function runAll(vf, done, cache) {
       await freshFFmpeg();
       lines = vf.speech_group(g);
     }
-    progress(0.45 + 0.53 * (g + 1) / groups, `${T('Voix', 'Voices')} : ${lines} ${T('répliques', 'lines')}`);
+    progress(0.45 + 0.53 * (g + 1) / groups, `${T('Voix', 'Voices')} : ${lines} / ${total} ${T('répliques', 'lines')} (${Math.round(100 * lines / total)} %)`);
   }
   progress(0.98, T('Voix : reconstruction de COPSPEECH', 'Voices: rebuilding COPSPEECH'));
   vf.speech_finish();
