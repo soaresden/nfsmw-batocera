@@ -6,6 +6,7 @@ run.sh calls, at every start:
     python3 mods.py restore <NFS Most Wanted.sh>          before the button icons are put in place
     python3 mods.py apply <NFS Most Wanted.sh> <style>    after them
 
+mods/black-edition/ (the Black Edition title screen) is applied only when the BLACK EDITION option is on, and last.
 restore puts back what the last apply replaced (originals kept in data/mods-originals/, the list in
 data/mods-state.json), so a removed mod folder means the base game again. apply copies every mod file over
 game_root/. A mod's GLOBAL/GLOBALMEMORYFILE.BIN (a pack the game preloads) gets the chosen icon style's changes: every
@@ -122,12 +123,17 @@ def mod_files(path):
     return out
 
 
-def apply(port, style):
+BLACK = 'black-edition'  # only with the BLACK EDITION option, and last (its FRONTB.LZC is built on the others')
+
+
+def apply(port, style, black=False):
     root, mods = os.path.join(port, 'game_root'), os.path.join(port, 'mods')
     backup = os.path.join(port, 'data', 'mods-originals')
     state = {}
     names = sorted(n for n in os.listdir(mods) if n not in ('icones', 'boutons-playstation')
                    and (os.path.isdir(os.path.join(mods, n)) or n.lower().endswith('.zip'))) if os.path.isdir(mods) else []
+    be = [n for n in names if os.path.splitext(n)[0].lower() == BLACK]
+    names = [n for n in names if n not in be] + (be if black else [])
     dubbed = os.path.exists(os.path.join(root, 'Movies', 'movies_report.txt'))
     for name in names:
         try:
@@ -164,6 +170,6 @@ if __name__ == '__main__':
     if len(sys.argv) >= 3 and sys.argv[1] == 'restore':
         restore(sys.argv[2])
     elif len(sys.argv) >= 3 and sys.argv[1] == 'apply':
-        apply(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '')
+        apply(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '', len(sys.argv) > 4 and sys.argv[4] == 'on')
     else:
         sys.exit(__doc__)

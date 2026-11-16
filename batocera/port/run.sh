@@ -143,7 +143,7 @@ if [ -d "$GAMEDIR/mods/icones" ]; then
 elif [ -d "$GAMEDIR/mods/boutons-playstation" ]; then
     ICONS=playstation  # the earlier single PlayStation mod
 fi
-[ "$MODS_PY" = 1 ] && python3 "$GAMEDIR/mods.py" apply "$GAMEDIR" "${ICONS:-}" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
+[ "$MODS_PY" = 1 ] && python3 "$GAMEDIR/mods.py" apply "$GAMEDIR" "${ICONS:-}" "$(conf_get nfsmw_black_edition)" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
 # PlayStation icons are drawn by position, as on a PlayStation pad; Xbox 360 and GameCube ones by letter (the
 # Retroid's labels). The menu (BOUTONS A/B X/Y) has the last word.
 case "$(conf_get nfsmw_buttons)" in
