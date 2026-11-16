@@ -117,19 +117,20 @@ redémarrage d'EmulationStation) :
 | Filtre jaune du jeu | original, doux, désactivé |
 | Anticrénelage | désactivé, FXAA |
 | Filtre d'image | aucun, cinéma, sépia, noir et blanc, froid, chaud, vif, Matrix, CRT |
-| Boutons A/B X/Y | **Par lettre** (défaut : la lettre affichée est celle du bouton de la Retroid, A à droite, B en bas) ou par position (comme une manette Xbox ou PlayStation). Avec le mod boutons PlayStation installé, le défaut devient par position |
+| Icônes des boutons | PlayStation, Xbox 360 (d'origine), GameCube : avec le zip des icônes (voir plus bas) |
+| Boutons A/B X/Y | **Par lettre** (la lettre affichée est celle du bouton de la Retroid, A à droite, B en bas) ou par position (comme une manette Xbox ou PlayStation). Par défaut : par position avec les icônes PlayStation, par lettre sinon |
 
 Les autres réglages sont dans `nfsmw.toml`.
 
-### Boutons PlayStation
+### Icônes des boutons : PlayStation, GameCube, Xbox 360
 
-`batocera/tools/ps_buttons/` remplace les icônes Xbox par des icônes PlayStation (✕ ○ □ △, L1/R1/L2/R2) et la
-photo de manette Xbox 360 des écrans de chargement et du menu Commandes par celle de la DualShock 2 qu'EA a
-laissée dans le jeu. Il part de vos fichiers (sortis des archives par `batocera/tools/Extraire textures NFSMW.sh`)
-et produit `game_root/GLOBAL/` (`GLOBALB.LZC`, `GLOBALMEMORYFILE.BIN`, `DYNTEX.BIN`), sans toucher au reste : un
-autre mod de ces fichiers (la MX-5…) est gardé. Disposition PlayStation : bas = ✕ (valider), droite = ○ (retour),
-gauche = □, haut = △ ; le lanceur met alors les boutons par position. Avec `--zip`, le mod se décompresse
-par-dessus `ports/`. Voir [son README](batocera/tools/ps_buttons/README.md).
+`batocera/tools/ps_buttons/` fabrique, à partir de vos fichiers (sortis des archives par
+`batocera/tools/Extraire textures NFSMW.sh`), un zip à décompresser par-dessus `ports/` avec trois styles
+d'icônes : **PlayStation** (✕ ○ □ △), **GameCube** (A B ronds, X Y en haricot) et **Xbox 360** (celles du jeu).
+Chaque style change aussi la photo de manette des écrans de chargement et du menu Commandes, avec celles qu'EA a
+laissées dans le jeu (DualShock 2, manette GameCube). Le style se choisit dans le menu **ICÔNES DES BOUTONS** ;
+les autres mods de `GLOBALMEMORYFILE.BIN` (la MX-5…) sont gardés. Voir
+[son README](batocera/tools/ps_buttons/README.md).
 
 ### Outils
 

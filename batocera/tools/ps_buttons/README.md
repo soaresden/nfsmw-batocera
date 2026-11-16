@@ -1,4 +1,4 @@
-# Boutons PlayStation
+# Icônes des boutons : PlayStation, GameCube, Xbox 360
 
 Remplace les icônes de boutons Xbox du jeu (A B X Y, LB RB, LT RT) par des icônes PlayStation (✕ ○ □ △, L1 R1,
 L2 R2), **par position** comme sur une manette PlayStation.
@@ -41,3 +41,24 @@ Les fichiers produits contiennent des données du jeu : ne les partagez pas. Les
 `huff.py`, `xenos.py` et `dxt.py` viennent de [MazdaMx5-nd-rf-ingames](https://github.com/soaresden/MazdaMx5-nd-rf-ingames)
 (GPL-3.0). Inspiré des packs d'icônes de [NFS XtendedInput](https://github.com/xan1242/NFS-XtendedInput) pour
 la version PC.
+
+## Les trois styles au choix dans EmulationStation
+
+```sh
+python3 ps_buttons.py --globalb GLOBALB.LZC --memfile GLOBALMEMORYFILE.BIN --dyntex DYNTEX.BIN \
+                      --icon-sets nfsmw-icones-boutons.zip
+```
+
+Le zip se décompresse par-dessus `/userdata/roms/ports/` et range dans `NFS Most Wanted.sh/mods/icones/` :
+
+| Style | Icônes | Manette (chargements, menu Commandes) | Boutons |
+|---|---|---|---|
+| `playstation/` | ✕ ○ □ △, L1 R1 L2 R2 | DualShock 2 d'EA | par position |
+| `gamecube/` | A et B ronds, X et Y en haricot, L1 R1 L2 R2 | manette GameCube d'EA | par lettre |
+| `xbox360/` | celles du jeu (seul votre `GLOBALMEMORYFILE.BIN` d'origine y est) | celle du jeu | par lettre |
+
+Le choix se fait dans **Options avancées du jeu → NFS MOST WANTED → ICÔNES DES BOUTONS** ; le lanceur pose le
+style choisi dans `game_root/GLOBAL/` à chaque lancement (PlayStation par défaut une fois les styles installés).
+Les gâchettes gardent les noms imprimés sur la Retroid (L1 R1 L2 R2) en PlayStation comme en GameCube. Sur la
+GameCube, les anciennes images de la manette Xbox d'origine (que la 360 n'affiche pas) restent telles quelles :
+la photo GameCube n'y tient pas.

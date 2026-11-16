@@ -96,12 +96,40 @@ add_arg nfsmw_limite_fps "$(conf_get nfsmw_fps)"
 add_arg nfsmw_tratamiento_visual "$(conf_get nfsmw_visual_treatment)"
 add_arg nfsmw_antialiasing "$(conf_get nfsmw_antialiasing)"
 add_arg nfsmw_posproceso "$(conf_get nfsmw_postprocess)"
-# The PlayStation icons mod (mods/boutons-playstation, batocera/tools/ps_buttons) draws the symbols by position,
-# as on a PlayStation pad: with it, the face buttons go by position unless the menu asks for letters.
+# Button icons (batocera/tools/ps_buttons --icon-sets): mods/icones/<style>/ holds the GLOBAL/ files of each
+# style; the one chosen in the menu (ICONES DES BOUTONS, PlayStation by default once the sets are installed) is put
+# in game_root/GLOBAL/. A file the style does not have is removed there: the game reads it from its archives
+# (xbox360/ only keeps the player's own GLOBALMEMORYFILE.BIN).
+ICONS="$(conf_get nfsmw_icons)"
+if [ -d "$GAMEDIR/mods/icones" ]; then
+    [ -n "$ICONS" ] || ICONS=playstation
+    SET="$GAMEDIR/mods/icones/$ICONS"
+    if [ -d "$SET" ]; then
+        mkdir -p "$GAMEDIR/game_root/GLOBAL"
+        for f in GLOBALB.LZC GLOBALMEMORYFILE.BIN DYNTEX.BIN; do
+            dst="$GAMEDIR/game_root/GLOBAL/$f"
+            if [ -f "$SET/$f" ]; then
+                cmp -s "$SET/$f" "$dst" || cp "$SET/$f" "$dst"
+            else
+                rm -f "$dst"
+            fi
+        done
+        echo "[batocera] button icons: $ICONS" >> "$GAMEDIR/nfsmw-stdout.log"
+    else
+        echo "[batocera] button icons: no set '$ICONS' in mods/icones" >> "$GAMEDIR/nfsmw-stdout.log"
+    fi
+elif [ -d "$GAMEDIR/mods/boutons-playstation" ]; then
+    ICONS=playstation  # the earlier single PlayStation mod
+fi
+# PlayStation icons are drawn by position, as on a PlayStation pad; Xbox 360 and GameCube ones by letter (the
+# Retroid's labels). The menu (BOUTONS A/B X/Y) has the last word.
 case "$(conf_get nfsmw_buttons)" in
     lettre) ARGS+=("--input_sdl_por_letra") ;;
     position) ARGS+=("--no-input_sdl_por_letra") ;;
-    *) [ -d "$GAMEDIR/mods/boutons-playstation" ] && ARGS+=("--no-input_sdl_por_letra") ;;
+    *) case "$ICONS" in
+           playstation) ARGS+=("--no-input_sdl_por_letra") ;;
+           xbox360|gamecube) ARGS+=("--input_sdl_por_letra") ;;
+       esac ;;
 esac
 # Controller: Batocera passes SDL_GAMECONTROLLERCONFIG built with ITS SDL3's button numbers (3.4.x); the game
 # carries its own SDL3 (3.5), which numbers the Retroid Pocket 5 pad one lower (seen in the log with

@@ -47,6 +47,12 @@ WHITE = (255, 255, 255, 255)
 # labelled Nintendo-style (Retroid Pocket 5: A right, B bottom, X top, Y left), the Xbox A is the right
 # button, B the bottom one, X the top one and Y the left one: each icon is the PlayStation symbol at that place.
 RETROID = {'SQUARE': 'triangle', 'CIRCLE': 'square'}  # cross and circle stay by position (tested on the RP5)
+GAMECUBE = {
+    'CROSS': 'gcA',          # A: big round button
+    'TRIANGLE': 'gcB',       # B: small round button
+    'SQUARE': 'gcX',         # X: kidney
+    'CIRCLE': 'gcY',         # Y: kidney
+}
 TEXTURES = {
     'CROSS': 'cross',        # A
     'TRIANGLE': 'circle',    # B
@@ -180,6 +186,15 @@ def draw_icon(kind, k=8):
             t = g * 1.15
             pts = [(c, c - t), (c + t * 0.95, c + t * 0.62), (c - t * 0.95, c + t * 0.62)]
             d.line(pts + [pts[0]], fill=WHITE, width=sw, joint='curve')
+    elif kind in ('gcA', 'gcB'):  # GameCube A and B: round buttons with their letter
+        r = s / 2 - 1.5 * k
+        d.ellipse((c - r, c - r, c + r, c + r), outline=WHITE, width=lw)
+        d.text((c, c + 0.5 * k), kind[2], font=font(int(17 * k)), fill=WHITE, anchor='mm')
+    elif kind in ('gcX', 'gcY'):  # GameCube X and Y: kidney-shaped, drawn as a pill
+        m = 1.5 * k
+        top = s * 0.2
+        d.rounded_rectangle((m, top, s - m, s - top), radius=int(9 * k), outline=WHITE, width=lw)
+        d.text((c, c + 0.5 * k), kind[2], font=font(int(15 * k)), fill=WHITE, anchor='mm')
     else:  # L1/L2/R1/R2: a rounded tab with the name, as the game's LB/RB
         m = 1.5 * k
         top = s * 0.18
@@ -191,12 +206,15 @@ def draw_icon(kind, k=8):
 
 # ---------------------------------------------------------------- files
 
-def patch_globalb(blob, retroid=False, log=print):
+def patch_globalb(blob, retroid=False, log=print, style='playstation'):
     """GLOBALB.LZC bytes -> (new bytes at the same size, [(name, before, after)])."""
     fe = bytearray(jdlz.decompress(blob))
     found = find_textures(fe)
     changed, shown = [], []
-    textures = dict(TEXTURES, **RETROID) if retroid else TEXTURES
+    if style == 'gamecube':
+        textures = dict(TEXTURES, **GAMECUBE)
+    else:
+        textures = dict(TEXTURES, **RETROID) if retroid else TEXTURES
     for name, kind in textures.items():
         t = found.get(name)
         if t is None:
@@ -244,7 +262,9 @@ def patch_memfile(mem, globalb):
 X360_C1, X360_C2 = 0xEC3C0443, 0xEC3C0444
 XBOX_C1, XBOX_C2 = 0x1113B973, 0x1113B974
 PS2_C1, PS2_C2 = 0xDF7B27A7, 0xDF7B27A8
+GC_C1, GC_C2 = 0xED543BAB, 0xED543BAC
 CONTROLLERS = {X360_C1: PS2_C1, X360_C2: PS2_C2, XBOX_C1: PS2_C1, XBOX_C2: PS2_C2}
+CONTROLLERS_GAMECUBE = {X360_C1: GC_C1, X360_C2: GC_C2, XBOX_C1: GC_C1, XBOX_C2: GC_C2}
 
 
 def tpk_entries(d):
@@ -285,12 +305,12 @@ def argb32_encode(img, original):
     return bytes(out)
 
 
-def patch_dyntex(d, log=print):
+def patch_dyntex(d, log=print, style='playstation'):
     """DYNTEX.BIN bytes -> (new bytes, same size and index, [(name, before, after)])."""
     d = bytearray(d)
     ent = {h: (o, off, size, usize) for o, h, off, size, usize in tpk_entries(d)}
     shown = []
-    for dst, src in CONTROLLERS.items():
+    for dst, src in (CONTROLLERS_GAMECUBE if style == 'gamecube' else CONTROLLERS).items():
         if dst not in ent or src not in ent:
             log('DYNTEX: texture %08X or %08X missing, skipped' % (dst, src))
             continue
@@ -320,11 +340,14 @@ def patch_dyntex(d, log=print):
         assert len(raw) == dusize
         blob = jdlz.compress(raw)
         if len(blob) > dsize:
+            if dst in (XBOX_C1, XBOX_C2):  # the original Xbox's pictures: the 360 does not show them
+                log('%s: %d bytes compressed, only %d room: left as it is' % (dname, len(blob), dsize))
+                continue
             raise ValueError('%s: %d bytes compressed, only %d room' % (dname, len(blob), dsize))
         assert jdlz.decompress(blob) == raw
         d[doff:doff + dsize] = blob + b'\0' * (dsize - len(blob))
         shown.append((dname, before, after))
-        log('%-26s <- PS2 controller (%d of %d bytes)' % (dname, len(blob), dsize))
+        log('%-26s <- %s controller (%d of %d bytes)' % (dname, style, len(blob), dsize))
     return bytes(d), shown
 
 
@@ -353,64 +376,91 @@ def preview(shown, path):
     sheet.convert('RGB').save(path)
 
 
-LISEZMOI = """Mod boutons PlayStation pour NFS Most Wanted (Batocera)
+LISEZMOI = """Icones des boutons pour NFS Most Wanted (Batocera)
 
-A decompresser par-dessus /userdata/roms/ports/ (remplacer les fichiers). Dans game_root/GLOBAL/ :
-  GLOBALB.LZC           icones des boutons : croix, rond, carre, triangle, L1/R1/L2/R2
-  GLOBALMEMORYFILE.BIN  les memes icones dans le pack precharge (les autres mods de ce fichier sont gardes)
-  DYNTEX.BIN            la manette DualShock 2 sur les chargements et le menu Commandes (si --dyntex)
+A decompresser par-dessus /userdata/roms/ports/. Le choix se fait dans EmulationStation :
+Options avancees du jeu > NFS MOST WANTED > ICONES DES BOUTONS (Xbox 360, PlayStation, GameCube).
 
-Disposition PlayStation : bas = croix (valider), droite = rond (retour), gauche = carre, haut = triangle.
-Tant que ce dossier mods/boutons-playstation existe, le lanceur met les boutons par position (sauf si le
-menu NFS MOST WANTED > BOUTONS A/B X/Y dit Par lettre).
+mods/icones/<style>/ garde, pour chaque style, les fichiers que le lanceur pose dans game_root/GLOBAL/ :
+  GLOBALB.LZC           icones des boutons
+  GLOBALMEMORYFILE.BIN  les memes icones dans le pack precharge (votre version, avec ses autres mods)
+  DYNTEX.BIN            la photo de manette des chargements et du menu Commandes
+xbox360/ ne garde que votre GLOBALMEMORYFILE.BIN d'origine : le jeu reprend alors les fichiers de ses archives.
 
-Pour revenir en arriere : remettre vos anciens fichiers de game_root/GLOBAL/ et supprimer ce dossier.
+Boutons : PlayStation = par position (bas = croix, droite = rond, gauche = carre, haut = triangle) ;
+Xbox 360 et GameCube = par lettre (la lettre affichee est celle du bouton de la Retroid). Le menu
+BOUTONS A/B X/Y peut changer ce choix. Pour tout enlever : remettre votre GLOBALMEMORYFILE.BIN
+(mods/icones/xbox360/) dans game_root/GLOBAL/, supprimer GLOBALB.LZC et DYNTEX.BIN de game_root/GLOBAL/
+et le dossier mods/icones/.
+
 Fait avec batocera/tools/ps_buttons du depot nfsmw-batocera. Contient des donnees du jeu : ne pas partager.
 """
+
+PORT = 'NFS Most Wanted.sh/'
+
+
+def build_style(style, blob, mem, dyn, retroid=False, log=print):
+    """{file name: bytes} for one icon style, plus the previews' tiles."""
+    files = {}
+    new, shown = patch_globalb(blob, retroid, log, style)
+    files['GLOBALB.LZC'] = new
+    if mem:
+        files['GLOBALMEMORYFILE.BIN'] = patch_memfile(mem, new)
+    dshown = []
+    if dyn:
+        files['DYNTEX.BIN'], dshown = patch_dyntex(dyn, log, style)
+    return files, shown, dshown
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--globalb', required=True, help='GLOBAL/GLOBALB.LZC (5018060 bytes)')
     ap.add_argument('--memfile', help='GLOBAL/GLOBALMEMORYFILE.BIN the game uses (its GLOBALB copy is patched)')
-    ap.add_argument('--out', required=True, help='game_root: writes GLOBAL/GLOBALB.LZC (and GLOBALMEMORYFILE.BIN)')
-    ap.add_argument('--preview', help='PNG with the icons before and after')
     ap.add_argument('--dyntex', help='GLOBAL/DYNTEX.BIN: the controller picture of the loading screens and the '
-                                     'controls menu becomes EA\'s PS2 one')
-    ap.add_argument('--preview-controller', help='PNG with the controller pictures before and after')
-    ap.add_argument('--zip', help='also a zip to extract over /userdata/roms/ports/ on Batocera '
-                                  '(NFS Most Wanted.sh/game_root/GLOBAL/...)')
+                                     'controls menu becomes EA\'s one for that style')
+    ap.add_argument('--style', choices=('playstation', 'gamecube'), default='playstation')
     ap.add_argument('--retroid', action='store_true',
-                    help='symbols where the buttons are with the face buttons by letter on a Retroid Pocket 5')
+                    help='PlayStation: triangle on top and square on the left with the face buttons by letter')
+    ap.add_argument('--out', help='game_root: writes GLOBAL/ for --style')
+    ap.add_argument('--preview', help='PNG with the icons before and after')
+    ap.add_argument('--preview-controller', help='PNG with the controller pictures before and after')
+    ap.add_argument('--icon-sets', metavar='ZIP',
+                    help='a zip to extract over /userdata/roms/ports/ with the Xbox 360, PlayStation and GameCube '
+                         'sets (NFS Most Wanted.sh/mods/icones/<style>/), chosen in EmulationStation')
     a = ap.parse_args()
     blob = open(a.globalb, 'rb').read()
-    new, shown = patch_globalb(blob, a.retroid)
+    mem = open(a.memfile, 'rb').read() if a.memfile else None
+    dyn = open(a.dyntex, 'rb').read() if a.dyntex else None
+    if a.icon_sets:
+        import tempfile
+        import zipfile
+        with zipfile.ZipFile(a.icon_sets, 'w', zipfile.ZIP_DEFLATED) as z:
+            if mem:  # Xbox 360: the game's own icons; only the GLOBALMEMORYFILE.BIN to put back
+                z.writestr(PORT + 'mods/icones/xbox360/GLOBALMEMORYFILE.BIN', mem)
+            for style in ('playstation', 'gamecube'):
+                print('==', style)
+                files, shown, dshown = build_style(style, blob, mem, dyn)
+                for name, data in files.items():
+                    z.writestr(PORT + 'mods/icones/%s/%s' % (style, name), data)
+                with tempfile.TemporaryDirectory() as t:
+                    for tiles, name in ((shown, 'icones.png'), (dshown, 'manette.png')):
+                        if tiles:
+                            preview(tiles, os.path.join(t, name))
+                            z.write(os.path.join(t, name), PORT + 'mods/icones/%s/%s' % (style, name))
+            z.writestr(PORT + 'mods/icones/LISEZMOI.txt', LISEZMOI)
+        print('icon sets for Batocera:', a.icon_sets)
+        return
+    if not a.out:
+        ap.error('--out or --icon-sets is needed')
+    files, shown, dshown = build_style(a.style, blob, mem, dyn, a.retroid)
     os.makedirs(os.path.join(a.out, 'GLOBAL'), exist_ok=True)
-    with open(os.path.join(a.out, 'GLOBAL', 'GLOBALB.LZC'), 'wb') as f:
-        f.write(new)
-    if a.memfile:
-        mem = patch_memfile(open(a.memfile, 'rb').read(), new)
-        with open(os.path.join(a.out, 'GLOBAL', 'GLOBALMEMORYFILE.BIN'), 'wb') as f:
-            f.write(mem)
+    for name, data in files.items():
+        with open(os.path.join(a.out, 'GLOBAL', name), 'wb') as f:
+            f.write(data)
     if a.preview:
         preview(shown, a.preview)
-    if a.dyntex:
-        dyn, dshown = patch_dyntex(open(a.dyntex, 'rb').read())
-        with open(os.path.join(a.out, 'GLOBAL', 'DYNTEX.BIN'), 'wb') as f:
-            f.write(dyn)
-        if a.preview_controller:
-            preview(dshown, a.preview_controller)
-    if a.zip:
-        import zipfile
-        with zipfile.ZipFile(a.zip, 'w', zipfile.ZIP_DEFLATED) as z:
-            for name in sorted(os.listdir(os.path.join(a.out, 'GLOBAL'))):
-                z.write(os.path.join(a.out, 'GLOBAL', name), 'NFS Most Wanted.sh/game_root/GLOBAL/' + name)
-            for extra in (a.preview, a.preview_controller):
-                if extra and os.path.exists(extra):
-                    z.write(extra, 'NFS Most Wanted.sh/mods/boutons-playstation/' + os.path.basename(extra))
-            # The launcher sees this folder and sets the face buttons by position (run.sh).
-            z.writestr('NFS Most Wanted.sh/mods/boutons-playstation/LISEZMOI.txt', LISEZMOI)
-        print('zip for Batocera:', a.zip)
+    if a.preview_controller and dshown:
+        preview(dshown, a.preview_controller)
     print('written to', os.path.join(a.out, 'GLOBAL'))
 
 
