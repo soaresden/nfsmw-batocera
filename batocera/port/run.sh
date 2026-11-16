@@ -137,6 +137,10 @@ esac
 # kernel's button codes; an older nfsmw_pad = batocera setting is ignored.
 unset SDL_GAMECONTROLLERCONFIG SDL_GAMECONTROLLERCONFIG_FILE
 echo "[batocera] controller: SDL's own mapping (Batocera's ignored: its button numbers are off by one here)" >> "$GAMEDIR/nfsmw-stdout.log"
+case "$(conf_get nfsmw_rumble)" in
+    on) ARGS+=("--input_vibracion") ;;
+    off) ARGS+=("--no-input_vibracion") ;;
+esac
 echo "[batocera] options: ${ARGS[*]}" >> "$GAMEDIR/nfsmw-stdout.log"
 
 # Saves, profiles and caches next to the game (ports/nfsmw/data) instead of /userdata/system/.local/share/nfsmw.

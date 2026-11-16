@@ -118,6 +118,7 @@ redémarrage d'EmulationStation) :
 | Anticrénelage | désactivé, FXAA |
 | Filtre d'image | aucun, cinéma, sépia, noir et blanc, froid, chaud, vif, Matrix, CRT |
 | Icônes des boutons | PlayStation, Xbox 360 (d'origine), GameCube : avec le zip des icônes (voir plus bas) |
+| Vibration | activée (défaut) ou désactivée ; le journal dit si le pilote de la manette la gère (`SDL rumble:`) |
 | Boutons A/B X/Y | **Par lettre** (la lettre affichée est celle du bouton de la Retroid, A à droite, B en bas) ou par position (comme une manette Xbox ou PlayStation). Par défaut : par position avec les icônes PlayStation, par lettre sinon |
 
 Les autres réglages sont dans `nfsmw.toml`.

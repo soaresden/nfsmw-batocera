@@ -10,6 +10,7 @@
  */
 
 #include <array>
+#include <atomic>
 #include <filesystem>
 
 #include <rex/assert.h>
@@ -322,10 +323,16 @@ X_RESULT SDLInputDriver::SetDeviceVibration(DeviceId id, X_INPUT_VIBRATION* vibr
   // XInput vibration holds until the guest changes it, but SDL rumble expires,
   // and a zero duration expires on the next SDL_UpdateJoysticks. Arm it for
   // SDL's maximum instead; each call cancels the previous effect anyway.
-  return SDL_RumbleGamepad(controller->sdl, vibration->left_motor_speed,
-                           vibration->right_motor_speed, kRumbleDurationMs)
-             ? X_ERROR_SUCCESS
-             : X_ERROR_FUNCTION_FAILED;
+  if (SDL_RumbleGamepad(controller->sdl, vibration->left_motor_speed, vibration->right_motor_speed,
+                        kRumbleDurationMs)) {
+    return X_ERROR_SUCCESS;
+  }
+  // PARCHE LOCAL - Batocera: say once why the pad does not rumble.
+  static std::atomic<bool> avisado{false};
+  if (!avisado.exchange(true)) {
+    REXLOG_WARN("SDL rumble failed: {}", SDL_GetError());
+  }
+  return X_ERROR_FUNCTION_FAILED;
 }
 
 X_RESULT SDLInputDriver::GetDeviceKeystroke(DeviceId id, uint32_t flags,
@@ -555,6 +562,11 @@ void SDLInputDriver::OnControllerDeviceAddedLocked(const SDL_Event& event) {
 
   REXLOG_INFO("SDL OnControllerDeviceAdded: connection order {}, device {}.", ordinal,
               static_cast<uint64_t>(state.id));
+  // PARCHE LOCAL - Batocera: whether SDL can make this pad rumble (input_vibracion).
+  REXLOG_INFO("SDL rumble: {}",
+              SDL_GetBooleanProperty(SDL_GetGamepadProperties(controller), SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN, false)
+                  ? "supported"
+                  : "not reported by the driver");
   // PARCHE LOCAL - Batocera: the mapping SDL uses for this pad, to read with input_sdl_diag.
   if (char* mapping = SDL_GetGamepadMapping(controller)) {
     REXLOG_INFO("SDL mapping: {}", mapping);

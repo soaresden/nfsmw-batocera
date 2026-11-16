@@ -39,7 +39,9 @@ input_sdl_por_letra = true
 # takes it for the left one. This puts left and top back where they are.
 input_sdl_intercambiar_xy = true
 # Diagnostic: each button press in logs/nfsmw_00X.log as "[mando] SDL <n> (<name>, etiqueta <label>) -> Xbox <button>".
-input_sdl_diag = true
+input_sdl_diag = false
+# Rumble: the game's vibration reaches the pad (if its driver offers it; "SDL rumble:" in the log says so).
+input_vibracion = true
 # The native renderer does not use Xenos memory export, which needs vertex stores and atomics.
 vulkan_require_vertex_pipeline_stores_and_atomics = false
 
