@@ -8,7 +8,9 @@ What changes for the browser:
 - subprocess.run reaches ffmpeg/ffprobe (ffmpeg.wasm) and vgmstream-cli (WASI) through js.vf_run;
 - each finished file is handed to the page with js.vf_flush and removed, so the 2 GB of output never sit in memory;
 - the speech lines are decoded and encoded in groups (ordered by their length in the stream header) instead of all
-  decoded first: 9929 decoded lines would take about 1.7 GB.
+  decoded first: 9929 decoded lines would take about 1.7 GB;
+- the worker (vf-worker.js) runs the steps: text_step, then movie() for each of movies_list(), movies_report,
+  speech_start, speech_group() for each group, speech_finish.
 """
 import os
 import struct
@@ -23,7 +25,7 @@ sys.path.insert(0, '/vf')
 X360 = '/iso/x360.iso'
 XBOX = '/iso/xbox.iso'
 OUT = '/out'
-GROUP = 256
+GROUP = 64  # speech lines per call: one ffmpeg run each, and a fresh ffmpeg.wasm per group (vf-worker.js)
 
 
 # ---------------------------------------------------------------- external programs
@@ -193,31 +195,52 @@ def text_step():
             flush(os.path.join(OUT, 'NFS', name), 'NFS/' + name)
 
 
-def movies_step(start, span):
+# The movies and the speech are cut into calls the worker makes one by one (one movie, one group of lines): in
+# between, it can start a fresh ffmpeg.wasm, whose memory gets corrupted after a few hundred runs ("memory access
+# out of bounds"), and retry the movie that failed. Module state keeps what the steps share.
+_S = {}
+
+
+def movies_list():
+    """The 360 movies, as patch_movies.main lists them: [file name in lower case]."""
     import patch_movies
-    from zzdata import open_discs, path
+    from zzdata import open_discs
     x360, xbox = open_discs(X360, XBOX)
-    output = os.path.join(OUT, 'Movies')
-    os.makedirs(output, exist_ok=True)
+    _S['x360'], _S['xbox'] = x360, xbox
+    os.makedirs(os.path.join(OUT, 'Movies'), exist_ok=True)
     suffix = patch_movies.SUFFIX.upper()
-    movies = sorted(p for p in x360.files if p.startswith('MOVIES/') and p.endswith(suffix))
-    report = []
-    for k, file_path in enumerate(movies):
-        name = file_path[len('MOVIES/'):-len(suffix)]
-        progress(start + span * k / len(movies), L('Vidéos : %s (%d/%d)', 'Movies: %s (%d/%d)') % (name.lower(), k + 1, len(movies)))
-        vp6 = path('MOVIES', '%s_FRENCH_PAL.VP6' % name)
-        if xbox.has(vp6):
-            line = patch_movies.convert(x360, xbox, file_path, vp6, output, 'ffmpeg')
-        else:
-            line = '%-45s unchanged (no French version on the Xbox disc)' % os.path.basename(file_path).lower()
-        print(line)
-        report.append(line)
-        target = os.path.join(output, os.path.basename(file_path).lower())
-        if os.path.exists(target):
-            flush(target, 'Movies/' + os.path.basename(target))
-    report_file = os.path.join(output, 'movies_report.txt')
+    _S['movies'] = sorted(p for p in x360.files if p.startswith('MOVIES/') and p.endswith(suffix))
+    _S['report'] = []
+    return [os.path.basename(p).lower() for p in _S['movies']]
+
+
+def movie(k, done=False):
+    """Movie k of movies_list(): converted and handed over, or noted as done by an earlier run."""
+    import patch_movies
+    from zzdata import path
+    file_path = _S['movies'][k]
+    suffix = patch_movies.SUFFIX.upper()
+    name = file_path[len('MOVIES/'):-len(suffix)]
+    output = os.path.join(OUT, 'Movies')
+    vp6 = path('MOVIES', '%s_FRENCH_PAL.VP6' % name)
+    if not _S['xbox'].has(vp6):
+        line = '%-45s unchanged (no French version on the Xbox disc)' % os.path.basename(file_path).lower()
+    elif done:
+        line = '%-45s OK (converted by an earlier run)' % os.path.basename(file_path).lower()
+    else:
+        line = patch_movies.convert(_S['x360'], _S['xbox'], file_path, vp6, output, 'ffmpeg')
+    print(line)
+    _S['report'].append(line)
+    target = os.path.join(output, os.path.basename(file_path).lower())
+    if os.path.exists(target):
+        flush(target, 'Movies/' + os.path.basename(target))
+    return line
+
+
+def movies_report():
+    report_file = os.path.join(OUT, 'Movies', 'movies_report.txt')
     with open(report_file, 'w', encoding='utf-8') as w:
-        w.writelines(line + '\n' for line in report)
+        w.writelines(line + '\n' for line in _S['report'])
     flush(report_file, 'Movies/movies_report.txt')
 
 
@@ -226,39 +249,48 @@ def _samples(elements):
     return values.get(0x85, 0)
 
 
-def speech_step(start, span):
+def speech_start():
+    """patch_speech.main up to the encoding: returns the number of groups of lines."""
     import tempfile
     import patch_speech as ps
-    from ea_stream import stream
-    from speech_idx import read, to_360, unit
-    from zzdata import SECTOR, bstringhash, open_discs
+    from speech_idx import read, to_360
+    from zzdata import open_discs
     x360, xbox = open_discs(X360, XBOX)
-    nfs = os.path.join(OUT, 'NFS')
-    os.makedirs(nfs, exist_ok=True)
-
+    os.makedirs(os.path.join(OUT, 'NFS'), exist_ok=True)
     idx_fr = xbox.read(ps.SPEECH.format('FR', 'IDX'))
     idx = to_360(idx_fr)
     if read(idx, '>') != read(idx_fr, '<'):
         raise SystemExit('converting the IDX changed its content')
     lines = ps.list_streams(xbox.read(ps.SPEECH.format('FR', 'BIG')))
     print('COPSPEECH_FR.BIG: %d lines' % len(lines))
-
     # ps.encoded_lines, in groups: decode a group, encode it, keep only the EA-XA streams
     order = sorted(range(len(lines)), key=lambda i: _samples(lines[i][2]))
-    streams = [None] * len(lines)
-    with tempfile.TemporaryDirectory() as folder:
-        for g in range(0, len(order), GROUP):
-            group = order[g:g + GROUP]
-            progress(start + span * 0.95 * g / len(order),
-                     L('Voix : %d / %d répliques', 'Voices: %d / %d lines') % (g, len(lines)))
-            decoded = [ps.decode(lines[i][1], 'vgmstream-cli', 'ffmpeg', folder) for i in group]
-            data = iter(ps.encode_all([s for channels, _ in decoded for s in channels]))
-            for i, (channels, rate) in zip(group, decoded):
-                streams[i] = stream(lines[i][2], [next(data) for _ in channels], len(channels[0]), rate)
-            del decoded, data
-    streams = [ps.canonical_header(s) for s in streams]
-    progress(start + span * 0.96, L('Voix : reconstruction de COPSPEECH', 'Voices: rebuilding COPSPEECH'))
-    big, idx = ps.rebuild(idx, [p for p, _, _ in lines], streams)
+    _S.update(x360=x360, xbox=xbox, idx=idx, lines=lines, order=order, streams=[None] * len(lines),
+              folder=tempfile.mkdtemp())
+    return (len(order) + GROUP - 1) // GROUP
+
+
+def speech_group(g):
+    import patch_speech as ps
+    from ea_stream import stream
+    lines, order, streams = _S['lines'], _S['order'], _S['streams']
+    group = order[g * GROUP:(g + 1) * GROUP]
+    decoded = [ps.decode(lines[i][1], 'vgmstream-cli', 'ffmpeg', _S['folder']) for i in group]
+    data = iter(ps.encode_all([s for channels, _ in decoded for s in channels]))
+    for i, (channels, rate) in zip(group, decoded):
+        streams[i] = stream(lines[i][2], [next(data) for _ in channels], len(channels[0]), rate)
+    return min((g + 1) * GROUP, len(order))
+
+
+def speech_finish():
+    """The rest of patch_speech.main: .BIG and .IDX rebuilt, ZZDATA9 written, ZDIR.BIN pointed at them."""
+    import patch_speech as ps
+    from speech_idx import read, unit
+    from zzdata import SECTOR, bstringhash
+    x360, xbox, lines = _S['x360'], _S['xbox'], _S['lines']
+    nfs = os.path.join(OUT, 'NFS')
+    streams = [ps.canonical_header(s) for s in _S.pop('streams')]
+    big, idx = ps.rebuild(_S['idx'], [p for p, _, _ in lines], streams)
     del streams
 
     def line_at(bk, v):
@@ -299,16 +331,4 @@ def speech_step(start, span):
         w.write(zdir)
     print('ZZDATA%d.BIN: %d bytes; ZDIR.BIN: COPSPEECH_EN.BIG, .IDX and .EVT -> French' % (ps.ZZDATA, end))
     flush(zz, 'NFS/ZZDATA%d.BIN' % ps.ZZDATA)
-
-
-def run_all():
-    import time
-    t = time.time()
-    accept_modified_copy()
-    progress(0.0, L('VF : textes', 'French dub: text'))
-    text_step()
-    movies_step(0.05, 0.4)
-    speech_step(0.45, 0.55)
-    flush(os.path.join(OUT, 'NFS', 'ZDIR.BIN'), 'NFS/ZDIR.BIN')
-    progress(1.0, L('VF terminée', 'French dub done'))
-    print('VF: %.0f min' % ((time.time() - t) / 60))
+    flush(zdir_file, 'NFS/ZDIR.BIN')

@@ -480,10 +480,31 @@ zone.addEventListener('drop', async (e) => {
   for (const f of order) await dropped(f);
 });
 
+// Movies an earlier run already dubbed: in the destination with another size than on the disc. Looked up before the
+// game copy (which would put the English ones back) and not converted again: a run stopped halfway resumes there.
+async function dubbedMovies() {
+  const done = [];
+  try {
+    let dir = state.dest;
+    for (const p of `${state.base}game_root/Movies`.split('/').filter(Boolean)) dir = await dir.getDirectoryHandle(p);
+    for (const f of state.game.files) {
+      if (!/^movies\/[^/]+_english_pal\.wmv$/i.test(f.rel)) continue;
+      const name = f.rel.slice(7).toLowerCase();
+      try {
+        const there = await (await dir.getFileHandle(name)).getFile();
+        if (there.size !== (await f.get()).size) done.push(name);
+      } catch { /* not there */ }
+    }
+  } catch { /* no Movies folder yet */ }
+  return done;
+}
+
 async function runVf() {
   log(L('VF : début (1 à 3 heures ; gardez la page ouverte)', 'French dub: start (1 to 3 hours; keep the page open)'));
   const t0 = Date.now();
-  await vfWorker({ type: 'run' }, async (rel, data) => {
+  const done = state.vfDone || [];
+  if (done.length) log(L(`VF : ${done.length} vidéos déjà converties par un essai précédent, sautées`, `French dub: ${done.length} movies already converted by an earlier run, skipped`));
+  await vfWorker({ type: 'run', done }, async (rel, data) => {
     await writeTo(state.dest, `${state.base}game_root/${rel}`, data);
     log(`VF : ${rel} (${size(data.length)})`);
   });
@@ -741,9 +762,11 @@ async function run() {
       log(`écrit : ${entries.length} fichiers dans ${PORT}/`);
       state.portWritten = true;
       await writeTo(state.dest, `${state.base}nfsmw_shaders.nfsp`, await shaders(state.game));
+      state.vfDone = state.vfXbox ? await dubbedMovies() : [];
       if ($('copy-game').checked) {
         let copied = 0, written = 0;
         for (const f of state.game.files) {
+          if (state.vfDone.includes(f.rel.slice(7).toLowerCase()) && /^movies\//i.test(f.rel)) continue;  // dubbed by an earlier run
           const file = await f.get();
           const isNew = await writeTo(state.dest, `${state.base}game_root/${f.rel}`, file, (n) => {
             copied += n;

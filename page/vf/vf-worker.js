@@ -30,9 +30,22 @@ async function loadPython(pyodideURL) {
   py.runPython("import sys; sys.path.insert(0, '/vf')");
 }
 
-async function loadTools(ffmpegURL) {
+// ffmpeg.wasm's memory gets corrupted after a few hundred runs in one instance ("memory access out of bounds"):
+// a fresh one is started every FFMPEG_RUNS runs, between two steps, and after an error.
+const FFMPEG_RUNS = 40;
+let ffmpegRuns = 0;
+let ffmpegURLSaved = '';
+
+async function freshFFmpeg() {
+  core = null;
+  ffmpegRuns = 0;
+  await loadTools(ffmpegURLSaved, true);
+}
+
+async function loadTools(ffmpegURL, quiet = false) {
+  ffmpegURLSaved = ffmpegURL;
   if (!core) {
-    post({ type: 'progress', fraction: 0, text: self.vf_lang === 'en' ? 'French dub: loading ffmpeg…' : 'VF : chargement de ffmpeg…' });
+    if (!quiet) post({ type: 'progress', fraction: 0, text: self.vf_lang === 'en' ? 'French dub: loading ffmpeg…' : 'VF : chargement de ffmpeg…' });
     const { default: createFFmpegCore } = await import(ffmpegURL + 'ffmpeg-core.js');
     const hash = btoa(JSON.stringify({ wasmURL: ffmpegURL + 'ffmpeg-core.wasm' }));
     core = await createFFmpegCore({ mainScriptUrlOrBlob: `${ffmpegURL}ffmpeg-core.js#${hash}` });
@@ -88,6 +101,7 @@ function ffmpeg(program, args, input, cwd) {
     output = args[last];
   }
   coreLogs.length = 0;
+  ffmpegRuns++;
   const r = program === 'ffmpeg' ? core.exec(...args) : core.ffprobe(...args);
   let returncode = typeof r === 'number' ? r : (core.ret || 0);
   // ffmpeg.wasm's ffprobe always ends with -1, even when it printed its answer
@@ -142,6 +156,50 @@ self.vf_progress = (fraction, text) => post({ type: 'progress', fraction, text }
 
 // ---------------------------------------------------------------- messages
 
+const T = (fr, en) => (self.vf_lang === 'en' ? en : fr);
+const progress = (fraction, text) => post({ type: 'progress', fraction, text });
+
+// vf_page's steps one by one, as build_package.py runs them. done: movies an earlier run already converted.
+async function runAll(vf, done) {
+  const t0 = Date.now();
+  vf.accept_modified_copy();
+  progress(0, T('VF : textes', 'French dub: text'));
+  vf.text_step();
+
+  const movies = vf.movies_list().toJs();
+  for (let k = 0; k < movies.length; k++) {
+    progress(0.05 + 0.4 * k / movies.length, `${T('Vidéos', 'Movies')} : ${movies[k]} (${k + 1}/${movies.length})`);
+    if (ffmpegRuns >= FFMPEG_RUNS) await freshFFmpeg();
+    try {
+      vf.movie(k, done.has(movies[k]));
+    } catch (e) {  // a worn-out ffmpeg.wasm: once more with a fresh one
+      post({ type: 'log', text: T(`${movies[k]} : nouvel essai avec un ffmpeg neuf (${String(e.message || e).split('\n').pop()})`,
+        `${movies[k]}: retry with a fresh ffmpeg (${String(e.message || e).split('\n').pop()})`) });
+      await freshFFmpeg();
+      vf.movie(k, false);
+    }
+  }
+  vf.movies_report();
+
+  const groups = vf.speech_start();
+  for (let g = 0; g < groups; g++) {
+    await freshFFmpeg();  // one ffmpeg run per line (resampling): a fresh instance for each group of 64 lines
+    let lines;
+    try {
+      lines = vf.speech_group(g);
+    } catch (e) {
+      post({ type: 'log', text: T(`voix, groupe ${g + 1} : nouvel essai avec un ffmpeg neuf`, `voices, group ${g + 1}: retry with a fresh ffmpeg`) });
+      await freshFFmpeg();
+      lines = vf.speech_group(g);
+    }
+    progress(0.45 + 0.53 * (g + 1) / groups, `${T('Voix', 'Voices')} : ${lines} ${T('répliques', 'lines')}`);
+  }
+  progress(0.98, T('Voix : reconstruction de COPSPEECH', 'Voices: rebuilding COPSPEECH'));
+  vf.speech_finish();
+  progress(1, T('VF terminée', 'French dub done'));
+  post({ type: 'log', text: `VF : ${Math.round((Date.now() - t0) / 60000)} min` });
+}
+
 self.onmessage = async ({ data: m }) => {
   try {
     self.vf_lang = m.lang || 'fr';
@@ -152,7 +210,7 @@ self.onmessage = async ({ data: m }) => {
       post({ type: 'result', problem: vf.check(), diagnostic: vf.diagnostic() });
     } else if (m.type === 'run') {
       await loadTools(m.ffmpeg);
-      vf.run_all();
+      await runAll(vf, new Set(m.done || []));
       post({ type: 'result', done: true });
     }
   } catch (e) {
