@@ -1,0 +1,12 @@
+{
+ "paquets": [
+  {
+   "edition": "pal_es",
+   "xex_sha256": "aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694",
+   "fichier": "nfsmw-pal_es.pak",
+   "version": "nfsmw-batocera 46fbd64 2026-11-16 04:00 UTC",
+   "taille": 21916990,
+   "sha256": "2e89e5ccba3f137722e6548d21b43e071e1d6d231aa86690b331259af7075773"
+  }
+ ]
+}
