@@ -1,5 +1,9 @@
 # Tools
 
+> **Batocera:** these are the shared nfsmw-nx scripts, written for the Switch build. On Batocera, `batocera/build.sh`
+> calls `codegen.sh` and `tools/biblioteca_shaders.mjs` is used by `batocera/build_shaders.sh`; the NRO steps do
+> not apply.
+
 This folder has the scripts that build the port: they get the missing libraries, extract the game, translate it to
 C++, fix up the generated code, check the result and build the NRO. Look here when a step of
 [docs/building.md](../docs/building.md) names a script and you want to know what it does. The names are in Spanish;

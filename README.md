@@ -42,7 +42,9 @@ conséquence.
 | [codepdbh/nfsmw-android](https://github.com/codepdbh/nfsmw-android) (NFSMW Android Evolved) | Le passage à l'ARM64 générique avec SDL3, Vulkan 1.1 et les correctifs Adreno/Turnip. Ce dépôt part de sa version 0.8.2 |
 | Ce dépôt | La cible Linux aarch64, la compilation croisée et le paquet « Ports » de Batocera |
 
-Le README d'origine du port Android est dans [README.android.md](README.android.md).
+Le dépôt ne garde que ce qui sert à Batocera : le port Android (Java, GLES, Gradle), la Switch et leurs outils
+sont dans leurs dépôts d'origine. `docs/` et `tools/` gardent la documentation et les scripts communs de nfsmw-nx
+(recompilation, renderer, éditions), écrits pour la Switch mais valables ici.
 
 ## Installation sur la console
 
@@ -98,12 +100,12 @@ Les journaux sont `nfsmw-stdout.log` (lanceur) et `logs/nfsmw_001.log` (jeu). **
 | Quitter | Hotkey + Start |
 
 Le lanceur écrit en tête de `nfsmw-stdout.log` la version du port (`VERSION`), Batocera, les pilotes Vulkan et
-la correspondance de manette : **envoyez ce fichier et `logs/nfsmw_00X.log` avec chaque retour.**
+la manette vue par SDL : **envoyez ce fichier et `logs/nfsmw_00X.log` avec chaque retour.**
 
 ## Commandes et options
 
-Les boutons sont ceux de la manette Xbox 360 : **A** valide, **B** revient (nitro en course), gâchettes pour
-accélérer et freiner, **Start** pour la pause. **Hotkey + Start** quitte le jeu. Le menu de debug s'ouvre avec
+Avec les icônes PlayStation (par défaut), le bouton du bas (✕) valide, celui de droite (○) revient, et la nitro
+est sur ✕ en course ; gâchettes pour accélérer et freiner, **Start** pour la pause. **Hotkey + Start** quitte le jeu. Le menu de debug s'ouvre avec
 **L + R + Droite**.
 
 **Options avancées du jeu → NFS MOST WANTED** dans EmulationStation (installé par le lanceur, visible après un
@@ -112,7 +114,7 @@ redémarrage d'EmulationStation) :
 | Option | Valeurs |
 |---|---|
 | Langue du jeu | Auto (celle de Batocera), celle du disque, ou une des dix langues |
-| Résolution interne | 1280x720, 1920x1080, 1024x576 |
+| Résolution interne | 1280x720 (celle de la Xbox 360, 60 FPS sur la RP5), 1920x1080 (l'écran de la RP5, plus lourd ; le maximum du renderer), 1024x576 (plus léger) |
 | Limite de FPS | 60, 30 |
 | Filtre jaune du jeu | original, doux, désactivé |
 | Anticrénelage | désactivé, FXAA |
@@ -139,6 +141,14 @@ les autres mods de `GLOBALMEMORYFILE.BIN` (la MX-5…) sont gardés. Voir
 |---|---|
 | `batocera/tools/Identifier NFSMW.sh` | Dit quelle édition est votre copie et quels fichiers diffèrent de l'original (`ports/nfsmw-identification.txt`) |
 | `batocera/tools/Extraire textures NFSMW.sh` | Sort des archives les packs de textures dont le mod PlayStation a besoin (`ports/nfsmw-extrait/`) |
+
+Sur le PC :
+
+| Outil | Rôle |
+|---|---|
+| `batocera/tools/ps_buttons/ps_buttons.py --icon-sets` | Le zip des trois styles d'icônes (voir plus haut) |
+| `batocera/tools/ps_buttons/gamelist_media.py` | Un zip `forgamelist/` avec les images de l'écran titre (image, vignette, fanart) pour votre fiche EmulationStation, et un dossier `screenshots/` pour vos captures (**Hotkey + L1**, rangées par Batocera dans `/userdata/screenshots/`). Rien n'est écrit dans `gamelist.xml` |
+| `batocera/build_shaders.sh <jeu> [sortie]` | Fabrique `nfsmw_shaders.nfsp` depuis votre copie (Node.js 18+), comme l'installeur de l'app Android. Inutile si vous avez déjà celui de l'app |
 
 ## Compilation
 
@@ -167,6 +177,7 @@ versionné), compile pour aarch64 et prépare `out/batocera/`. Il faut environ 1
 | `batocera/package.sh` | Le dossier `NFS Most Wanted.sh/` : binaire, bibliothèques, réglages, lanceur, `VERSION` |
 | `batocera/port/` | Le lanceur `run.sh`, la touche de sortie `padto.keys` et le menu d'options `es_features_nfsmw.cfg` |
 | `batocera/nfsmw.toml` | Les réglages de départ |
+| `batocera/shader-builder/` | Le constructeur de la bibliothèque de shaders (compilateurs HLSL/DXC en WebAssembly), utilisé par `build_shaders.sh` |
 | `app/src/nfsmw_nucleos_grandes.cpp` | Les threads du jeu sur les cœurs rapides (A77), repris du port Android |
 | `app/orden_funciones_lld.txt` | Les fonctions chaudes en tête du code (ordre de la Switch), avec ThinLTO |
 

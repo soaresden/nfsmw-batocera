@@ -1,5 +1,9 @@
 # Documentation
 
+> **Batocera:** this repository is the Batocera (Linux aarch64) port. The documents below come from nfsmw-nx and
+> describe the Switch build; the recompilation, renderer and edition parts apply here too. The Batocera build is
+> in the main [README](../README.md) and `batocera/`.
+
 ## Start here
 
 These documents explain how the port works, how to build it, and how to use it as a guide to port another Xbox 360
