@@ -142,6 +142,16 @@ async function chooseGame(all) {
   const total = (await Promise.all(game.files.map(async (f) => (await f.get()).size))).reduce((a, b) => a + b, 0);
   fact('game-facts', `${game.files.length} fichiers, ${size(total)}${game.root ? ` (dans <code>${game.root}</code>)` : ''}`);
   fact('game-facts', `Édition : <strong>${EDITIONS[xexSha] || 'inconnue'}</strong>`, paquet ? 'ok' : 'bad');
+  {  // default.xex alone, to identify a copy or to add an edition to the port
+    const li = document.createElement('li');
+    li.className = 'muted';
+    const link = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([xex])), download: 'default.xex', textContent: 'Enregistrer default.xex seul',
+    });
+    link.style.color = 'inherit';
+    li.append(link, ` (empreinte ${xexSha.slice(0, 8)}…, pour un rapport ou une nouvelle édition)`);
+    $('game-facts').append(li);
+  }
   if (!paquet) {
     fact('game-facts', EDITIONS[xexSha]
       ? 'Cette édition n\'est pas encore prise en charge par le port Batocera.'
