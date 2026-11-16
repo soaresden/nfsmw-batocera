@@ -674,6 +674,14 @@ async function dirOf(root, parts) {
 }
 
 async function writeTo(root, path, data, onBytes) {
+  try {
+    return await writeFile(root, path, data, onBytes);
+  } catch (e) {  // say which file: Chrome refuses some names on a real disk ("Name is not allowed")
+    throw new Error(`${path} : ${e.message || e}`);
+  }
+}
+
+async function writeFile(root, path, data, onBytes) {
   const parts = path.split('/');
   const dir = await dirOf(root, parts.slice(0, -1));
   const name = parts[parts.length - 1];

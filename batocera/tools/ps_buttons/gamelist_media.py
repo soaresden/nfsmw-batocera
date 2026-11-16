@@ -98,7 +98,9 @@ def media(frontb):
         b = io.BytesIO()
         im.save(b, 'PNG')
         out['forgamelist/' + name] = b.getvalue()
-    out['forgamelist/screenshots/.garder'] = b''
+    # A small file keeps the folder (not a dot file: Chrome's File System Access refuses those names on a real disk).
+    out['forgamelist/screenshots/LISEZMOI.txt'] = ('Copiez ici vos captures (Hotkey + L1, rangees par Batocera dans '
+                                                  '/userdata/screenshots/).\n').encode('utf-8')
     out['forgamelist/LISEZMOI.txt'] = LISEZMOI.encode('utf-8')
     return out
 
