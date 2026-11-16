@@ -111,6 +111,13 @@ add_arg nfsmw_limite_fps "$(conf_get nfsmw_fps)"
 add_arg nfsmw_tratamiento_visual "$(conf_get nfsmw_visual_treatment)"
 add_arg nfsmw_antialiasing "$(conf_get nfsmw_antialiasing)"
 add_arg nfsmw_posproceso "$(conf_get nfsmw_postprocess)"
+# Mods (mods.py): mods/<name>/ laid out as game_root/, e.g. mods/mx5/. What the last start applied is put back first,
+# so a removed mod folder gives the base game again; they are applied after the icons, which they keep.
+MODS_PY=0
+if command -v python3 >/dev/null 2>&1 && [ -f "$GAMEDIR/mods.py" ]; then
+    MODS_PY=1
+    python3 "$GAMEDIR/mods.py" restore "$GAMEDIR" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
+fi
 # Button icons (batocera/tools/ps_buttons --icon-sets): mods/icones/<style>/ holds the GLOBAL/ files of each
 # style; the one chosen in the menu (ICONES DES BOUTONS, PlayStation by default once the sets are installed) is put
 # in game_root/GLOBAL/. A file the style does not have is removed there: the game reads it from its archives
@@ -136,6 +143,7 @@ if [ -d "$GAMEDIR/mods/icones" ]; then
 elif [ -d "$GAMEDIR/mods/boutons-playstation" ]; then
     ICONS=playstation  # the earlier single PlayStation mod
 fi
+[ "$MODS_PY" = 1 ] && python3 "$GAMEDIR/mods.py" apply "$GAMEDIR" "${ICONS:-}" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
 # PlayStation icons are drawn by position, as on a PlayStation pad; Xbox 360 and GameCube ones by letter (the
 # Retroid's labels). The menu (BOUTONS A/B X/Y) has the last word.
 case "$(conf_get nfsmw_buttons)" in

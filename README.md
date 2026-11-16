@@ -147,6 +147,14 @@ redémarrage d'EmulationStation) :
 
 Les autres réglages sont dans `nfsmw.toml`.
 
+### Mods (la MX-5…)
+
+Un dossier `NFS Most Wanted.sh/mods/<nom>/`, rangé comme `game_root/` (`CARS/…`, `GLOBAL/…`), est appliqué à chaque
+lancement par `mods.py` : par exemple `mods/mx5/` avec le contenu de `game_root/` du zip de la page MX-5
+(MazdaMx5-nd-rf-ingames). Les fichiers d'origine sont gardés dans `data/mods-originals/` : supprimer le dossier du
+mod rend le jeu de base au lancement suivant. Le `GLOBALMEMORYFILE.BIN` d'un mod reçoit les icônes du style choisi
+(et, avec la VF, les textes anglais y sont masqués comme le fait french-dub).
+
 ### Black Edition
 
 L'option **BLACK EDITION** du menu NFS MOST WANTED débloque le contenu de la Black Edition, présent sur tous les

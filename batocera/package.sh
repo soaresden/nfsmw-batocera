@@ -7,6 +7,7 @@
 # lists a folder with the .sh extension as a game; Batocera runs its run.sh and reads its padto.keys.
 #   NFS Most Wanted.sh/run.sh           the launcher
 #   NFS Most Wanted.sh/padto.keys       Hotkey + Start quits the game
+#   NFS Most Wanted.sh/mods.py          applies mods/<name>/ (e.g. mods/mx5/) over game_root at each start
 #   NFS Most Wanted.sh/nfsmw            the game, with librexruntime.so and librexgpu-xenos.so
 #   NFS Most Wanted.sh/nfsmw.toml       settings
 #   NFS Most Wanted.sh/lib/             libraries the console may not have
@@ -29,7 +30,7 @@ cp "$RAIZ/batocera/nfsmw.toml" "$PKG/nfsmw.toml"
 echo "nfsmw-batocera $(git -C "$RAIZ" describe --always --dirty 2>/dev/null || echo unknown) $(date -u '+%F %H:%M UTC')" > "$PKG/VERSION"
 # The NFS MOST WANTED submenu of EmulationStation's advanced game options (the launcher installs it).
 cp "$RAIZ/batocera/port/es_features_nfsmw.cfg" "$PKG/es_features_nfsmw.cfg"
-cp "$RAIZ/batocera/port/run.sh" "$RAIZ/batocera/port/padto.keys" "$PKG/"
+cp "$RAIZ/batocera/port/run.sh" "$RAIZ/batocera/port/padto.keys" "$RAIZ/batocera/port/mods.py" "$PKG/"
 chmod +x "$PKG/run.sh" "$PKG/nfsmw"
 
 # Shared libraries the binary needs and Batocera does not always carry (X11/XCB client libraries, used only
