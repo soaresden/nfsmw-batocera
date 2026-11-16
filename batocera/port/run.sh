@@ -43,6 +43,20 @@ fi
 export LD_LIBRARY_PATH="$LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 # SDL3 picks Wayland under Batocera's compositor, otherwise KMS/DRM or X11.
 export SDL_VIDEO_DRIVER="${SDL_VIDEO_DRIVER:-wayland,kmsdrm,x11}"
+# Mouse pointer: without a mouse, Batocera's Wayland compositor leaves its pointer in the top left corner until the
+# screen is touched (SDL can only hide it once the pointer is over the game's window). Sway hides an idle pointer
+# with "seat * hide_cursor <ms>"; its IPC socket is found in the environment or under the runtime folders.
+COMPOSITOR=$(for c in sway labwc weston cage; do pgrep -x "$c" >/dev/null 2>&1 && echo "$c"; done | head -1)
+if [ "$COMPOSITOR" = sway ] && command -v swaymsg >/dev/null 2>&1; then
+    SOCK="${SWAYSOCK:-$(ls -t /run/user/*/sway-ipc.*.sock /var/run/sway-ipc.*.sock /tmp/sway-ipc.*.sock 2>/dev/null | head -1)}"
+    if [ -n "$SOCK" ] && SWAYSOCK="$SOCK" swaymsg "seat * hide_cursor 200" >/dev/null 2>&1; then
+        POINTER="hidden after 200 ms (sway, $SOCK)"
+    else
+        POINTER="sway found but swaymsg failed (socket: ${SOCK:-none})"
+    fi
+else
+    POINTER="left as it is (compositor: ${COMPOSITOR:-none found})"
+fi
 # Adreno: Mesa Turnip. Keep its pipeline cache on the SD card so later sessions start smoothly.
 export MESA_SHADER_CACHE_DIR="$GAMEDIR/cache/mesa"
 export MESA_SHADER_CACHE_MAX_SIZE=1G
@@ -55,6 +69,7 @@ chmod +x "$GAMEDIR/nfsmw" 2>/dev/null
     echo "[batocera] C++ runtime: system ${SYS_CXX:-none}, bundled ${OWN_CXX:-none}; LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
     echo "[batocera] WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-} DISPLAY=${DISPLAY:-} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-} HOME=${HOME:-}"
     echo "[batocera] SDL_GAMECONTROLLERCONFIG: ${SDL_GAMECONTROLLERCONFIG:-(none)}"
+    echo "[batocera] mouse pointer: $POINTER"
     ls /usr/share/vulkan/icd.d/ 2>/dev/null | sed 's/^/[batocera] vulkan icd: /'
 } > "$GAMEDIR/nfsmw-stdout.log" 2>&1
 # ---- Options from EmulationStation (ADVANCED GAME OPTIONS > NFS MOST WANTED) ----
