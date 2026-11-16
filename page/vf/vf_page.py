@@ -2,7 +2,9 @@
 
 The steps and checks are those of build_package.py: text (patch_text), movies (patch_movies), speech (patch_speech).
 What changes for the browser:
-- the two disc images are read in place (WORKERFS, /iso/x360.iso and /iso/xbox.iso);
+- the two disc images are read in place through js.vf_iso_read (File.slice): Python's file offsets are 32-bit in
+  Pyodide (wasm32), and the data of a 7 GB 360 image or of an original Xbox image (partition at 0x18300000) lies
+  beyond 2 GB, so open() of /iso/x360.iso and /iso/xbox.iso returns IsoFile instead;
 - subprocess.run reaches ffmpeg/ffprobe (ffmpeg.wasm) and vgmstream-cli (WASI) through js.vf_run;
 - each finished file is handed to the page with js.vf_flush and removed, so the 2 GB of output never sit in memory;
 - the speech lines are decoded and encoded in groups (ordered by their length in the stream header) instead of all
@@ -43,6 +45,60 @@ def _run(cmd, input=None, cwd=None, check=False, capture_output=False, text=Fals
 
 
 subprocess.run = _run
+
+
+# ---------------------------------------------------------------- the disc images
+
+class IsoFile:
+    """Read-only file over one of the page's ISO files, with offsets beyond 2 GB (JavaScript numbers)."""
+
+    def __init__(self, key):
+        self.key = key
+        self.size = int(js.vf_iso_size(key))
+        self.pos = 0
+
+    def seek(self, offset, whence=0):
+        self.pos = offset if whence == 0 else self.pos + offset if whence == 1 else self.size + offset
+        return self.pos
+
+    def tell(self):
+        return self.pos
+
+    def read(self, n=-1):
+        if n is None or n < 0:
+            n = self.size - self.pos
+        n = max(0, min(n, self.size - self.pos))
+        if not n:
+            return b''
+        data = js.vf_iso_read(self.key, self.pos, n).to_bytes()
+        self.pos += len(data)
+        return data
+
+    def close(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+import builtins  # noqa: E402
+
+_open = builtins.open
+_ISOS = {X360: 'x360', XBOX: 'xbox'}
+
+
+def _iso_open(file, mode='r', *args, **kwargs):
+    if isinstance(file, str) and file in _ISOS:
+        if any(c in mode for c in 'wa+'):
+            raise PermissionError(file)
+        return IsoFile(_ISOS[file])
+    return _open(file, mode, *args, **kwargs)
+
+
+builtins.open = _iso_open
 
 
 def progress(fraction, text):

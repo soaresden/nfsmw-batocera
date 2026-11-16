@@ -39,11 +39,15 @@ async function loadTools(ffmpegURL) {
   if (!vgm) vgm = await WebAssembly.compileStreaming(fetch(new URL('./vgmstream-cli.wasm', import.meta.url)));
 }
 
+// The two images, read by vf_page.IsoFile through vf_iso_read: offsets beyond 2 GB, which Python's own files in
+// Pyodide (wasm32) cannot seek to. FileReaderSync is synchronous, as the Python code expects.
+let discs = {};
+const reader = new FileReaderSync();
 function mountDiscs(x360, xbox) {
-  py.FS.mkdirTree('/iso');
-  try { py.FS.unmount('/iso'); } catch { /* first time */ }
-  py.FS.mount(py.FS.filesystems.WORKERFS, { blobs: [{ name: 'x360.iso', data: x360 }, { name: 'xbox.iso', data: xbox }] }, '/iso');
+  discs = { x360, xbox };
 }
+self.vf_iso_size = (key) => discs[key].size;
+self.vf_iso_read = (key, offset, length) => new Uint8Array(reader.readAsArrayBuffer(discs[key].slice(offset, offset + length)));
 
 // ---------------------------------------------------------------- the programs
 
