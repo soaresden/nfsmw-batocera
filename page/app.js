@@ -12,7 +12,8 @@ import { readXiso } from './iso.js';
 const $ = (id) => document.getElementById(id);
 const PORT = 'NFS Most Wanted.sh';
 const params = new URLSearchParams(location.search);
-const PYODIDE = params.get('pyodide') || 'https://cdn.jsdelivr.net/pyodide/v0.27.7/full/';
+const PYODIDE = new URL(params.get('pyodide') || 'https://cdn.jsdelivr.net/pyodide/v0.27.7/full/', location.href).href;
+const FFMPEG = new URL(params.get('ffmpeg') || 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/', location.href).href;
 const SALT = new TextEncoder().encode('nfsmw-batocera/paquet/1\0');
 // SHA-256 of the shader library this port expects (Android/Vulkan 1.1 variant of shader_common.h), by default.xex.
 const LIBRARIES = {
@@ -191,6 +192,7 @@ async function chooseGame(all) {
     fact('game-facts', 'Mod détecté (<code>GLOBAL/GLOBALMEMORYFILE.BIN</code>) : il est gardé par les icônes.');
   }
   Object.assign(state, { game, xex, xexSha, paquet, total });
+  offerVf(edition);
   $('s-dest').classList.remove('off');
   $('pick-dest').disabled = !canWrite;
   if (!canWrite) {
@@ -207,6 +209,7 @@ $('pick-game').onclick = async () => {
   try {
     const dir = await window.showDirectoryPicker({ id: 'nfsmw-jeu' });
     $('game-facts').replaceChildren();
+    state.iso = null;
     const all = await walkHandle(dir);
     await chooseGame(all);
   } catch (e) {
@@ -218,6 +221,7 @@ async function chooseIso(file) {
   fact('game-facts', `Lecture de <code>${file.name}</code>…`, 'muted');
   try {
     const all = await readXiso(file);
+    state.iso = file;
     $('game-facts').replaceChildren();
     fact('game-facts', `ISO : <code>${file.name}</code>`);
     await chooseGame(all);
@@ -228,7 +232,7 @@ async function chooseIso(file) {
 }
 $('pick-iso').onclick = () => $('pick-iso-input').click();
 $('pick-iso-input').onchange = (e) => e.target.files[0] && chooseIso(e.target.files[0]);
-$('pick-game-input').onchange = (e) => ($('game-facts').replaceChildren(), chooseGame(walkInput(e.target.files))).catch((x) => fact('game-facts', String(x.message || x), 'bad'));
+$('pick-game-input').onchange = (e) => ($('game-facts').replaceChildren(), state.iso = null, chooseGame(walkInput(e.target.files))).catch((x) => fact('game-facts', String(x.message || x), 'bad'));
 
 $('pick-dest').onclick = async () => {
   try {
@@ -249,6 +253,86 @@ $('pick-dest').onclick = async () => {
     if (e.name !== 'AbortError') fact('dest-facts', String(e.message || e), 'bad');
   }
 };
+
+// ------------------------------------------------------------------ French dub (page/vf/)
+
+// patch_text.py on GLOBALMEMORYFILE.BIN: the pack's copies of the English text get a hash nobody asks for, so the
+// game reads LANGUAGES\\ENGLISH.BIN (and the system messages) through ZDIR.BIN, where they point to the French ones.
+function hideTextCopies(pack) {
+  const out = pack.slice();
+  const v = new DataView(out.buffer);
+  if (out.length < 16 || v.getUint32(8, true) !== 0x53219999) return out;
+  const count = v.getUint32(12, true);
+  for (const en of [bHash('LANGUAGES\\ENGLISH.BIN'), 0x21d83a59]) {
+    const hidden = bHash(`FRENCH_DUB\\HIDDEN_${en.toString(16).toUpperCase().padStart(8, '0')}`);
+    for (let i = 0; i < count; i++) if (v.getUint32(16 + 20 * i, true) === en) v.setUint32(16 + 20 * i, hidden, true);
+  }
+  return out;
+}
+
+function offerVf(edition) {
+  state.vfXbox = null;
+  $('vf').hidden = !(edition && ['oui', 'a verifier'].includes(edition.vf));
+  $('vf-facts').replaceChildren();
+  $('pick-xbox').disabled = !state.iso || !canWrite;
+  if (!state.iso) fact('vf-facts', 'La VF a besoin de l\'ISO Xbox 360 (pas d\'un dossier extrait).', 'muted');
+  else if (!canWrite) fact('vf-facts', 'La VF a besoin de Chrome ou Edge (écriture directe des fichiers).', 'muted');
+}
+
+function vfWorker(message, onFile) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./vf/vf-worker.js', import.meta.url), { type: 'module' });
+    let writes = Promise.resolve();
+    worker.onmessage = ({ data: m }) => {
+      if (m.type === 'progress') progress(m.fraction, m.text);
+      else if (m.type === 'log') log(m.text);
+      else if (m.type === 'file') writes = writes.then(() => onFile(m.rel, m.data));
+      else if (m.type === 'error') { worker.terminate(); reject(new Error(m.message)); }
+      else if (m.type === 'result') writes.then(() => { worker.terminate(); resolve(m); }, reject);
+    };
+    worker.onerror = (e) => { worker.terminate(); reject(new Error(e.message || 'VF : erreur du worker')); };
+    worker.postMessage({ ...message, x360: state.iso, xbox: state.vfXbox || message.xbox, pyodide: PYODIDE, ffmpeg: FFMPEG });
+  });
+}
+
+$('pick-xbox').onclick = () => $('pick-xbox-input').click();
+$('pick-xbox-input').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  state.vfXbox = null;
+  $('vf-facts').replaceChildren();
+  fact('vf-facts', `Vérification de <code>${file.name}</code> avec l'ISO Xbox 360 (une minute)…`, 'muted');
+  try {
+    const r = await vfWorker({ type: 'check', xbox: file }, async () => {});
+    $('vf-facts').replaceChildren();
+    const report = `${r.problem ? `Problème : ${r.problem}\n\n` : ''}${r.diagnostic}\n`;
+    const li = document.createElement('li');
+    li.append(Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([report], { type: 'text/plain' })), download: 'nfsmw-vf-rapport.txt',
+      textContent: 'Enregistrer le rapport',
+    }), ' (noms et tailles de fichiers seulement)');
+    if (r.problem) {
+      fact('vf-facts', 'Ces deux ISO ne sont pas encore prises en charge pour la VF : l\'outil a été mis au point avec la PAL anglaise. Le rapport ci-dessous dit ce qu\'il faut adapter.', 'bad');
+    } else {
+      state.vfXbox = file;
+      fact('vf-facts', 'ISO Xbox française reconnue : la VF (textes, vidéos, voix) sera ajoutée après la copie du jeu. Comptez 1 à 3 heures, page ouverte.', 'ok');
+    }
+    $('vf-facts').append(li);
+  } catch (x) {
+    $('vf-facts').replaceChildren();
+    fact('vf-facts', String(x.message || x), 'bad');
+  }
+};
+
+async function runVf() {
+  log('VF : début (1 à 3 heures ; gardez la page ouverte)');
+  const t0 = Date.now();
+  await vfWorker({ type: 'run' }, async (rel, data) => {
+    await writeTo(state.dest, `${PORT}/game_root/${rel}`, data);
+    log(`VF : ${rel} (${size(data.length)})`);
+  });
+  log(`VF : terminée en ${Math.round((Date.now() - t0) / 60000)} min`);
+}
 
 // ------------------------------------------------------------------ the package
 
@@ -313,7 +397,9 @@ async function pythonTools(game) {
   const memfile = saved ? new Uint8Array(await (await saved.get()).arrayBuffer())
     : loose ? new Uint8Array(await (await loose.get()).arrayBuffer())
       : await fromArchives(game, 'GLOBAL/GLOBALMEMORYFILE.BIN');
-  for (const [n, b] of Object.entries({ globalb, dyntex, frontb, memfile })) py.FS.writeFile(`/in_${n}`, b);
+  // With the French dub the pack's copies of the English text are hidden (patch_text.py), in the icon sets' copies too.
+  const pack = state.vfXbox ? hideTextCopies(memfile) : memfile;
+  for (const [n, b] of Object.entries({ globalb, dyntex, frontb, memfile: pack })) py.FS.writeFile(`/in_${n}`, b);
 
   progress(0.16, 'Icônes PlayStation, GameCube et Xbox 360…');
   py.globals.set('js_log', (t) => log(t));
@@ -497,6 +583,7 @@ async function run() {
       } else {
         log(`copiez default.xex, NFS/ et Movies/ dans ${PORT}/game_root/`);
       }
+      if (state.vfXbox) await runVf();
     }
     progress(1, 'Terminé.');
     $('s-done').hidden = false;

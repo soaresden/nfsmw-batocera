@@ -5,6 +5,11 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- French dub in the installation page: with the PAL English 360 ISO and the original Xbox French ISO, the
+  nfsmw-nx french-dub tools run in the browser (Pyodide, ffmpeg.wasm, vgmstream for WASI). The icon sets start from
+  the pack with its English text hidden, as the dub needs. Other 360 editions get a report of both discs.
+- `batocera/build_edition.sh`: the port of another edition from its default.xex.
+- Editions table on the installation page.
 - The installation page takes the Xbox 360 ISO directly (XDVDFS read in the browser, XGD2 disc images and xiso).
 - Installation page (`page/`): from the player's game folder it decrypts the port with their `default.xex`, builds
   the shaders, the icon sets and the gamelist pictures in the browser, and writes `NFS Most Wanted.sh/` to the SD card

@@ -29,6 +29,7 @@ h1 { font-size: 1.7rem; margin: 0 0 4px; letter-spacing: -0.01em; }
 section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; }
 section h2 { font-size: 1.05rem; margin: 0 0 8px; display: flex; gap: 10px; align-items: baseline; }
 section h2 .n { color: var(--accent); font-variant-numeric: tabular-nums; }
+section h3 { font-size: .98rem; margin: 16px 0 4px; }
 section p { margin: 6px 0; }
 section.off { opacity: .55; }
 button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 10px 16px; cursor: pointer;
@@ -80,6 +81,16 @@ footer a { color: inherit; }
       <input id="pick-game-input" type="file" webkitdirectory hidden>
     </div>
     <ul class="facts" id="game-facts"></ul>
+    <div id="vf" hidden>
+      <h3>VF (facultatif)</h3>
+      <p>Avec l'ISO de la <strong>Xbox d'origine en français</strong>, la page passe le jeu en VF : textes, 32 des
+        36 vidéos et les voix en jeu. Outil french-dub de nfsmw-nx, exécuté dans le navigateur.</p>
+      <div class="row">
+        <button id="pick-xbox" class="second" disabled>Choisir l'ISO Xbox française</button>
+        <input id="pick-xbox-input" type="file" accept=".iso,.xiso" hidden>
+      </div>
+      <ul class="facts" id="vf-facts"></ul>
+    </div>
     <details id="editions" open>
       <summary>Éditions reconnues</summary>
       <table>

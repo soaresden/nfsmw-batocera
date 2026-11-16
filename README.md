@@ -28,6 +28,11 @@ dossier extrait), puis le dossier `roms/ports` de Batocera (carte SD ou partage 
 - elle écrit `NFS Most Wanted.sh/` et extrait le jeu dans `game_root/` (les fichiers déjà là sont sautés) : l'ISO
   est lue directement (XDVDFS, `page/iso.js`), sans outil d'extraction.
 
+**VF** : avec l'ISO 360 PAL anglaise, la page propose d'ajouter l'ISO de la **Xbox d'origine en français**. Elle
+lance alors l'outil french-dub de nfsmw-nx (`batocera/tools/french-dub/`) dans le navigateur (`page/vf/` : Pyodide,
+ffmpeg.wasm, vgmstream compilé pour WASI) : textes, 32 vidéos sur 36 et voix en jeu en français, en 1 à 3 heures.
+Pour une autre édition (USA), elle fait un rapport des fichiers des deux ISO pour adapter l'outil.
+
 Sans Chrome ni Edge, elle fabrique un zip et le jeu se copie à la main. `page/build_site.sh` assemble le site,
 `.github/workflows/page.yml` le publie sur GitHub Pages (réglage unique : Settings → Pages → Source : GitHub
 Actions).

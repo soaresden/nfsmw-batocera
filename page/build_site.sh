@@ -14,6 +14,10 @@ cp -r "$SB/lib" "$SB/wasm" "$SB/shader_common.h" "$SB/NOTICES.md" "$OUT/shaders/
 cp "$SB/release/manifest.json" "$OUT/shaders/release/"
 PB="$ROOT/batocera/tools/ps_buttons"
 cp "$PB"/{jdlz,tpk,huff,xenos,dxt,ps_buttons,gamelist_media}.py "$OUT/outils/"
+mkdir -p "$OUT/vf" "$OUT/outils/french-dub" "$OUT/vendor"
+cp "$ROOT"/page/vf/* "$OUT/vf/"
+cp -r "$ROOT/page/vendor/browser_wasi_shim" "$OUT/vendor/"
+cp "$ROOT"/batocera/tools/french-dub/*.py "$ROOT/batocera/tools/french-dub/README.md" "$OUT/outils/french-dub/"
 cp "$ROOT/page/fonts/DejaVuSans-Bold.ttf" "$ROOT/page/fonts/LICENSE-DejaVu.txt" "$OUT/outils/"
 if ls "$ROOT"/page/paquets/*.pak >/dev/null 2>&1; then cp "$ROOT"/page/paquets/*.pak "$ROOT/page/paquets/index.json" "$OUT/paquets/"; else echo "page/paquets/: no package to offer" >&2; fi
 touch "$OUT/.nojekyll"
