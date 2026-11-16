@@ -126,13 +126,18 @@ def mod_files(path):
 BLACK = 'black-edition'  # only with the BLACK EDITION option, and last (its FRONTB.LZC is built on the others')
 
 
+def is_black(name):
+    """mods/black-edition/, however it is spelled: blackedition, Black Edition, black_edition.zip..."""
+    return ''.join(c for c in os.path.splitext(name)[0].lower() if c.isalnum()) == 'blackedition'
+
+
 def apply(port, style, black=False):
     root, mods = os.path.join(port, 'game_root'), os.path.join(port, 'mods')
     backup = os.path.join(port, 'data', 'mods-originals')
     state = {}
     names = sorted(n for n in os.listdir(mods) if n not in ('icones', 'boutons-playstation')
                    and (os.path.isdir(os.path.join(mods, n)) or n.lower().endswith('.zip'))) if os.path.isdir(mods) else []
-    be = [n for n in names if os.path.splitext(n)[0].lower() == BLACK]
+    be = [n for n in names if is_black(n)]
     names = [n for n in names if n not in be] + (be if black else [])
     dubbed = os.path.exists(os.path.join(root, 'Movies', 'movies_report.txt'))
     for name in names:
