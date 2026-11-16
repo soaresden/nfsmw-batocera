@@ -4,6 +4,8 @@
 // Messages out: progress {fraction, text}, log {text}, file {rel, data} (game_root/<rel>), result {...}, error.
 import { WASI, File as WasiFile, OpenFile, ConsoleStdout, PreopenDirectory } from '../vendor/browser_wasi_shim/index.js';
 
+// ?v=<commit> of the worker's own URL (app.js), appended to the files it fetches: no stale cache.
+const V = new URL(import.meta.url).search;
 const PY = ['vf_page.py', 'zzdata.py', 'xdvdfs.py', 'patch_text.py', 'patch_movies.py', 'patch_speech.py',
   'alignment.py', 'asf.py', 'ea_movie_audio.py', 'ea_stream.py', 'ea_xa.py', 'speech_idx.py'];
 let py = null;
@@ -21,7 +23,7 @@ async function loadPython(pyodideURL) {
   py.FS.mkdirTree('/vf');
   for (const f of PY) {
     const src = f === 'vf_page.py' ? `./${f}` : `../outils/french-dub/${f}`;
-    const r = await fetch(new URL(src, import.meta.url));
+    const r = await fetch(new URL(src + V, import.meta.url));
     if (!r.ok) throw new Error(`${f} : ${r.status}`);
     py.FS.writeFile(`/vf/${f}`, new Uint8Array(await r.arrayBuffer()));
   }
@@ -36,7 +38,7 @@ async function loadTools(ffmpegURL) {
     core = await createFFmpegCore({ mainScriptUrlOrBlob: `${ffmpegURL}ffmpeg-core.js#${hash}` });
     core.setLogger(({ type, message }) => coreLogs.push([type, message]));
   }
-  if (!vgm) vgm = await WebAssembly.compileStreaming(fetch(new URL('./vgmstream-cli.wasm', import.meta.url)));
+  if (!vgm) vgm = await WebAssembly.compileStreaming(fetch(new URL(`./vgmstream-cli.wasm${V}`, import.meta.url)));
 }
 
 // The two images, read by vf_page.IsoFile through vf_iso_read: offsets beyond 2 GB, which Python's own files in

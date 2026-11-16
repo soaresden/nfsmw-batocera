@@ -63,6 +63,10 @@ function flag(code) {
   }[code] || '<rect width="30" height="20" fill="#555"/>';
   return `<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">${body}</svg>`;
 }
+// Version of the site (page/build_site.sh writes the commit here): appended to every file the page fetches, so a
+// new version is never mixed with files a browser kept in its cache.
+const BUILD = 'dev';
+const V = `?v=${BUILD}`;
 const PY_FILES = ['jdlz.py', 'tpk.py', 'huff.py', 'xenos.py', 'dxt.py', 'ps_buttons.py', 'gamelist_media.py'];
 
 const state = { game: null, dest: null, xex: null, xexSha: null, paquet: null };
@@ -98,7 +102,7 @@ async function editionsTable(highlight) {
     grid.append(card);
   }
 }
-fetch('paquets/index.json').then((r) => (r.ok ? r.json() : { paquets: [] })).then((i) => { INDEX = i; editionsTable(); })
+fetch(`paquets/index.json${V}`).then((r) => (r.ok ? r.json() : { paquets: [] })).then((i) => { INDEX = i; editionsTable(); })
   .catch(() => editionsTable());
 const canWrite = typeof window.showDirectoryPicker === 'function';
 
@@ -121,7 +125,7 @@ function announce() {
   const e = EDITIONS[state.xexSha];
   if (!state.paquet || !e) { out.hidden = true; return; }
   const items = [`${flag(e.pays)} NFS Most Wanted ${edName(e)}, ${L('port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5', 'native Batocera port: 60 FPS in races at 1280x720 on the Retroid Pocket 5')}`];
-  if (state.vfXbox) items.push(L('<b>VF complète</b> : textes, 32 des 36 vidéos et toutes les voix en jeu, en français', '<b>Full French dub</b>: text, 32 of the 36 movies and all in-game voices in French'));
+  if (state.vfXbox) items.push(L('<b>Votre version européenne 360 (PAL anglaise) patchée en français</b> : textes, 32 des 36 vidéos et toutes les voix en jeu', '<b>Your European 360 version (PAL English) patched into French</b>: text, 32 of the 36 movies and all in-game voices'));
   else if (state.dubbed) items.push(L('<b>VF</b> : le doublage français déjà présent dans votre dossier est gardé', '<b>French dub</b>: the one already in your folder is kept'));
   else if (e.vf === 'deja') items.push(L('Jeu en français (votre disque)', 'Game in French (your disc)'));
   else {
@@ -244,6 +248,7 @@ async function chooseGame(all) {
   // A swapped default.xex: say where the data comes from (the port follows the executable, the language the data).
   const zz0 = await (await game.byName.get('nfs/zzdata0.bin').get()).size;
   state.englishData = zz0 === 381569024;
+  fact('game-facts', `${L('Données du disque', 'Disc data')} : <strong>${DISC_DATA[zz0] || L('inconnues', 'unknown')}</strong> <span class="muted">(NFS/ZZDATA0.BIN ${zz0} ${L('octets', 'bytes')})</span>`);
   if (XEX_DATA[xexSha] && DISC_DATA[zz0] && !XEX_DATA[xexSha].includes(zz0)) {
     fact('game-facts', L(`Copie modifiée : exécutable ${edName(edition)}, données du disque <strong>${DISC_DATA[zz0]}</strong>. Le port suit l'exécutable (${edName(edition)}) ; la langue et la VF suivent les données.`,
       `Modified copy: ${edName(edition)} executable, disc data <strong>${DISC_DATA[zz0]}</strong>. The port follows the executable (${edName(edition)}); the language and the French dub follow the data.`));
@@ -369,7 +374,7 @@ function offerVf(edition) {
 
 function vfWorker(message, onFile) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL('./vf/vf-worker.js', import.meta.url), { type: 'module' });
+    const worker = new Worker(new URL(`./vf/vf-worker.js${V}`, import.meta.url), { type: 'module' });
     let writes = Promise.resolve();
     worker.onmessage = ({ data: m }) => {
       if (m.type === 'progress') progress(m.fraction, m.text);
@@ -491,7 +496,7 @@ async function gunzip(bytes) {
 async function openPaquet() {
   const p = state.paquet;
   progress(0.01, L('Téléchargement du port…', 'Downloading the port…'));
-  const blob = await fetchBytes(`paquets/${p.fichier}`);
+  const blob = await fetchBytes(`paquets/${p.fichier}${V}`);
   if (await sha256(blob) !== p.sha256) throw new Error(L('le port téléchargé est abîmé : rechargez la page', 'the downloaded port is damaged: reload the page'));
   const magic = new TextDecoder().decode(blob.subarray(0, 8));
   if (magic !== 'NFSMWPK1') throw new Error(L('port illisible', 'unreadable port'));
@@ -532,7 +537,7 @@ async function pythonTools(game) {
   const py = await loadPyodide({ indexURL: PYODIDE });
   await py.loadPackage(['numpy', 'pillow'], { messageCallback: () => {} });
   py.FS.mkdirTree('/outils');
-  for (const f of [...PY_FILES, 'DejaVuSans-Bold.ttf']) py.FS.writeFile(`/outils/${f}`, await fetchBytes(`outils/${f}`));
+  for (const f of [...PY_FILES, 'DejaVuSans-Bold.ttf']) py.FS.writeFile(`/outils/${f}`, await fetchBytes(`outils/${f}${V}`));
 
   progress(0.12, L('Lecture des textures du jeu…', 'Reading the game\'s textures…'));
   const globalb = await fromArchives(game, 'GLOBAL/GLOBALB.LZC');
@@ -604,8 +609,8 @@ async function shaders(game) {
   try { i18n.setLanguage('fr'); } catch { /* the builder's messages stay in English */ }
   const quiet = () => ({ print: () => {}, printErr: () => {} });
   const [hlsl, dxc, pack, lzx] = await Promise.all([createHlsl(quiet()), createDxc(quiet()), createPack(quiet()), createLzx(quiet())]);
-  const manifest = JSON.parse(new TextDecoder().decode(await fetchBytes(S + 'release/manifest.json')));
-  const shaderCommon = await fetchBytes(S + 'shader_common.h');
+  const manifest = JSON.parse(new TextDecoder().decode(await fetchBytes(S + 'release/manifest.json' + V)));
+  const shaderCommon = await fetchBytes(S + 'shader_common.h' + V);
   const build = manifest.builds.find((b) => b.xex_sha256 === state.xexSha);
 
   const { image } = await readXexImage(state.xex, async (c, bits, n) => {

@@ -20,5 +20,10 @@ cp -r "$ROOT/page/vendor/browser_wasi_shim" "$OUT/vendor/"
 cp "$ROOT"/batocera/tools/french-dub/*.py "$ROOT/batocera/tools/french-dub/README.md" "$OUT/outils/french-dub/"
 cp "$ROOT/page/fonts/DejaVuSans-Bold.ttf" "$ROOT/page/fonts/LICENSE-DejaVu.txt" "$OUT/outils/"
 if ls "$ROOT"/page/paquets/*.pak >/dev/null 2>&1; then cp "$ROOT"/page/paquets/*.pak "$ROOT/page/paquets/index.json" "$OUT/paquets/"; else echo "page/paquets/: no package to offer" >&2; fi
+# Cache busting: the commit in BUILD (app.js) and on the page's own scripts.
+BUILD=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || date +%s)
+sed -i "s|const BUILD = 'dev';|const BUILD = '$BUILD';|" "$OUT/app.js"
+sed -i "s|from './\([a-z0-9]*\)\.js';|from './\1.js?v=$BUILD';|" "$OUT/app.js"
+sed -i "s|src=\"app.js\"|src=\"app.js?v=$BUILD\"|" "$OUT/index.html"
 touch "$OUT/.nojekyll"
 echo "$OUT"

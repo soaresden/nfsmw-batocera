@@ -27,7 +27,7 @@ const EN = {
   "get2": "<b>Your buttons</b><span>PlayStation, GameCube or Xbox 360 icons</span>",
   "get3": "<b>Ready to play</b><span>options in EmulationStation, saves, rumble</span>",
   "get4": "<b>Black Edition</b><span>road M3 GTR, Camaro SS, 8 tuned cars, 4 more events</span>",
-  "callout": "<b>Want the game in French?</b> The French Xbox 360 edition is rare and expensive, but you do not need it: <b>your English 360 ISO + the French ISO of the original Xbox</b> give the full French dub (text, 32 of the 36 movies and all the police radio voices). The page does the conversion itself, it just takes longer (1 to 3 hours).",
+  "callout": "<b>Want the game in French?</b> The French Xbox 360 edition is rare and expensive, but you do not need it: with <b>your European 360 ISO (PAL English) + the French ISO of the original Xbox</b>, you get <b>the European 360 version patched into French</b>: text, 32 of the 36 movies and all the police radio voices. The page does the patching itself, it just takes longer (1 to 3 hours).",
   "browser-h": "Browser",
   "browser-p": "To write straight to the SD card or the network share, and for the French dub, open this page with <strong>Chrome</strong> or <strong>Edge</strong> on a computer. Here the page makes a zip and you copy the game files yourself (you then need the folder extracted from the ISO).",
   "h1x": "Your game",
