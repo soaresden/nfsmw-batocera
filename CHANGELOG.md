@@ -6,6 +6,10 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 ## 2026-11
 
 - Black Edition option (ES menu, cvar `nfsmw_black_edition`): tuhana's data patch written after the XEX is mapped.
+- Black Edition title screen (`mods/black-edition/`, made by the page from the player's files): black-and-white title
+  picture and "Black Edition" under the game's logo, applied only with the option.
+- Mods: `<file>.patch` textures put into compressed files over the icons and other mods, also into the copy
+  `GLOBALMEMORYFILE.BIN` preloads; results cached in `data/mods-cache/`.
 - USA (NTSC) port built with `batocera/build_edition.sh`.
 - Installation page redesigned: drop both ISOs at once (360 and original Xbox told apart by default.xex /
   default.xbe), flags, a "what you get" summary, the PAL English + Xbox French route to the French dub spelled out.

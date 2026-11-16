@@ -153,7 +153,11 @@ Un dossier `NFS Most Wanted.sh/mods/<nom>/`, rangé comme `game_root/` (`CARS/�
 lancement par `mods.py`, ou un zip posé dedans tel quel : par exemple `mods/mx5/mx5.zip`, le zip de la page
 MX-5 (MazdaMx5-nd-rf-ingames), sans le décompresser. Les fichiers d'origine sont gardés dans `data/mods-originals/` : supprimer le dossier du
 mod rend le jeu de base au lancement suivant. Le `GLOBALMEMORYFILE.BIN` d'un mod reçoit les icônes du style choisi
-(et, avec la VF, les textes anglais y sont masqués comme le fait french-dub).
+(et, avec la VF, les textes anglais y sont masqués comme le fait french-dub). Un fichier `<fichier>.patch` d'un mod
+(écrit par `black_edition_title.py`) remplace seulement des textures dans un fichier compressé (`FRONTB.LZC`,
+`GLOBALB.LZC`, et la copie de `GLOBALB.LZC` préchargée dans `GLOBALMEMORYFILE.BIN`), par-dessus les icônes et les
+autres mods ; le résultat est gardé dans `data/mods-cache/` (le premier lancement après un changement prend une
+demi-minute de plus).
 
 ### Black Edition
 
@@ -164,6 +168,13 @@ tuhana (`xenia-canary/game-patches`, une valeur de `.data` à `0x82A2CE04`), rep
 [Epix Digital Studio](https://github.com/Pixelplix93/NFS-Most-Wanted-Black-Edition-Xbox-360) dans ses XEX
 modifiés ; ici pas de XEX modifié : le port écrit la valeur au démarrage (`app/src/nfsmw_black_edition.cpp`).
 À activer avant de commencer une carrière.
+
+Avec l'option, `mods/black-edition/` (fait par la page d'installation, ou par
+`batocera/tools/ps_buttons/black_edition_title.py` à partir de vos `FRONTB.LZC`, `GLOBALB.LZC` et `GLOBALA.BUN`)
+donne aussi son écran titre : le fond de l'écran « Appuyer sur START » (`WS_XENON_SPLASHBACK` de `GLOBALB.LZC`) en
+noir et blanc argenté, la M3 légèrement bleu acier, les gyrophares rouge et bleu, et « Black Edition » au pochoir
+graffiti (Sedgwick Ave Display, OFL) sous le logo du jeu (`MW_LOGO` de `GLOBALA.BUN`), sur l'écran titre et dans
+les menus. Sans l'option, ou sans le dossier, le jeu reprend ses images d'origine.
 
 ### Icônes des boutons : PlayStation, GameCube, Xbox 360
 

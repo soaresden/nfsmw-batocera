@@ -63,6 +63,13 @@ and packer from `shaders/`, libmspack (LZX), and [DirectXShaderCompiler](https:/
 v2025.1 (University of Illinois/NCSA Open Source License, with LLVM's license terms). Its own notices are in that
 repository.
 
+## Fonts
+
+- DejaVu Sans Bold (`page/fonts/`, Bitstream Vera / DejaVu license, `page/fonts/LICENSE-DejaVu.txt`): the button
+  icons drawn by `batocera/tools/ps_buttons/`.
+- Sedgwick Ave Display (`batocera/tools/ps_buttons/SedgwickAveDisplay-Regular.ttf`, Kevin Burke and Pedro Vergani,
+  SIL Open Font License 1.1, https://openfontlicense.org): the "Black Edition" tag of the Black Edition title screen.
+
 ## Trademarks
 
 The saved-game ZIP workflow and reversible graphics presets introduced in 0.8.1 are inspired by `Partidas.java`

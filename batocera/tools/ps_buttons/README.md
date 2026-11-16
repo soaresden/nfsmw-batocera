@@ -62,3 +62,17 @@ style choisi dans `game_root/GLOBAL/` à chaque lancement (PlayStation par défa
 Les gâchettes gardent les noms imprimés sur la Retroid (L1 R1 L2 R2) en PlayStation comme en GameCube. Sur la
 GameCube, les anciennes images de la manette Xbox d'origine (que la 360 n'affiche pas) restent telles quelles :
 la photo GameCube n'y tient pas.
+
+## Écran titre Black Edition
+
+`black_edition_title.py` fait `mods/black-edition/black-edition.zip` à partir de vos fichiers (la page
+d'installation le fait aussi) :
+
+    python3 black_edition_title.py --frontb FRONTB.LZC --globalb GLOBALB.LZC --globala GLOBALA.BUN --zip black-edition.zip
+
+Le fond de l'écran « Appuyer sur START » (`WS_XENON_SPLASHBACK` de `GLOBALB.LZC`, et par précaution
+`WS_MWSPLASHBACK` et `DEMO_SPLASH` de `FRONTB.LZC`) passe en noir et blanc argenté, la M3 légèrement bleu acier et
+les gyrophares rouge et bleu ; « Black Edition » est peint sous le logo du jeu (`MW_LOGO` de `GLOBALA.BUN`, affiché
+sur l'écran titre et dans les menus). Le zip contient les textures en `.patch`, que `mods.py` pose par-dessus les
+icônes et les autres mods (la MX-5…), et les fichiers entiers pour le cas où `game_root` n'en a pas. Il n'est
+appliqué qu'avec l'option BLACK EDITION. Fait à partir de votre copie du jeu : ne le partagez pas.

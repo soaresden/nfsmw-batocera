@@ -67,7 +67,8 @@ function flag(code) {
 // new version is never mixed with files a browser kept in its cache.
 const BUILD = 'dev';
 const V = `?v=${BUILD}`;
-const PY_FILES = ['jdlz.py', 'tpk.py', 'huff.py', 'xenos.py', 'dxt.py', 'ps_buttons.py', 'gamelist_media.py'];
+const PY_FILES = ['jdlz.py', 'tpk.py', 'huff.py', 'xenos.py', 'dxt.py', 'ps_buttons.py', 'gamelist_media.py',
+  'black_edition_title.py', 'SedgwickAveDisplay-Regular.ttf'];
 
 const state = { game: null, dest: null, xex: null, xexSha: null, paquet: null };
 let INDEX = { paquets: [] };
@@ -135,7 +136,7 @@ function announce() {
   }
   items.push(L('Icônes PlayStation (par défaut), GameCube ou Xbox 360, au choix dans EmulationStation', 'PlayStation (default), GameCube or Xbox 360 button icons, chosen in EmulationStation'));
   items.push(L('Shaders fabriqués à partir de votre disque, images de l\'écran titre pour la fiche du jeu', 'Shaders built from your disc, title screen pictures for the game\'s entry'));
-  items.push(L('<b>Black Edition</b> à activer dans les options : BMW M3 GTR de route, Camaro SS, 8 voitures tunées, l\'épreuve 70 du Challenge Series et 3 courses en plus', '<b>Black Edition</b> in the options: road BMW M3 GTR, Camaro SS, 8 tuned cars, Challenge Series event 70 and 3 more races'));
+  items.push(L('<b>Black Edition</b> à activer dans les options : BMW M3 GTR de route, Camaro SS, 8 voitures tunées, l\'épreuve 70 du Challenge Series et 3 courses en plus, avec son écran titre (tiré de votre jeu, en noir et blanc, « Black Edition » sous le logo)', '<b>Black Edition</b> in the options: road BMW M3 GTR, Camaro SS, 8 tuned cars, Challenge Series event 70 and 3 more races, with its own title screen (made from your game, in black and white, "Black Edition" under the logo)'));
   items.push(L('Options dans EmulationStation, sauvegardes, vibration, Hotkey + Start pour quitter', 'Options in EmulationStation, saves, rumble, Hotkey + Start to quit'));
   const time = state.vfXbox ? L('quelques minutes, plus la copie du jeu, plus 1 à 3 heures de VF', 'a few minutes, plus the game copy, plus 1 to 3 hours for the French dub')
     : L('quelques minutes, plus la copie du jeu (7 Go)', 'a few minutes, plus the game copy (7 GB)');
@@ -600,6 +601,7 @@ async function pythonTools(game) {
   const globalb = await fromArchives(game, 'GLOBAL/GLOBALB.LZC');
   const dyntex = await fromArchives(game, 'GLOBAL/DYNTEX.BIN');
   const frontb = await fromArchives(game, 'FRONTEND/FRONTB.LZC');
+  const globala = await fromArchives(game, 'GLOBAL/GLOBALA.BUN');  // the game's logo (Black Edition title screen)
   // GLOBALMEMORYFILE.BIN: the one saved by an earlier install (Xbox 360 set), else a mod's loose copy, else the disc's.
   const saved = game.port.get('mods/icones/xbox360/globalmemoryfile.bin');
   const loose = game.byName.get('global/globalmemoryfile.bin');
@@ -608,10 +610,12 @@ async function pythonTools(game) {
       : await fromArchives(game, 'GLOBAL/GLOBALMEMORYFILE.BIN');
   // With the French dub the pack's copies of the English text are hidden (patch_text.py), in the icon sets' copies too.
   const pack = state.vfXbox ? hideTextCopies(memfile) : memfile;
-  for (const [n, b] of Object.entries({ globalb, dyntex, frontb, memfile: pack })) py.FS.writeFile(`/in_${n}`, b);
+  for (const [n, b] of Object.entries({ globalb, dyntex, frontb, globala, memfile: pack })) py.FS.writeFile(`/in_${n}`, b);
 
   progress(0.16, L('Icônes PlayStation, GameCube et Xbox 360…', 'PlayStation, GameCube and Xbox 360 icons…'));
   py.globals.set('js_log', (t) => log(t));
+  py.globals.set('js_progress', (f) => progress(f, L('Écran titre Black Edition (une minute environ)…',
+    'Black Edition title screen (about a minute)…')));
   await py.runPythonAsync(`
 import os, sys
 sys.path.insert(0, '/outils')
@@ -620,6 +624,10 @@ import ps_buttons, gamelist_media
 rd = lambda n: open('/in_' + n, 'rb').read()
 out = ps_buttons.icon_sets(rd('globalb'), rd('memfile'), rd('dyntex'), log=lambda *a: js_log(' '.join(map(str, a))))
 out.update(gamelist_media.media(rd('frontb')))
+js_progress(0.22)
+import black_edition_title
+out['mods/black-edition/black-edition.zip'] = black_edition_title.mod_zip(
+    rd('frontb'), rd('globalb'), rd('globala'), log=lambda *a: js_log(' '.join(map(str, a))))
 for name, data in out.items():
     path = '/sortie/' + name
     os.makedirs(os.path.dirname(path), exist_ok=True)
