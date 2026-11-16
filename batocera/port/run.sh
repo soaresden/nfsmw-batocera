@@ -43,19 +43,16 @@ fi
 export LD_LIBRARY_PATH="$LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 # SDL3 picks Wayland under Batocera's compositor, otherwise KMS/DRM or X11.
 export SDL_VIDEO_DRIVER="${SDL_VIDEO_DRIVER:-wayland,kmsdrm,x11}"
-# Mouse pointer: without a mouse, Batocera's Wayland compositor leaves its pointer in the top left corner until the
-# screen is touched (SDL can only hide it once the pointer is over the game's window). Sway hides an idle pointer
-# with "seat * hide_cursor <ms>"; its IPC socket is found in the environment or under the runtime folders.
-COMPOSITOR=$(for c in sway labwc weston cage; do pgrep -x "$c" >/dev/null 2>&1 && echo "$c"; done | head -1)
-if [ "$COMPOSITOR" = sway ] && command -v swaymsg >/dev/null 2>&1; then
-    SOCK="${SWAYSOCK:-$(ls -t /run/user/*/sway-ipc.*.sock /var/run/sway-ipc.*.sock /tmp/sway-ipc.*.sock 2>/dev/null | head -1)}"
-    if [ -n "$SOCK" ] && SWAYSOCK="$SOCK" swaymsg "seat * hide_cursor 200" >/dev/null 2>&1; then
-        POINTER="hidden after 200 ms (sway, $SOCK)"
-    else
-        POINTER="sway found but swaymsg failed (socket: ${SOCK:-none})"
-    fi
+# Mouse pointer: Batocera's Ports launcher shows it for scripts (some need a mouse) and the game has none, so it
+# stayed in the top left corner until the screen was touched. batocera-mouse hide asks the compositor to hide it
+# for good (labwc: a key binding sent with wtype, Alt+Win+H; X11: unclutter); once now and once the game window is
+# up, since a window that appears can bring it back. Batocera hides it again itself when the game ends.
+if command -v batocera-mouse >/dev/null 2>&1; then
+    batocera-mouse hide >/dev/null 2>&1
+    ( sleep 4; batocera-mouse hide >/dev/null 2>&1; sleep 6; batocera-mouse hide >/dev/null 2>&1 ) &
+    POINTER="hidden with batocera-mouse"
 else
-    POINTER="left as it is (compositor: ${COMPOSITOR:-none found})"
+    POINTER="batocera-mouse not found"
 fi
 # Adreno: Mesa Turnip. Keep its pipeline cache on the SD card so later sessions start smoothly.
 export MESA_SHADER_CACHE_DIR="$GAMEDIR/cache/mesa"
