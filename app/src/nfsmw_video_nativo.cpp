@@ -45,6 +45,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <rex/cvar.h>
@@ -185,6 +186,7 @@ void CompletarFotograma(PPCContext& ctx, uint8_t* base, uint32_t obj) {
   const uint64_t r1 = ctx.r1.u64;
   const uint64_t lr = ctx.lr;
   const uint32_t sp = ctx.r1.u32 - 128;
+  int esperas = 0;
   Escribir32(base, sp, ctx.r1.u32);  // stack back chain
   for (int i = 0; Leer32(base, lector + 24) != 0 && !c.error && i < 4096; ++i) {
     const size_t antes = c.datos.size();
@@ -200,8 +202,20 @@ void CompletarFotograma(PPCContext& ctx, uint8_t* base, uint32_t obj) {
     __imp__sub_82749C10(ctx, base);
     AnotarSeccion(base, 0, estructura, 0, 4, sp + 88, sp + 80, lector + 24, ctx.r3.u32);
     if (c.datos.size() == antes) {
+      // "Remaining" but nothing handed over: the next packets are not read from the disk yet (seen on the
+      // Retroid with attract_movie frame 918, 30 s into the movie). Wait for them a little (100 x 2 ms) before
+      // giving up on the frame.
+      if (Leer32(base, lector + 24) != 0 && esperas < 100) {
+        ++esperas;
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        continue;
+      }
       break;
     }
+  }
+  if (esperas) {
+    REXLOG_INFO("[video] fotograma completado tras esperar {} ms a sus datos ({} bytes, quedan {})", esperas * 2,
+                c.datos.size(), Leer32(base, lector + 24));
   }
   ctx.r1.u64 = r1;
   ctx.lr = lr;
@@ -574,6 +588,23 @@ bool SustituirFotograma(PPCContext& ctx, uint8_t* base, Pelicula& p, Captura& c,
     CompletarFotograma(ctx, base, obj);
   }
   if (c.quedan || c.error || c.datos.empty()) {
+    if (p.juego_fiable && !c.datos.empty()) {
+      // The game's reader has already handed part of this frame over: the game's decoder would read on from the
+      // middle of it and crash (attract_movie frame 918: read of guest 0xB48 in a loop). The picture on screen
+      // stays; the game decodes again from the next frame and the next I frame puts everything right.
+      ++p.rechazados;
+      p.desincronizado = true;
+      if (p.avisos++ < 10) {
+        REXLOG_WARN("[video] WMV3 nativo: el fotograma {} ({}) de '{}' se queda con la imagen anterior: fotograma "
+                    "comprimido incompleto ({} bytes recibidos)", p.fotogramas, NombreTipo(tipo), p.ruta,
+                    c.datos.size());
+      }
+      DejarContexto(base, obj, tipo);
+      ctx.r3.u64 = 0;
+      ++p.fotogramas;
+      ++p.repetidos;
+      return true;
+    }
     return Rechazar(ctx, base, p, tipo, "fotograma comprimido incompleto");
   }
   const int64_t antes = AhoraUs();
