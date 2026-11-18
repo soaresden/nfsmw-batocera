@@ -17,6 +17,8 @@
 #   5. cross build into out/arm64-<edition>, package into out/batocera-<edition>, encrypted package into
 #      page/paquets/ (batocera/make_paquet.py).
 # No PGO on Batocera, so unlike the Switch build the tree does not need to be swapped into app/.
+# ARCH=x86_64 builds for a PC (out/x86_64-<edition>, out/batocera-x86_64-<edition>, nfsmw-<edition>-x86_64.pak)
+# instead of aarch64; with SKIP_CODEGEN=1 the edition tree app_<edition> already made is used as it is.
 # Set FORCE=1 to accept a default.xex that is not the one listed for that edition, NO_PAQUET=1 to skip the encrypted
 # package (tests).
 set -euo pipefail
@@ -25,6 +27,12 @@ ED=${1:?usage: batocera/build_edition.sh <edition> /path/to/default.xex}
 XEX=${2:?usage: batocera/build_edition.sh <edition> /path/to/default.xex}
 JOBS=${JOBS:-$(nproc)}
 PY=${PYTHON:-python3}
+ARCH=${ARCH:-aarch64}
+case "$ARCH" in
+  aarch64) BUILD_DIR="out/arm64-$ED"; PKG_DIR="out/batocera-$ED" ;;
+  x86_64) BUILD_DIR="out/x86_64-$ED"; PKG_DIR="out/batocera-x86_64-$ED" ;;
+  *) echo "ARCH: aarch64 or x86_64" >&2; exit 1 ;;
+esac
 W="$RAIZ/out/editions/$ED"
 REF="$RAIZ/assets/game_root/default.xex"
 REXGLUE_HOST="$RAIZ/sdk/out/linux-amd64/rexglue"
@@ -51,6 +59,7 @@ EOF
 
 mkdir -p "$W" "assets/editions/$ED"
 cp "$XEX" "assets/editions/$ED/default.xex"
+if [ "${SKIP_CODEGEN:-0}" != 1 ]; then
 
 echo "== 1. executable images"
 [ -f out/editions/pal_es.img ] || "$PY" tools/editions/regional/imagen.py "$REF" out/editions/pal_es.img
@@ -78,15 +87,16 @@ for a, b in e.get('nativo', {}).get('huellas_shaders', {}).items(): print('%s=%s
 echo "== 4. code generator"
 REXGLUE="$REXGLUE_HOST" PYTHON="$PY" bash tools/codegen.sh "app_$ED" "app_$ED/enganchadas.txt" "out/editions/$ED/tabla.tsv"
 grep -iE "falta|faltan|REVISAR|quitad" "$W/crear_arbol.log" | head -20 || true
+fi
 
-echo "== 5. cross build, package"
+echo "== 5. build ($ARCH), package"
 SYSROOT_ARG=()
 [ -n "${NFSMW_SYSROOT:-}" ] && SYSROOT_ARG=(-DNFSMW_SYSROOT="$NFSMW_SYSROOT")
-cmake -S "app_$ED" -B "out/arm64-$ED" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_TOOLCHAIN_FILE="$RAIZ/batocera/toolchain-aarch64-linux.cmake" "${SYSROOT_ARG[@]}" \
+cmake -S "app_$ED" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE="$RAIZ/batocera/toolchain-$ARCH-linux.cmake" "${SYSROOT_ARG[@]}" \
   -DREXSDK_DIR="$RAIZ/sdk" -DREXGLUE_ENABLE_TRACY=OFF -DNFSMW_BUILD_LAUNCHER=OFF
-cmake --build "out/arm64-$ED" -j "$JOBS"
-batocera/package.sh "out/arm64-$ED" "out/batocera-$ED" "$RAIZ/sdk/out/linux-arm64"
-if [ "${NO_PAQUET:-0}" = 1 ]; then echo "done: out/batocera-$ED/ (no package: NO_PAQUET=1)"; exit 0; fi
-"$PY" batocera/make_paquet.py "out/batocera-$ED/NFS Most Wanted.sh" "assets/editions/$ED/default.xex" "$ED"
-echo "done: out/batocera-$ED/ and page/paquets/nfsmw-$ED.pak (add it with git add -f)"
+cmake --build "$BUILD_DIR" -j "$JOBS"
+batocera/package.sh "$BUILD_DIR" "$PKG_DIR"
+if [ "${NO_PAQUET:-0}" = 1 ]; then echo "done: $PKG_DIR/ (no package: NO_PAQUET=1)"; exit 0; fi
+"$PY" batocera/make_paquet.py "$PKG_DIR/NFS Most Wanted.sh" "assets/editions/$ED/default.xex" "$ED"
+echo "done: $PKG_DIR/ and its package in page/paquets/ (add it with git add -f)"

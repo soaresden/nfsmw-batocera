@@ -1,25 +1,28 @@
-# NFSMW pour Batocera (Retroid Pocket 5)
+# NFSMW pour Batocera (Retroid Pocket 5, PC x86_64)
 
-**Need for Speed: Most Wanted (2005, version Xbox 360)** en natif sous **Batocera Linux ARM64**, visé sur la
-**Retroid Pocket 5** (Snapdragon 865, GPU Adreno 650, Vulkan via Mesa Turnip).
+**Need for Speed: Most Wanted (2005, version Xbox 360)** en natif sous **Batocera Linux**, visé sur la
+**Retroid Pocket 5** (ARM64 : Snapdragon 865, GPU Adreno 650, Vulkan via Mesa Turnip), et aussi pour **Batocera
+sur PC (x86_64)** : processeur avec AVX2 (Intel depuis 2013, AMD Zen, Steam Deck) et carte graphique Vulkan.
 
 Ce n'est pas un émulateur : le code PowerPC du `default.xex` est recompilé en C++ avec
-[ReXGlue](https://github.com/rexglue/rexglue-sdk) puis compilé pour Linux aarch64. Le jeu est dessiné par le
-renderer Vulkan natif du port.
+[ReXGlue](https://github.com/rexglue/rexglue-sdk) puis compilé pour Linux aarch64 ou x86_64. Le jeu est dessiné
+par le renderer Vulkan natif du port.
 
 > [!IMPORTANT]
 > **Ça tourne sur la Retroid Pocket 5** (Batocera v44, Turnip Adreno 650) : **60 FPS en course en 1280x720**,
 > son, vidéos, sauvegardes, VF, manette, menu d'options, mod boutons PlayStation. Détails : [État](#état).
 
 > [!NOTE]
-> Il faut **votre propre copie** du jeu Xbox 360, édition **PAL Espagne** (la même que le port Android). Ce dépôt ne
-> contient aucun fichier du jeu ni rien de généré à partir de lui.
+> Il faut **votre propre copie** du jeu Xbox 360 : **USA**, **PAL anglaise** ou **PAL Espagne** (la VF complète se
+> fait à partir de la PAL anglaise et de l'ISO Xbox française). Ce dépôt ne contient aucun fichier du jeu, et le code
+> traduit n'est publié que chiffré, ouvrable seulement avec le `default.xex` de l'édition.
 
 ## Installation facile : la page web
 
 `page/` est une page à ouvrir dans **Chrome ou Edge sur un PC**. Elle demande l'**ISO** Xbox 360 du jeu (ou un
 dossier extrait), puis le dossier `roms/ports` de Batocera (carte SD ou partage réseau), et elle prépare tout sans rien envoyer :
 
+- on choisit la machine : console ARM (Retroid…) ou PC (x86_64) ;
 - elle reconnaît l'édition par le SHA-256 du `default.xex` ;
 - elle déchiffre le port compilé avec ce `default.xex` (le paquet chiffré ne sert à rien sans le jeu, voir
   `batocera/make_paquet.py`) ;
@@ -221,9 +224,16 @@ batocera/build.sh /chemin/vers/default.xex
 `batocera/build.sh` construit le générateur de code pour le PC, traduit le jeu en C++ (`app/generated`, jamais
 versionné), compile pour aarch64 et prépare `out/batocera/`. Il faut environ 16 Go de RAM.
 
+**Pour Batocera sur PC** : `ARCH=x86_64 batocera/build.sh /chemin/vers/default.xex` compile en natif sur le même
+PC (paquets `:amd64` des mêmes bibliothèques de développement, déjà là sur une Ubuntu x86_64) et prépare
+`out/batocera-x86_64/` ; `ARCH=x86_64 batocera/build_edition.sh <édition> <default.xex>` fait de même pour une autre
+édition, et le paquet chiffré s'appelle `nfsmw-<édition>-x86_64.pak`. Le lanceur vérifie que le paquet correspond
+à la machine (et, sur PC, que le processeur a AVX2) et le dit dans `nfsmw-stdout.log`.
+
 | Fichier | Rôle |
 |---|---|
 | `batocera/toolchain-aarch64-linux.cmake` | Compilation croisée clang 20 + lld, réglée pour le Cortex-A77 |
+| `batocera/toolchain-x86_64-linux.cmake` | Compilation pour PC, clang 20 + lld, x86-64-v3 (AVX2) |
 | `batocera/build.sh` | Les quatre étapes, du `default.xex` au paquet |
 | `batocera/package.sh` | Le dossier `NFS Most Wanted.sh/` : binaire, bibliothèques, réglages, lanceur, `VERSION` |
 | `batocera/port/` | Le lanceur `run.sh`, la touche de sortie `padto.keys` et le menu d'options `es_features_nfsmw.cfg` |

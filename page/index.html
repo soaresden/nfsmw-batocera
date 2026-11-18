@@ -45,6 +45,8 @@ h1 small { display: block; font-size: .42em; color: var(--muted); letter-spacing
 .lang { position: absolute; top: 18px; right: 0; display: flex; gap: 2px; }
 .lang a { font: 600 .8rem/1 Barlow, sans-serif; letter-spacing: .12em; padding: 7px 10px; color: var(--muted); text-decoration: none; background: var(--chip); }
 .lang a.on { color: var(--accent-ink); background: var(--accent); }
+.arch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; }
+.arch button.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 .siren { position: absolute; top: 0; left: 0; right: 0; height: 3px; opacity: .9;
   background: linear-gradient(90deg, var(--police-red) 0 50%, var(--police-blue) 50% 100%);
   animation: siren 1.2s steps(1) infinite; }
@@ -161,6 +163,11 @@ footer a { color: inherit; }
 
   <section id="s-game" class="panel">
     <h2><span class="n">1</span> <span data-i18n="h1x">Votre jeu</span></h2>
+    <div class="arch">
+      <span class="muted" data-i18n="arch-k">Votre Batocera tourne sur :</span>
+      <button id="arch-aarch64" class="second" data-i18n="arch-arm">une console ARM (Retroid Pocket, Odin…)</button>
+      <button id="arch-x86_64" class="second" data-i18n="arch-pc">un PC (x86_64)</button>
+    </div>
     <div id="drop">
       <div class="big" data-i18n="drop-big">Déposez ici vos ISO</div>
       <p class="muted" data-i18n="drop-p">L'ISO Xbox 360, et si vous voulez la VF, l'ISO de la Xbox d'origine en français. Les deux d'un

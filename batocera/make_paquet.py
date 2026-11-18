@@ -10,7 +10,9 @@ File: "NFSMWPK1" + 12-byte nonce + AES-256-GCM(gzip(container)).
 Container: u32 LE length of a JSON index {"version", "files": [{"path", "size"}]} + the index + the files' bytes
 in that order. game_root/ is left out (the player's files go there).
 
-paquets/index.json lists the packages by SHA-256 of default.xex (already public: tools/editions/regional).
+paquets/index.json lists the packages by SHA-256 of default.xex (already public: tools/editions/regional) and
+processor ("arch": aarch64 for the Retroid & co, x86_64 for a PC; read from the port's nfsmw). The x86_64 file is
+nfsmw-<edition>-x86_64.pak, the aarch64 one keeps nfsmw-<edition>.pak.
 """
 import gzip
 import hashlib
@@ -57,16 +59,19 @@ def main():
     version, plain = container(port)
     nonce = os.urandom(12)
     blob = MAGIC + nonce + AESGCM(key_of(xex)).encrypt(nonce, gzip.compress(plain, 9, mtime=0), MAGIC)
-    name = 'nfsmw-%s.pak' % edition
+    machine = open(os.path.join(port, 'nfsmw'), 'rb').read(20)[18]
+    arch = {0xB7: 'aarch64', 0x3E: 'x86_64'}[machine]
+    name = 'nfsmw-%s%s.pak' % (edition, '' if arch == 'aarch64' else '-' + arch)
     with open(os.path.join(out, name), 'wb') as f:
         f.write(blob)
     index_path = os.path.join(out, 'index.json')
     index = json.load(open(index_path)) if os.path.exists(index_path) else {'paquets': []}
     xex_sha = hashlib.sha256(xex).hexdigest()
-    index['paquets'] = [p for p in index['paquets'] if p['xex_sha256'] != xex_sha]
-    index['paquets'].append({'edition': edition, 'xex_sha256': xex_sha, 'fichier': name, 'version': version,
-                             'taille': len(blob), 'sha256': hashlib.sha256(blob).hexdigest()})
-    index['paquets'].sort(key=lambda p: p['edition'])
+    index['paquets'] = [p for p in index['paquets']
+                        if (p['xex_sha256'], p.get('arch', 'aarch64')) != (xex_sha, arch)]
+    index['paquets'].append({'edition': edition, 'arch': arch, 'xex_sha256': xex_sha, 'fichier': name,
+                             'version': version, 'taille': len(blob), 'sha256': hashlib.sha256(blob).hexdigest()})
+    index['paquets'].sort(key=lambda p: (p['edition'], p['arch']))
     with open(index_path, 'w', encoding='utf-8') as f:
         json.dump(index, f, indent=1, ensure_ascii=False)
         f.write('\n')

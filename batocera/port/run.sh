@@ -28,11 +28,30 @@ if [ ! -f "$GAMEDIR/game_root/default.xex" ]; then
     exit 1
 fi
 
+# Processor: the package is built for one (aarch64 for the Retroid & co, x86_64 for a PC). The ELF header says which
+# (e_machine at byte 18: 0xb7 aarch64, 0x3e x86_64); a wrong one would only fail with "cannot execute binary file".
+case "$(od -An -tx1 -j18 -N1 "$GAMEDIR/nfsmw" 2>/dev/null | tr -d ' ')" in
+    b7) BUILT_FOR=aarch64 ;; 3e) BUILT_FOR=x86_64 ;; *) BUILT_FOR=unknown ;;
+esac
+MACHINE="$(uname -m)"
+if [ "$BUILT_FOR" != unknown ] && [ "$BUILT_FOR" != "$MACHINE" ]; then
+    echo "[batocera] $(date '+%F %T') ce paquet est pour $BUILT_FOR, cette machine est $MACHINE : refaites l'installation avec la page en choisissant $MACHINE" \
+        | tee "$GAMEDIR/nfsmw-stdout.log" >&2
+    exit 1
+fi
+if [ "$MACHINE" = x86_64 ] && ! grep -qw avx2 /proc/cpuinfo 2>/dev/null; then
+    # The x86_64 build needs x86-64-v3 (AVX2): without it the game would stop on an illegal instruction.
+    echo "[batocera] $(date '+%F %T') ce processeur n'a pas AVX2 (x86-64-v3, Intel 2013+ ou AMD Zen) : le jeu ne peut pas tourner" \
+        | tee "$GAMEDIR/nfsmw-stdout.log" >&2
+    exit 1
+fi
+
 # The C++ runtime of the build (lib/cxx) only if the console's is older: the newer one wins, as the GPU driver
 # (Mesa) also loads it.
 cxx_version() { grep -ao 'GLIBCXX_3\.4\.[0-9]*' "$1" 2>/dev/null | sort -uV | tail -1; }
 SYS_CXX=""
-for f in /usr/lib/libstdc++.so.6 /usr/lib64/libstdc++.so.6 /lib/libstdc++.so.6 /usr/lib/aarch64-linux-gnu/libstdc++.so.6; do
+for f in /usr/lib/libstdc++.so.6 /usr/lib64/libstdc++.so.6 /lib/libstdc++.so.6 /usr/lib/aarch64-linux-gnu/libstdc++.so.6 \
+         /usr/lib/x86_64-linux-gnu/libstdc++.so.6; do
     [ -e "$f" ] && SYS_CXX="$(cxx_version "$f")" && break
 done
 OWN_CXX="$(cxx_version "$GAMEDIR/lib/cxx/libstdc++.so.6")"
@@ -54,7 +73,8 @@ if command -v batocera-mouse >/dev/null 2>&1; then
 else
     POINTER="batocera-mouse not found"
 fi
-# Adreno: Mesa Turnip. Keep its pipeline cache on the SD card so later sessions start smoothly.
+# Mesa (Turnip on the Adreno, RADV/ANV on a PC): keep its pipeline cache next to the game so later sessions start
+# smoothly.
 export MESA_SHADER_CACHE_DIR="$GAMEDIR/cache/mesa"
 export MESA_SHADER_CACHE_MAX_SIZE=1G
 mkdir -p "$MESA_SHADER_CACHE_DIR"
@@ -62,7 +82,7 @@ mkdir -p "$MESA_SHADER_CACHE_DIR"
 chmod +x "$GAMEDIR/nfsmw" 2>/dev/null
 {
     echo "[batocera] $(date '+%F %T') $(cat /usr/share/batocera/batocera.version 2>/dev/null) $(uname -r)"
-    echo "[batocera] port: $(cat "$GAMEDIR/VERSION" 2>/dev/null || echo 'no VERSION file (a build older than 2026-11-15 17:00)')"
+    echo "[batocera] port: $(cat "$GAMEDIR/VERSION" 2>/dev/null || echo 'no VERSION file (a build older than 2026-11-15 17:00)') ($BUILT_FOR, machine $MACHINE)"
     echo "[batocera] C++ runtime: system ${SYS_CXX:-none}, bundled ${OWN_CXX:-none}; LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
     echo "[batocera] WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-} DISPLAY=${DISPLAY:-} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-} HOME=${HOME:-}"
     echo "[batocera] SDL_GAMECONTROLLERCONFIG: ${SDL_GAMECONTROLLERCONFIG:-(none)}"

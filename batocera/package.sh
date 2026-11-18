@@ -1,5 +1,5 @@
 #!/bin/bash
-# Makes the Batocera "Ports" folder from an aarch64 build:
+# Makes the Batocera "Ports" folder from an aarch64 (Retroid & co) or x86_64 (PC) build:
 #
 #   batocera/package.sh <build dir> <output dir>
 #
@@ -16,18 +16,24 @@ set -euo pipefail
 RAIZ=$(cd "$(dirname "$0")/.." && pwd)
 BUILD=${1:?build dir}
 DEST=${2:?output dir}
-SDKOUT=${3:-$RAIZ/sdk/out/linux-arm64}   # librexruntime.so and the GPU plugin, which loads from the exe's folder
-EXE=$(find "$BUILD" "$SDKOUT" -maxdepth 2 -type f -name nfsmw -perm -u+x 2>/dev/null | head -1)
+EXE=$(find "$BUILD" -maxdepth 2 -type f -name nfsmw -perm -u+x 2>/dev/null | head -1)
 [ -n "$EXE" ] || { echo "nfsmw not found in $BUILD" >&2; exit 1; }
+# The build's processor (ELF e_machine): where its libraries come from.
+case "$(od -An -tx1 -j18 -N1 "$EXE" | tr -d ' ')" in
+    b7) ARCH=aarch64; SDKARCH=linux-arm64 ;;
+    3e) ARCH=x86_64; SDKARCH=linux-amd64 ;;
+    *) echo "$EXE: unknown processor" >&2; exit 1 ;;
+esac
+SDKOUT=${3:-$RAIZ/sdk/out/$SDKARCH}   # librexruntime.so and the GPU plugin, which loads from the exe's folder
 
 rm -rf "$DEST"
 PKG="$DEST/NFS Most Wanted.sh"
 mkdir -p "$PKG/lib" "$PKG/game_root"
 cp "$EXE" "$PKG/nfsmw"
-llvm-strip-20 --strip-unneeded "$PKG/nfsmw" 2>/dev/null || llvm-strip --strip-unneeded "$PKG/nfsmw" 2>/dev/null || aarch64-linux-gnu-strip --strip-unneeded "$PKG/nfsmw"
+llvm-strip-20 --strip-unneeded "$PKG/nfsmw" 2>/dev/null || llvm-strip --strip-unneeded "$PKG/nfsmw" 2>/dev/null || $ARCH-linux-gnu-strip --strip-unneeded "$PKG/nfsmw"
 cp "$RAIZ/batocera/nfsmw.toml" "$PKG/nfsmw.toml"
 # Which build this is: the launcher writes it at the top of nfsmw-stdout.log.
-echo "nfsmw-batocera $(git -C "$RAIZ" describe --always --dirty 2>/dev/null || echo unknown) $(date -u '+%F %H:%M UTC')" > "$PKG/VERSION"
+echo "nfsmw-batocera $(git -C "$RAIZ" describe --always --dirty 2>/dev/null || echo unknown) $(date -u '+%F %H:%M UTC') $ARCH" > "$PKG/VERSION"
 # The NFS MOST WANTED submenu of EmulationStation's advanced game options (the launcher installs it).
 cp "$RAIZ/batocera/port/es_features_nfsmw.cfg" "$PKG/es_features_nfsmw.cfg"
 cp "$RAIZ/batocera/port/run.sh" "$RAIZ/batocera/port/padto.keys" "$RAIZ/batocera/port/mods.py" "$PKG/"
@@ -37,7 +43,7 @@ chmod +x "$PKG/run.sh" "$PKG/nfsmw"
 # Shared libraries the binary needs and Batocera does not always carry (X11/XCB client libraries, used only
 # when there is no Wayland), with their own dependencies. Vulkan, the C library, Wayland, DRM, audio and udev
 # always come from the console: they must match its drivers and services.
-SYSLIB=/usr/lib/aarch64-linux-gnu
+SYSLIB=/usr/lib/$ARCH-linux-gnu
 system_lib() {
   case "$1" in
     libc.so*|libm.so*|libdl.so*|libpthread.so*|librt.so*|ld-linux*|libvulkan.so*|libwayland*|libdrm*|libgbm*|libEGL*|libGL*|libasound*|libpulse*|libudev*|libdbus*|libsystemd*) return 0 ;;
@@ -72,11 +78,8 @@ mkdir -p "$PKG/lib/cxx"
 cp -L "$SYSLIB/libstdc++.so.6" "$SYSLIB/libgcc_s.so.1" "$PKG/lib/cxx/"
 
 cat > "$PKG/game_root/LISEZMOI.txt" <<'TXT'
-Copiez ici, depuis votre propre copie du jeu (Xbox 360, PAL Espagne) :
-  default.xex
-  NFS/
-  Movies/
-  nfsmw_shaders.nfsp   (celle que l'app Android a generee, dossier nsfmw-androidevolved/)
+La page d'installation (https://soaresden.github.io/nfsmw-batocera/) remplit ce dossier a partir de votre propre
+copie du jeu (Xbox 360, l'edition de ce paquet) : default.xex, NFS/, Movies/ et nfsmw_shaders.nfsp.
 TXT
 echo "Batocera package: $DEST"
 readelf -d "$PKG/nfsmw" | grep NEEDED

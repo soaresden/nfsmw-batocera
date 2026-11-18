@@ -88,7 +88,30 @@ const XEX_DATA = {  // the data sizes that go with each default.xex
   '23ece29d18724ea28971d52f936964d127148bd2359ff24795da7442b9069bf4': [375844864],
 };
 
-const ready = (sha) => INDEX.paquets.some((p) => p.xex_sha256 === sha);
+// The player's machine: aarch64 (Retroid Pocket, Odin, Raspberry Pi 5...) or x86_64 (a PC with Batocera). Each has
+// its own package (paquets/index.json "arch"; the older entries have none and are aarch64).
+const ARCHES = ['aarch64', 'x86_64'];
+state.arch = (() => { try { return localStorage.getItem('nfsmw-arch'); } catch { return null; } })();
+if (!ARCHES.includes(state.arch)) state.arch = 'aarch64';
+const findPaquet = (sha) => INDEX.paquets.find((p) => p.xex_sha256 === sha && (p.arch || 'aarch64') === state.arch);
+const ready = (sha) => !!findPaquet(sha);
+function showArch() {
+  for (const a of ARCHES) $(`arch-${a}`).classList.toggle('on', a === state.arch);
+}
+for (const a of ARCHES) {
+  $(`arch-${a}`).onclick = () => {
+    if (a === state.arch) return;
+    state.arch = a;
+    try { localStorage.setItem('nfsmw-arch', a); } catch { /* remembered for this visit only */ }
+    showArch();
+    editionsTable(state.xexSha);
+    if (state.lastGame) {  // the same game, with the other machine's package
+      $('game-facts').replaceChildren();
+      chooseGame(state.lastGame).catch((x) => fact('game-facts', String(x.message || x), 'bad'));
+    }
+  };
+}
+showArch();
 
 async function editionsTable(highlight) {
   const grid = $('editions-grid');
@@ -109,6 +132,8 @@ const canWrite = typeof window.showDirectoryPicker === 'function';
 
 // ------------------------------------------------------------------ small helpers
 
+const archName = (a) => (a === 'x86_64' ? L('PC (x86_64)', 'PC (x86_64)') : L('ARM (Retroid…)', 'ARM (Retroid…)'));
+
 const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
 const sha256 = async (bytes) => hex(await crypto.subtle.digest('SHA-256', bytes));
 const size = (n) => n >= 1e9 ? `${(n / 1e9).toFixed(2)} ${L('Go', 'GB')}` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} ${L('Mo', 'MB')}` : `${Math.round(n / 1e3)} ${L('ko', 'kB')}`;
@@ -125,7 +150,9 @@ function announce() {
   const out = $('output');
   const e = EDITIONS[state.xexSha];
   if (!state.paquet || !e) { out.hidden = true; return; }
-  const items = [`${flag(e.pays)} NFS Most Wanted ${edName(e)}, ${L('port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5', 'native Batocera port: 60 FPS in races at 1280x720 on the Retroid Pocket 5')}`];
+  const items = [`${flag(e.pays)} NFS Most Wanted ${edName(e)}, ${state.arch === 'x86_64'
+    ? L('port natif Batocera pour PC (x86_64, processeur avec AVX2, carte graphique Vulkan)', 'native Batocera port for PC (x86_64, a processor with AVX2, a Vulkan graphics card)')
+    : L('port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5', 'native Batocera port: 60 FPS in races at 1280x720 on the Retroid Pocket 5')}`];
   if (state.vfXbox) items.push(L('<b>Votre version européenne 360 (PAL anglaise) patchée en français</b> : textes, 32 des 36 vidéos et toutes les voix en jeu', '<b>Your European 360 version (PAL English) patched into French</b>: text, 32 of the 36 movies and all in-game voices'));
   else if (state.dubbed) items.push(L('<b>VF</b> : le doublage français déjà présent dans votre dossier est gardé', '<b>French dub</b>: the one already in your folder is kept'));
   else if (e.vf === 'deja') items.push(L('Jeu en français (votre disque)', 'Game in French (your disc)'));
@@ -226,6 +253,7 @@ async function fromArchives(game, path) {
 }
 
 async function chooseGame(all) {
+  state.lastGame = all;
   const game = gameFrom(all);
   if (!game) {
     fact('game-facts', L('Pas de <code>default.xex</code> dans ce dossier.', 'No <code>default.xex</code> in this folder.'), 'bad');
@@ -239,7 +267,7 @@ async function chooseGame(all) {
   }
   const xex = new Uint8Array(await (await game.byName.get('default.xex').get()).arrayBuffer());
   const xexSha = await sha256(xex);
-  const paquet = INDEX.paquets.find((p) => p.xex_sha256 === xexSha);
+  const paquet = findPaquet(xexSha);
   editionsTable(xexSha);
   const total = (await Promise.all(game.files.map(async (f) => (await f.get()).size))).reduce((a, b) => a + b, 0);
   fact('game-facts', `${game.files.length} ${L('fichiers', 'files')}, ${size(total)}${game.root ? ` (${L('dans', 'in')} <code>${game.root}</code>)` : ''}`);
@@ -267,7 +295,10 @@ async function chooseGame(all) {
   if (!paquet) {
     state.paquet = null;
     announce();
-    fact('game-facts', !edition
+    const other = INDEX.paquets.find((p) => p.xex_sha256 === xexSha);
+    fact('game-facts', other
+      ? L(`Pas encore de port ${archName(state.arch)} pour cette édition ; il existe pour ${archName(other.arch || 'aarch64')}.`, `No ${archName(state.arch)} port for this edition yet; there is one for ${archName(other.arch || 'aarch64')}.`)
+      : !edition
       ? L('<code>default.xex</code> modifié ou édition inconnue : le port ne peut pas l\'utiliser.', 'Modified <code>default.xex</code> or unknown edition: the port cannot use it.')
       : edition.plan === 'prevu'
         ? L('Port pas encore prêt pour cette édition : il faut compiler son <code>default.xex</code> une fois. Voir le tableau ci-dessous.', 'No port for this edition yet: its <code>default.xex</code> has to be compiled once. See the table below.')
