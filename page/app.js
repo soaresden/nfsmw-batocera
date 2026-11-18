@@ -587,7 +587,13 @@ async function destState() {
   const existing = !!edition && edition === state.xexSha;
   const dubbed = existing && (await destHas(`${state.base}game_root/Movies/rapport_films.txt`)
     || (await destHas(`${state.base}game_root/Movies/movies_report.txt`) && !(await destHas(`${state.base}game_root/vf-cache`, true))));
-  const tools = existing && await destHas(`${state.base}mods/icones`, true) && await destHas(`${state.base}mods/black-edition`, true);
+  let black = false;  // mods/black-edition/, however it is spelled (blackedition, Black Edition...), as mods.py reads it
+  try {
+    for await (const [name, h] of (await destDir(`${state.base}mods`)).entries()) {
+      if (name.replace(/\.zip$/i, '').toLowerCase().replace(/[^a-z0-9]/g, '') === 'blackedition' && (h.kind === 'directory' || /\.zip$/i.test(name))) black = true;
+    }
+  } catch { /* no mods/ */ }
+  const tools = existing && black && await destHas(`${state.base}mods/icones`, true);
   return { edition, existing, destDubbed: dubbed, destTools: tools };
 }
 

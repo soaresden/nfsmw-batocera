@@ -202,8 +202,10 @@ def apply(port, style, black=False):
     state = {}
     names = sorted(n for n in os.listdir(mods) if n not in ('icones', 'boutons-playstation')
                    and (os.path.isdir(os.path.join(mods, n)) or n.lower().endswith('.zip'))) if os.path.isdir(mods) else []
-    be = [n for n in names if is_black(n)]
-    names = [n for n in names if n not in be] + (be if black else [])
+    # One Black Edition only: the page's mods/black-edition/ first, else the first one found (blackedition...).
+    be = sorted((n for n in names if is_black(n)), key=lambda n: (n != BLACK, n))[:1]
+    names = [n for n in names if not is_black(n)] + (be if black else [])
+
     dubbed = os.path.exists(os.path.join(root, 'Movies', 'movies_report.txt'))
 
     def keep(rel):  # what the game had, once
