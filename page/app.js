@@ -88,12 +88,16 @@ const XEX_DATA = {  // the data sizes that go with each default.xex
   '23ece29d18724ea28971d52f936964d127148bd2359ff24795da7442b9069bf4': [375844864],
 };
 
-// The player's machine: aarch64 (Retroid Pocket, Odin, Raspberry Pi 5...) or x86_64 (a PC with Batocera). Each has
-// its own package (paquets/index.json "arch"; the older entries have none and are aarch64).
-const ARCHES = ['aarch64', 'x86_64'];
+// The player's machine: aarch64 (Retroid Pocket, Odin, Raspberry Pi 5...), x86_64 (a PC with Batocera) or both, in
+// one folder (bin/aarch64/ and bin/x86_64/, the rest shared). Each machine has its own package (paquets/index.json
+// "arch"; the older entries have none and are aarch64), both opened by the same default.xex.
+const ARCHES = ['both', 'aarch64', 'x86_64'];
 state.arch = (() => { try { return localStorage.getItem('nfsmw-arch'); } catch { return null; } })();
-if (!ARCHES.includes(state.arch)) state.arch = 'aarch64';
-const findPaquet = (sha) => INDEX.paquets.find((p) => p.xex_sha256 === sha && (p.arch || 'aarch64') === state.arch);
+if (!ARCHES.includes(state.arch)) state.arch = 'both';
+const archList = () => (state.arch === 'both' ? ['aarch64', 'x86_64'] : [state.arch]);
+const findPaquets = (sha) => archList().map((a) => INDEX.paquets.find((p) => p.xex_sha256 === sha && (p.arch || 'aarch64') === a));
+// The first package when every machine asked for has one (state.paquet: "a port exists"), else undefined.
+const findPaquet = (sha) => { const all = findPaquets(sha); return all.every(Boolean) ? all[0] : undefined; };
 const ready = (sha) => !!findPaquet(sha);
 function showArch() {
   for (const a of ARCHES) $(`arch-${a}`).classList.toggle('on', a === state.arch);
@@ -132,7 +136,7 @@ const canWrite = typeof window.showDirectoryPicker === 'function';
 
 // ------------------------------------------------------------------ small helpers
 
-const archName = (a) => (a === 'x86_64' ? L('PC (x86_64)', 'PC (x86_64)') : L('ARM (Retroid…)', 'ARM (Retroid…)'));
+const archName = (a) => (a === 'x86_64' ? L('PC (x86_64)', 'PC (x86_64)') : a === 'both' ? L('ARM et PC', 'ARM and PC') : L('ARM (Retroid…)', 'ARM (Retroid…)'));
 
 const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
 const sha256 = async (bytes) => hex(await crypto.subtle.digest('SHA-256', bytes));
@@ -152,7 +156,9 @@ function announce() {
   if (!state.paquet || !e) { out.hidden = true; return; }
   const items = [`${flag(e.pays)} NFS Most Wanted ${edName(e)}, ${state.arch === 'x86_64'
     ? L('port natif Batocera pour PC (x86_64, processeur avec AVX2, carte graphique Vulkan)', 'native Batocera port for PC (x86_64, a processor with AVX2, a Vulkan graphics card)')
-    : L('port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5', 'native Batocera port: 60 FPS in races at 1280x720 on the Retroid Pocket 5')}`];
+    : state.arch === 'both'
+      ? L('port natif Batocera pour les deux machines dans un seul dossier : Retroid Pocket 5 (60 FPS en course en 1280x720) et PC x86_64 (AVX2, Vulkan), avec le même jeu et les mêmes sauvegardes', 'native Batocera port for both machines in one folder: Retroid Pocket 5 (60 FPS in races at 1280x720) and x86_64 PC (AVX2, Vulkan), with the same game and saves')
+      : L('port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5', 'native Batocera port: 60 FPS in races at 1280x720 on the Retroid Pocket 5')}`];
   if (state.destDubbed) items.push(L('<b>VF</b> : celle déjà faite dans le dossier choisi est gardée, rien n\'est refait', '<b>French dub</b>: the one already done in the chosen folder is kept, nothing is done again'));
   else if (state.vfXbox) items.push(L('<b>Votre version européenne 360 (PAL anglaise) patchée en français</b> : textes, 32 des 36 vidéos et toutes les voix en jeu', '<b>Your European 360 version (PAL English) patched into French</b>: text, 32 of the 36 movies and all in-game voices'));
   else if (state.dubbed) items.push(L('<b>VF</b> : le doublage français déjà présent dans votre dossier est gardé', '<b>French dub</b>: the one already in your folder is kept'));
@@ -269,6 +275,7 @@ async function chooseGame(all) {
   const xex = new Uint8Array(await (await game.byName.get('default.xex').get()).arrayBuffer());
   const xexSha = await sha256(xex);
   const paquet = findPaquet(xexSha);
+  state.paquets = paquet ? findPaquets(xexSha) : [];
   editionsTable(xexSha);
   const total = (await Promise.all(game.files.map(async (f) => (await f.get()).size))).reduce((a, b) => a + b, 0);
   fact('game-facts', `${game.files.length} ${L('fichiers', 'files')}, ${size(total)}${game.root ? ` (${L('dans', 'in')} <code>${game.root}</code>)` : ''}`);
@@ -378,7 +385,7 @@ $('pick-dest').onclick = async () => {
     // One folder for both machines: bin/aarch64/ and bin/x86_64/ side by side, the game and the saves shared. It
     // must hold one edition only (the game files already there are kept as they are).
     const installed = await destInstalls();
-    const other = installed.filter((a) => a !== state.arch);
+    const other = installed.filter((a) => !archList().includes(a));
     const ds = await destState();
     Object.assign(state, ds);
     const { edition } = ds;
@@ -390,9 +397,9 @@ $('pick-dest').onclick = async () => {
       return;
     }
     if (other.length) {
-      fact('dest-facts', L(`Ce dossier a déjà la version ${archName(other[0])} : la version ${archName(state.arch)} s'y ajoute (<code>bin/${state.arch}/</code>). Le jeu, les sauvegardes, les mods et les réglages sont partagés entre les deux.`,
-        `This folder already has the ${archName(other[0])} version: the ${archName(state.arch)} one is added next to it (<code>bin/${state.arch}/</code>). The game, saves, mods and settings are shared by both.`), 'ok');
-    } else if (installed.includes(state.arch)) {
+      fact('dest-facts', L(`Ce dossier a déjà la version ${archName(other[0])} : la version ${archName(state.arch)} s'y ajoute (${archList().map((a) => `<code>bin/${a}/</code>`).join(', ')}). Le jeu, les sauvegardes, les mods et les réglages sont partagés entre les deux.`,
+        `This folder already has the ${archName(other[0])} version: the ${archName(state.arch)} one is added next to it (${archList().map((a) => `<code>bin/${a}/</code>`).join(', ')}). The game, saves, mods and settings are shared by both.`), 'ok');
+    } else if (archList().some((a) => installed.includes(a))) {
       fact('dest-facts', L(`Mise à jour de la version ${archName(state.arch)} déjà installée ici ; le jeu et les sauvegardes sont gardés.`,
         `Update of the ${archName(state.arch)} version already installed here; the game and saves are kept.`), 'ok');
     }
@@ -675,7 +682,12 @@ async function gunzip(bytes) {
 }
 
 async function openPaquet() {
-  const p = state.paquet;
+  const files = {};
+  for (const p of state.paquets.length ? state.paquets : [state.paquet]) Object.assign(files, await openOne(p));
+  return files;
+}
+
+async function openOne(p) {
   progress(0.01, L('Téléchargement du port…', 'Downloading the port…'));
   const blob = await fetchBytes(`paquets/${p.fichier}${V}`);
   if (await sha256(blob) !== p.sha256) throw new Error(L('le port téléchargé est abîmé : rechargez la page', 'the downloaded port is damaged: reload the page'));
@@ -701,6 +713,34 @@ async function openPaquet() {
   }
   log(`port : ${index.version} (${index.files.length} fichiers)`);
   return files;
+}
+
+// An install from before 2026-11-18 has its executable at the top: once this run has written bin/<its processor>/,
+// the old files go (the launcher would also do it at its next start), its shader library into game_root/ and its
+// pipeline cache into bin/<processor>/cache/.
+async function tidyOldLayout() {
+  let root;
+  try {
+    root = await destDir(state.base);
+    const exe = await (await root.getFileHandle('nfsmw')).getFile();
+    const m = new Uint8Array(await exe.slice(18, 19).arrayBuffer())[0];
+    const arch = m === 0xb7 ? 'aarch64' : m === 0x3e ? 'x86_64' : null;
+    if (!arch || !archList().includes(arch)) return;
+    try {
+      const pipelines = await (await (await root.getDirectoryHandle('cache')).getFileHandle('nfsmw_nativo_pipelines.bin')).getFile();
+      await writeTo(state.dest, `${state.base}bin/${arch}/cache/nfsmw_nativo_pipelines.bin`, pipelines, null, true);
+      await (await root.getDirectoryHandle('cache')).removeEntry('nfsmw_nativo_pipelines.bin');
+    } catch { /* no pipeline cache */ }
+    for (const name of ['nfsmw', 'librexruntime.so', 'librexgpu-xenos.so', 'VERSION', 'lib']) {
+      try { await root.removeEntry(name, { recursive: true }); } catch { /* not there */ }
+    }
+    log(L(`ancienne installation ${archName(arch)} rangée : l'exécutable est maintenant dans bin/${arch}/`, `older ${archName(arch)} install tidied: the executable is now in bin/${arch}/`));
+  } catch { /* nothing at the top */ }
+  try {
+    const lib = await (await root.getFileHandle('nfsmw_shaders.nfsp')).getFile();
+    await writeTo(state.dest, `${state.base}game_root/nfsmw_shaders.nfsp`, lib, null, true);
+    await root.removeEntry('nfsmw_shaders.nfsp');
+  } catch { /* none at the top */ }
 }
 
 function concat(a, b) {
@@ -931,6 +971,7 @@ async function run() {
       state.portWritten = true;
       if (await destLibrary()) log(L('shaders : déjà fabriqués par un essai précédent, gardés', 'shaders: already built by an earlier run, kept'));
       else await writeTo(state.dest, `${state.base}game_root/nfsmw_shaders.nfsp`, await shaders(state.game));
+      await tidyOldLayout();
       state.vfDone = vfToDo ? await dubbedMovies() : [];
       if ($('copy-game').checked) {
         let copied = 0, written = 0;
