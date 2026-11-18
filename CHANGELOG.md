@@ -5,6 +5,10 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- One folder for both machines: `bin/aarch64/` and `bin/x86_64/` hold what depends on the processor; the game,
+  shader library (now in `game_root/`), saves, logs, mods and settings are shared. The launcher picks
+  `bin/$(uname -m)/` and moves an older install's executable into `bin/<its processor>/`; the page adds a machine
+  to an existing folder and refuses a folder holding another edition.
 - Batocera on PC (x86_64): USA, PAL English and PAL Spain built natively with clang 20 (x86-64-v3, AVX2); packages
   `nfsmw-<edition>-x86_64.pak`, the machine is chosen on the installation page. The launcher refuses a package built
   for another processor, or a PC without AVX2, with a message in `nfsmw-stdout.log`. Checked up to the game's first

@@ -43,7 +43,10 @@ def container(port):
             data = open(path, 'rb').read()
             files.append({'path': rel, 'size': len(data)})
             blobs.append(data)
-    version = open(os.path.join(port, 'VERSION'), encoding='utf-8').read().strip()
+    vf = os.path.join(port, 'VERSION')
+    if not os.path.exists(vf):  # bin/<arch>/VERSION since 2026-11-18
+        vf = next(os.path.join(port, 'bin', a, 'VERSION') for a in sorted(os.listdir(os.path.join(port, 'bin'))))
+    version = open(vf, encoding='utf-8').read().strip()
     index = json.dumps({'version': version, 'files': files}, separators=(',', ':')).encode()
     return version, len(index).to_bytes(4, 'little') + index + b''.join(blobs)
 

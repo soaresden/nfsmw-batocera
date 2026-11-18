@@ -31,6 +31,14 @@ dossier extrait), puis le dossier `roms/ports` de Batocera (carte SD ou partage 
 - elle écrit `NFS Most Wanted.sh/` et extrait le jeu dans `game_root/` (les fichiers déjà là sont sautés) : l'ISO
   est lue directement (XDVDFS, `page/iso.js`), sans outil d'extraction.
 
+**Un dossier pour les deux machines** : ce qui dépend du processeur est dans `bin/aarch64/` (Retroid…) et
+`bin/x86_64/` (PC) : l'exécutable, `librexruntime.so`, `librexgpu-xenos.so` et `lib/`, environ 50 et 65 Mo. Tout le
+reste est commun : le jeu (`game_root/`, avec `nfsmw_shaders.nfsp`), les sauvegardes (`data/`, `saves/`), les
+journaux (`logs/`), les mods, les icônes et les réglages (`nfsmw.toml`). Choisir sur la page l'autre machine et le
+même dossier y ajoute seulement son `bin/` ; `run.sh` lance celui de la machine (`uname -m`). Le dossier se copie
+tel quel d'une machine à l'autre, carrière comprise. Une installation d'avant (exécutable à la racine) est rangée
+dans `bin/<processeur>/` par le lanceur au lancement suivant. Un dossier ne contient qu'une édition du jeu.
+
 **VF** : avec l'ISO 360 PAL anglaise, la page propose d'ajouter l'ISO de la **Xbox d'origine en français**. Elle
 lance alors l'outil french-dub de nfsmw-nx (`batocera/tools/french-dub/`) dans le navigateur (`page/vf/` : Pyodide,
 ffmpeg.wasm, vgmstream compilé pour WASI) : textes, 32 vidéos sur 36 et voix en jeu en français, en 1 à 3 heures.
