@@ -18,7 +18,7 @@ Checks:
 - after: the written file is read back by FFmpeg and correlated with the English one again.
 
 32 of the 36 movies have a French version on the Xbox disc; intro_movie, storyfmv_pal11,
-storyfmv_rapal and eahd_bumper stay as they are.
+storyfmv_rapal and eahd_bumper stay as they are, and attract_movie is kept in English (KEEP_ENGLISH): 31 are dubbed.
 
 Usage: python patch_movies.py <Xbox 360 image> <Xbox image> <output Movies folder> <ffmpeg> [names...]
 (with names, e.g. ealogo storyfmv_raz08: only those movies, no report)
@@ -37,6 +37,10 @@ from ea_movie_audio import duration, split_stereo
 from zzdata import open_discs, path
 
 SUFFIX = "_english_pal.wmv"
+# Movies kept in English although the Xbox disc has them in French. attract_movie (the trailer behind "Press Start",
+# music and some police radio): with its audio replaced, the game's WMV reader lost the end of frame 918 (the truck
+# sliding, 30 s in) and the movie froze or crashed (Batocera port, Retroid Pocket 5, 18/11/2026); the original plays.
+KEEP_ENGLISH = {"attract_movie"}
 # WMA2 bit rates tried, best first: the frames covering each original audio object must fit in its
 # size (Microsoft's WMA Pro sometimes puts more than one second in one object)
 BITRATES_KBPS = (192, 160, 128, 112, 96, 80, 64, 56, 48, 40, 32)
@@ -181,7 +185,9 @@ def main():
         if only and name.lower() not in only:
             continue
         vp6 = path("MOVIES", f"{name}_FRENCH_PAL.VP6")
-        if xbox.has(vp6):
+        if name.lower() in KEEP_ENGLISH:
+            line = f"{os.path.basename(file_path).lower():45} unchanged (kept in English: see KEEP_ENGLISH)"
+        elif xbox.has(vp6):
             line = convert(x360, xbox, file_path, vp6, output, ffmpeg)
         else:
             line = f"{os.path.basename(file_path).lower():45} unchanged (no French version on the Xbox disc)"

@@ -41,7 +41,7 @@ dans `bin/<processeur>/` par le lanceur au lancement suivant. Un dossier ne cont
 
 **VF** : avec l'ISO 360 PAL anglaise, la page propose d'ajouter l'ISO de la **Xbox d'origine en français**. Elle
 lance alors l'outil french-dub de nfsmw-nx (`batocera/tools/french-dub/`) dans le navigateur (`page/vf/` : Pyodide,
-ffmpeg.wasm, vgmstream compilé pour WASI) : textes, 32 vidéos sur 36 et voix en jeu en français, en 1 à 3 heures.
+ffmpeg.wasm, vgmstream compilé pour WASI) : textes, 31 vidéos sur 36 (la bande-annonce de l'écran titre reste en anglais) et voix en jeu en français, en 1 à 3 heures.
 Pour une autre édition (USA), elle fait un rapport des fichiers des deux ISO pour adapter l'outil.
 
 Sans Chrome ni Edge, elle fabrique un zip et le jeu se copie à la main. `page/build_site.sh` assemble le site,
@@ -58,7 +58,7 @@ diffèrent de l'original (`ports/nfsmw-identification.txt`). Éditions connues :
 
 **Version française doublée.** La branche `tools/french-dub` de
 [soaresden/nfsmw-nx](https://github.com/soaresden/nfsmw-nx/tree/tools/french-dub) fait une VF complète (texte,
-32 vidéos, voix en jeu) avec le disque Xbox original français. Seuls `NFS/ZDIR.BIN`, `NFS/ZZDATA0.BIN`,
+31 vidéos, voix en jeu) avec le disque Xbox original français. Seuls `NFS/ZDIR.BIN`, `NFS/ZZDATA0.BIN`,
 `NFS/ZZDATA9.BIN` et des `Movies/*.wmv` changent ; le lanceur la reconnaît et met la langue du jeu en
 conséquence.
 

@@ -17,7 +17,7 @@ to copy over `game_root`. **Those output files contain game data: do not share t
 | Part | Result |
 |---|---|
 | Menus and game text | French (already on the 360 disc) |
-| Movies | 32 of 36 dubbed in French, with the original 720p video |
+| Movies | 31 of 36 dubbed in French, with the original 720p video (attract_movie, the trailer behind "Press Start", stays in English: see KEEP_ENGLISH in patch_movies.py) |
 | In-game speech (police radio, Mia's messages…) | French |
 
 `intro_movie`, `storyfmv_pal11`, `storyfmv_rapal` and `eahd_bumper` have no French version on the

@@ -223,7 +223,9 @@ def movie(k, done=False):
     name = file_path[len('MOVIES/'):-len(suffix)]
     output = os.path.join(OUT, 'Movies')
     vp6 = path('MOVIES', '%s_FRENCH_PAL.VP6' % name)
-    if not _S['xbox'].has(vp6):
+    if name.lower() in patch_movies.KEEP_ENGLISH:
+        line = '%-45s unchanged (kept in English: see KEEP_ENGLISH)' % os.path.basename(file_path).lower()
+    elif not _S['xbox'].has(vp6):
         line = '%-45s unchanged (no French version on the Xbox disc)' % os.path.basename(file_path).lower()
     elif done:
         line = '%-45s OK (converted by an earlier run)' % os.path.basename(file_path).lower()

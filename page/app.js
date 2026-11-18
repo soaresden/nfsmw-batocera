@@ -160,7 +160,7 @@ function announce() {
       ? L('port natif Batocera pour les deux machines dans un seul dossier : Retroid Pocket 5 (60 FPS en course en 1280x720) et PC x86_64 (AVX2, Vulkan), avec le même jeu et les mêmes sauvegardes', 'native Batocera port for both machines in one folder: Retroid Pocket 5 (60 FPS in races at 1280x720) and x86_64 PC (AVX2, Vulkan), with the same game and saves')
       : L('port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5', 'native Batocera port: 60 FPS in races at 1280x720 on the Retroid Pocket 5')}`];
   if (state.destDubbed) items.push(L('<b>VF</b> : celle déjà faite dans le dossier choisi est gardée, rien n\'est refait', '<b>French dub</b>: the one already done in the chosen folder is kept, nothing is done again'));
-  else if (state.vfXbox) items.push(L('<b>Votre version européenne 360 (PAL anglaise) patchée en français</b> : textes, 32 des 36 vidéos et toutes les voix en jeu', '<b>Your European 360 version (PAL English) patched into French</b>: text, 32 of the 36 movies and all in-game voices'));
+  else if (state.vfXbox) items.push(L('<b>Votre version européenne 360 (PAL anglaise) patchée en français</b> : textes, 31 des 36 vidéos (la bande-annonce de l\x27écran titre reste en anglais) et toutes les voix en jeu', '<b>Your European 360 version (PAL English) patched into French</b>: text, 31 of the 36 movies (the title screen trailer stays in English) and all in-game voices'));
   else if (state.dubbed) items.push(L('<b>VF</b> : le doublage français déjà présent dans votre dossier est gardé', '<b>French dub</b>: the one already in your folder is kept'));
   else if (e.vf === 'deja') items.push(L('Jeu en français (votre disque)', 'Game in French (your disc)'));
   else {
@@ -645,6 +645,10 @@ async function destLibrary() {
   }
 }
 
+// Movies the French dub keeps in English (patch_movies.KEEP_ENGLISH): attract_movie, whose dubbed copy froze the
+// game 30 s in. An install dubbed before 18/11/2026 gets the disc's copy back (they differ in size).
+const KEEP_ENGLISH = /^movies\/attract_movie_english_pal\.wmv$/i;
+
 async function dubbedMovies() {
   const done = [];
   try {
@@ -988,12 +992,13 @@ async function run() {
       if ($('copy-game').checked) {
         let copied = 0, written = 0;
         for (const f of state.game.files) {
-          if (state.vfDone.includes(f.rel.slice(7).toLowerCase()) && /^movies\//i.test(f.rel)) continue;  // dubbed by an earlier run
+          const english = KEEP_ENGLISH.test(f.rel);
+          if (!english && state.vfDone.includes(f.rel.slice(7).toLowerCase()) && /^movies\//i.test(f.rel)) continue;  // dubbed by an earlier run
           const file = await f.get();
           const isNew = await writeTo(state.dest, `${state.base}game_root/${f.rel}`, file, (n) => {
             copied += n;
             progress(0.82 + 0.18 * (copied / state.total), `${L('Copie du jeu', 'Copying the game')} : ${size(copied)} / ${size(state.total)}`);
-          }, state.existing);
+          }, state.existing && !english);  // a movie kept in English is put back if an earlier dub replaced it
           if (isNew) written++;
         }
         log(`jeu : ${written} fichiers copiés, ${state.game.files.length - written} déjà présents`);
