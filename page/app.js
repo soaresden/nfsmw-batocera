@@ -153,7 +153,8 @@ function announce() {
   const items = [`${flag(e.pays)} NFS Most Wanted ${edName(e)}, ${state.arch === 'x86_64'
     ? L('port natif Batocera pour PC (x86_64, processeur avec AVX2, carte graphique Vulkan)', 'native Batocera port for PC (x86_64, a processor with AVX2, a Vulkan graphics card)')
     : L('port natif Batocera : 60 FPS en course en 1280x720 sur Retroid Pocket 5', 'native Batocera port: 60 FPS in races at 1280x720 on the Retroid Pocket 5')}`];
-  if (state.vfXbox) items.push(L('<b>Votre version européenne 360 (PAL anglaise) patchée en français</b> : textes, 32 des 36 vidéos et toutes les voix en jeu', '<b>Your European 360 version (PAL English) patched into French</b>: text, 32 of the 36 movies and all in-game voices'));
+  if (state.destDubbed) items.push(L('<b>VF</b> : celle déjà faite dans le dossier choisi est gardée, rien n\'est refait', '<b>French dub</b>: the one already done in the chosen folder is kept, nothing is done again'));
+  else if (state.vfXbox) items.push(L('<b>Votre version européenne 360 (PAL anglaise) patchée en français</b> : textes, 32 des 36 vidéos et toutes les voix en jeu', '<b>Your European 360 version (PAL English) patched into French</b>: text, 32 of the 36 movies and all in-game voices'));
   else if (state.dubbed) items.push(L('<b>VF</b> : le doublage français déjà présent dans votre dossier est gardé', '<b>French dub</b>: the one already in your folder is kept'));
   else if (e.vf === 'deja') items.push(L('Jeu en français (votre disque)', 'Game in French (your disc)'));
   else {
@@ -165,7 +166,7 @@ function announce() {
   items.push(L('Shaders fabriqués à partir de votre disque, images de l\'écran titre pour la fiche du jeu', 'Shaders built from your disc, title screen pictures for the game\'s entry'));
   items.push(L('<b>Black Edition</b> à activer dans les options : BMW M3 GTR de route, Camaro SS, 8 voitures tunées, l\'épreuve 70 du Challenge Series et 3 courses en plus, avec son écran titre (tiré de votre jeu, en noir et blanc, « Black Edition » sous le logo)', '<b>Black Edition</b> in the options: road BMW M3 GTR, Camaro SS, 8 tuned cars, Challenge Series event 70 and 3 more races, with its own title screen (made from your game, in black and white, "Black Edition" under the logo)'));
   items.push(L('Options dans EmulationStation, sauvegardes, vibration, Hotkey + Start pour quitter', 'Options in EmulationStation, saves, rumble, Hotkey + Start to quit'));
-  const time = state.vfXbox ? L('quelques minutes, plus la copie du jeu, plus 1 à 3 heures de VF', 'a few minutes, plus the game copy, plus 1 to 3 hours for the French dub')
+  const time = state.vfXbox && !state.destDubbed ? L('quelques minutes, plus la copie du jeu, plus 1 à 3 heures de VF', 'a few minutes, plus the game copy, plus 1 to 3 hours for the French dub')
     : L('quelques minutes, plus la copie du jeu (7 Go)', 'a few minutes, plus the game copy (7 GB)');
   out.innerHTML = `<h3>${L('Ce que vous obtenez', 'What you get')}</h3><ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul><p class="muted small">${L('Durée', 'Time')} : ${time}.</p>`;
   out.hidden = false;
@@ -378,7 +379,9 @@ $('pick-dest').onclick = async () => {
     // must hold one edition only (the game files already there are kept as they are).
     const installed = await destInstalls();
     const other = installed.filter((a) => a !== state.arch);
-    const edition = await destEdition();
+    const ds = await destState();
+    Object.assign(state, ds);
+    const { edition } = ds;
     if (edition && edition !== state.xexSha) {
       fact('dest-facts', L('Ce dossier contient une <b>autre édition</b> du jeu : choisissez un autre dossier (un dossier ne peut avoir qu\'une édition, partagée par les deux machines).',
         'This folder holds <b>another edition</b> of the game: choose another folder (a folder holds one edition, shared by both machines).'), 'bad');
@@ -393,6 +396,15 @@ $('pick-dest').onclick = async () => {
       fact('dest-facts', L(`Mise à jour de la version ${archName(state.arch)} déjà installée ici ; le jeu et les sauvegardes sont gardés.`,
         `Update of the ${archName(state.arch)} version already installed here; the game and saves are kept.`), 'ok');
     }
+    if (state.existing) {
+      const kept = [L('le jeu', 'the game')];
+      if (state.destDubbed) kept.push(L('sa VF', 'its French dub'));
+      if (state.destTools) kept.push(L('les icônes, les images et l\'écran titre Black Edition', 'the icons, pictures and Black Edition title screen'));
+      fact('dest-facts', L(`Ce dossier a déjà ce jeu : rien n'est refait. Gardés tels quels : ${kept.join(', ')} ; seuls les fichiers manquants sont ajoutés.`,
+        `This folder already has this game: nothing is done again. Kept as they are: ${kept.join(', ')}; only missing files are added.`), 'ok');
+      if (state.vfXbox && state.destDubbed) fact('dest-facts', L('La VF est déjà faite ici : l\'ISO Xbox ne sert pas.', 'The French dub is already done here: the Xbox ISO is not needed.'), 'muted');
+    }
+    announce();
     $('s-run').classList.remove('off');
     $('run').disabled = false;
   } catch (e) {
@@ -556,6 +568,29 @@ async function destInstalls() {
   return found;
 }
 
+async function destHas(path, dir = false) {
+  try {
+    const parts = path.split('/').filter(Boolean);
+    const parent = await destDir(parts.slice(0, -1).join('/'));
+    await (dir ? parent.getDirectoryHandle(parts[parts.length - 1]) : parent.getFileHandle(parts[parts.length - 1]));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// What the destination already holds of this game, so that nothing is done twice: the same edition (then a game
+// file already there is never replaced: the French dub changes their sizes), a finished French dub (its movies
+// report, and no vf-cache/ left: the page removes it at the very end), the icon sets and the Black Edition title.
+async function destState() {
+  const edition = await destEdition();
+  const existing = !!edition && edition === state.xexSha;
+  const dubbed = existing && (await destHas(`${state.base}game_root/Movies/rapport_films.txt`)
+    || (await destHas(`${state.base}game_root/Movies/movies_report.txt`) && !(await destHas(`${state.base}game_root/vf-cache`, true))));
+  const tools = existing && await destHas(`${state.base}mods/icones`, true) && await destHas(`${state.base}mods/black-edition`, true);
+  return { edition, existing, destDubbed: dubbed, destTools: tools };
+}
+
 // SHA-256 of the default.xex already in the destination's game_root/, or null.
 async function destEdition() {
   try {
@@ -691,7 +726,7 @@ async function pythonTools(game) {
     : loose ? new Uint8Array(await (await loose.get()).arrayBuffer())
       : await fromArchives(game, 'GLOBAL/GLOBALMEMORYFILE.BIN');
   // With the French dub the pack's copies of the English text are hidden (patch_text.py), in the icon sets' copies too.
-  const pack = state.vfXbox ? hideTextCopies(memfile) : memfile;
+  const pack = state.vfXbox || state.dubbed || state.destDubbed ? hideTextCopies(memfile) : memfile;
   for (const [n, b] of Object.entries({ globalb, dyntex, frontb, globala, memfile: pack })) py.FS.writeFile(`/in_${n}`, b);
 
   progress(0.16, L('Icônes PlayStation, GameCube et Xbox 360…', 'PlayStation, GameCube and Xbox 360 icons…'));
@@ -817,9 +852,9 @@ async function dirOf(root, parts) {
   return d;
 }
 
-async function writeTo(root, path, data, onBytes) {
+async function writeTo(root, path, data, onBytes, keep = false) {
   try {
-    return await writeFile(root, path, data, onBytes);
+    return await writeFile(root, path, data, onBytes, keep);
   } catch (e) {  // say which file: Chrome refuses some names on a real disk ("Name is not allowed")
     throw new Error(`${path} : ${e.message || e}`);
   }
@@ -831,15 +866,15 @@ async function writeTo(root, path, data, onBytes) {
 const REFUSED = /\.(cfg|dll|ini|manifest|scf|dng|lnk|url)$/i;  // download_file_types.asciipb, Chromium main
 const safeName = (path) => (REFUSED.test(path) ? `${path}.txt` : path);
 
-async function writeFile(root, path, data, onBytes) {
+async function writeFile(root, path, data, onBytes, keep = false) {
   path = safeName(path);
   const parts = path.split('/');
   const dir = await dirOf(root, parts.slice(0, -1));
   const name = parts[parts.length - 1];
   if (data instanceof Blob) {
-    try {  // skip a game file that is already there with the same size
+    try {  // skip a game file that is already there with the same size; with keep, whatever its size (the same game)
       const old = await (await dir.getFileHandle(name)).getFile();
-      if (old.size === data.size) { onBytes?.(data.size); return false; }
+      if (keep || old.size === data.size) { onBytes?.(data.size); return false; }
     } catch { /* not there yet */ }
   }
   const w = await (await dir.getFileHandle(name, { create: true })).createWritable();
@@ -864,8 +899,11 @@ async function run() {
   state.portWritten = false;
   const out = {};  // path under NFS Most Wanted.sh/ -> bytes
   try {
+    if (canWrite && state.dest) Object.assign(state, await destState());  // the folder may have changed since
+    const vfToDo = state.vfXbox && !state.destDubbed;
     Object.assign(out, await openPaquet());
-    Object.assign(out, await pythonTools(state.game));
+    if (canWrite && state.destTools) log(L('icônes, images et écran titre Black Edition : déjà là, gardés', 'icons, pictures and Black Edition title screen: already there, kept'));
+    else Object.assign(out, await pythonTools(state.game));
     if (!canWrite) {
       out['game_root/nfsmw_shaders.nfsp'] = await shaders(state.game);
       progress(0.85, L('Fabrication du zip…', 'Making the zip…'));
@@ -878,6 +916,8 @@ async function run() {
       const entries = Object.entries(out);
       let i = 0;
       for (const [p, d] of entries) {
+        // The settings already in the folder are the player's (shared by both machines): kept.
+        if (p === 'nfsmw.toml' && await destHas(`${state.base}nfsmw.toml`)) continue;
         await writeTo(state.dest, `${state.base}${p}`, d);
         progress(0.2 + 0.08 * (++i / entries.length), `${L('Écriture de', 'Writing')} ${p}…`);
       }
@@ -885,7 +925,7 @@ async function run() {
       state.portWritten = true;
       if (await destLibrary()) log(L('shaders : déjà fabriqués par un essai précédent, gardés', 'shaders: already built by an earlier run, kept'));
       else await writeTo(state.dest, `${state.base}game_root/nfsmw_shaders.nfsp`, await shaders(state.game));
-      state.vfDone = state.vfXbox ? await dubbedMovies() : [];
+      state.vfDone = vfToDo ? await dubbedMovies() : [];
       if ($('copy-game').checked) {
         let copied = 0, written = 0;
         for (const f of state.game.files) {
@@ -894,14 +934,15 @@ async function run() {
           const isNew = await writeTo(state.dest, `${state.base}game_root/${f.rel}`, file, (n) => {
             copied += n;
             progress(0.82 + 0.18 * (copied / state.total), `${L('Copie du jeu', 'Copying the game')} : ${size(copied)} / ${size(state.total)}`);
-          });
+          }, state.existing);
           if (isNew) written++;
         }
         log(`jeu : ${written} fichiers copiés, ${state.game.files.length - written} déjà présents`);
       } else {
         log(L(`copiez default.xex, NFS/ et Movies/ dans ${PORT}/game_root/`, `copy default.xex, NFS/ and Movies/ into ${PORT}/game_root/`));
       }
-      if (state.vfXbox) await runVf();
+      if (vfToDo) await runVf();
+      else if (state.vfXbox) log(L('VF : déjà faite dans ce dossier, gardée', 'French dub: already done in this folder, kept'));
     }
     progress(1, L('Terminé.', 'Done.'));
     $('s-done').hidden = false;
@@ -924,3 +965,6 @@ async function run() {
 $('run').onclick = run;
 
 if (!canWrite) $('s-browser').hidden = false;
+
+// Browser tests (?test): the functions that read and write the destination, on a folder the test prepares.
+if (new URLSearchParams(location.search).has('test')) window.nfsmwTest = { state, destState, destInstalls, writeTo, sha256 };
