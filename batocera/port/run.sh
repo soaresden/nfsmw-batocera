@@ -47,11 +47,11 @@ if [ -f "$GAMEDIR/nfsmw" ]; then
     OLD="$(elf_arch "$GAMEDIR/nfsmw")"
     if [ "$OLD" != unknown ]; then
         if [ -e "$GAMEDIR/bin/$OLD/nfsmw" ]; then
-            rm -rf "$GAMEDIR/nfsmw" "$GAMEDIR/librexruntime.so" "$GAMEDIR/librexgpu-xenos.so" "$GAMEDIR/lib"
+            rm -rf "$GAMEDIR/nfsmw" "$GAMEDIR/librexruntime.so" "$GAMEDIR/librexgpu-xenos.so" "$GAMEDIR/lib" "$GAMEDIR/VERSION"
             echo "[batocera] old $OLD files at the top removed (bin/$OLD/ is there)" >> "$GAMEDIR/nfsmw-launcher.log"
         else
             mkdir -p "$GAMEDIR/bin/$OLD/cache"
-            for f in nfsmw librexruntime.so librexgpu-xenos.so lib; do
+            for f in nfsmw librexruntime.so librexgpu-xenos.so lib VERSION; do
                 [ -e "$GAMEDIR/$f" ] && mv "$GAMEDIR/$f" "$GAMEDIR/bin/$OLD/"
             done
             [ -f "$GAMEDIR/cache/nfsmw_nativo_pipelines.bin" ] && mv "$GAMEDIR/cache/nfsmw_nativo_pipelines.bin" "$GAMEDIR/bin/$OLD/cache/"
