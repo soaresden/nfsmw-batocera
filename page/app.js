@@ -354,6 +354,18 @@ async function chooseIso(file) {
     state.iso = file;
     $('game-facts').replaceChildren();
     fact('game-facts', `ISO : <code>${file.name}</code>`);
+    // ?extraire=Movies/attract_movie_english_pal.wmv: hands that one file of the ISO over as a download (to compare
+    // a file of an installed folder with the disc's, when something goes wrong).
+    const want = new URLSearchParams(location.search).get('extraire');
+    if (want) {
+      const f = all.find((x) => x.path.toLowerCase().endsWith(want.toLowerCase()));
+      if (!f) fact('game-facts', L(`${want} : pas dans l'ISO`, `${want}: not in the ISO`), 'bad');
+      else {
+        const blob = await f.get();
+        Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: f.path.split('/').pop() }).click();
+        fact('game-facts', L(`${f.path} extrait (${size(blob.size)})`, `${f.path} extracted (${size(blob.size)})`), 'ok');
+      }
+    }
     await chooseGame(all);
   } catch (e) {
     $('game-facts').replaceChildren();
