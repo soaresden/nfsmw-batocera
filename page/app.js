@@ -374,6 +374,25 @@ $('pick-dest').onclick = async () => {
       fact('dest-facts', L(`Une fois fini, copiez le dossier <code>${PORT}</code> dans <code>roms/ports</code> de Batocera.`,
         `Once done, copy the <code>${PORT}</code> folder into Batocera's <code>roms/ports</code>.`), 'muted');
     }
+    // One folder for both machines: bin/aarch64/ and bin/x86_64/ side by side, the game and the saves shared. It
+    // must hold one edition only (the game files already there are kept as they are).
+    const installed = await destInstalls();
+    const other = installed.filter((a) => a !== state.arch);
+    const edition = await destEdition();
+    if (edition && edition !== state.xexSha) {
+      fact('dest-facts', L('Ce dossier contient une <b>autre édition</b> du jeu : choisissez un autre dossier (un dossier ne peut avoir qu\'une édition, partagée par les deux machines).',
+        'This folder holds <b>another edition</b> of the game: choose another folder (a folder holds one edition, shared by both machines).'), 'bad');
+      $('s-run').classList.add('off');
+      $('run').disabled = true;
+      return;
+    }
+    if (other.length) {
+      fact('dest-facts', L(`Ce dossier a déjà la version ${archName(other[0])} : la version ${archName(state.arch)} s'y ajoute (<code>bin/${state.arch}/</code>). Le jeu, les sauvegardes, les mods et les réglages sont partagés entre les deux.`,
+        `This folder already has the ${archName(other[0])} version: the ${archName(state.arch)} one is added next to it (<code>bin/${state.arch}/</code>). The game, saves, mods and settings are shared by both.`), 'ok');
+    } else if (installed.includes(state.arch)) {
+      fact('dest-facts', L(`Mise à jour de la version ${archName(state.arch)} déjà installée ici ; le jeu et les sauvegardes sont gardés.`,
+        `Update of the ${archName(state.arch)} version already installed here; the game and saves are kept.`), 'ok');
+    }
     $('s-run').classList.remove('off');
     $('run').disabled = false;
   } catch (e) {
@@ -521,14 +540,46 @@ async function destDir(path) {
   return dir;
 }
 
+// The machines already installed in the destination: bin/<arch>/, or an executable at the top (before 2026-11-18,
+// moved into bin/ by the launcher at its next start).
+async function destInstalls() {
+  const found = [];
+  try {
+    for await (const [name, h] of (await destDir(`${state.base}bin`)).entries()) if (h.kind === 'directory') found.push(name);
+  } catch { /* no bin/ */ }
+  try {
+    const exe = await (await (await destDir(state.base)).getFileHandle('nfsmw')).getFile();
+    const m = new Uint8Array(await exe.slice(18, 19).arrayBuffer())[0];
+    const arch = m === 0xb7 ? 'aarch64' : m === 0x3e ? 'x86_64' : null;
+    if (arch && !found.includes(arch)) found.push(arch);
+  } catch { /* none at the top */ }
+  return found;
+}
+
+// SHA-256 of the default.xex already in the destination's game_root/, or null.
+async function destEdition() {
+  try {
+    const xex = await (await (await destDir(`${state.base}game_root`)).getFileHandle('default.xex')).getFile();
+    return await sha256(new Uint8Array(await xex.arrayBuffer()));
+  } catch {
+    return null;
+  }
+}
+
 // The shader library of an earlier run, if the destination holds the same edition (same default.xex): a resumed
 // run does not compile the shaders again.
 async function destLibrary() {
   try {
     const xex = new Uint8Array(await (await (await (await destDir(`${state.base}game_root`)).getFileHandle('default.xex')).getFile()).arrayBuffer());
     if (await sha256(xex) !== state.xexSha) return null;
-    const lib = await (await (await destDir(state.base)).getFileHandle('nfsmw_shaders.nfsp')).getFile();
-    return lib.size > 24 ? lib : null;
+    // In game_root/ (shared by both machines' executables), or at the top for an install made before 2026-11-18.
+    for (const where of [`${state.base}game_root`, state.base]) {
+      try {
+        const lib = await (await (await destDir(where)).getFileHandle('nfsmw_shaders.nfsp')).getFile();
+        if (lib.size > 24) return lib;
+      } catch { /* not there */ }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -816,7 +867,7 @@ async function run() {
     Object.assign(out, await openPaquet());
     Object.assign(out, await pythonTools(state.game));
     if (!canWrite) {
-      out['nfsmw_shaders.nfsp'] = await shaders(state.game);
+      out['game_root/nfsmw_shaders.nfsp'] = await shaders(state.game);
       progress(0.85, L('Fabrication du zip…', 'Making the zip…'));
       const zip = writeZip(Object.entries(out).map(([p, d]) => [`${PORT}/${p}`, d]));
       const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(zip), download: 'nfsmw-batocera.zip' });
@@ -833,7 +884,7 @@ async function run() {
       log(`écrit : ${entries.length} fichiers dans ${PORT}/`);
       state.portWritten = true;
       if (await destLibrary()) log(L('shaders : déjà fabriqués par un essai précédent, gardés', 'shaders: already built by an earlier run, kept'));
-      else await writeTo(state.dest, `${state.base}nfsmw_shaders.nfsp`, await shaders(state.game));
+      else await writeTo(state.dest, `${state.base}game_root/nfsmw_shaders.nfsp`, await shaders(state.game));
       state.vfDone = state.vfXbox ? await dubbedMovies() : [];
       if ($('copy-game').checked) {
         let copied = 0, written = 0;

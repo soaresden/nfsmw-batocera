@@ -59,7 +59,11 @@ def main():
     version, plain = container(port)
     nonce = os.urandom(12)
     blob = MAGIC + nonce + AESGCM(key_of(xex)).encrypt(nonce, gzip.compress(plain, 9, mtime=0), MAGIC)
-    machine = open(os.path.join(port, 'nfsmw'), 'rb').read(20)[18]
+    exes = [os.path.join(port, 'bin', a, 'nfsmw') for a in sorted(os.listdir(os.path.join(port, 'bin')))] \
+        if os.path.isdir(os.path.join(port, 'bin')) else [os.path.join(port, 'nfsmw')]  # bin/<arch>/ since 2026-11-18
+    if len(exes) != 1:
+        sys.exit('%s: one bin/<arch>/ per package' % port)
+    machine = open(exes[0], 'rb').read(20)[18]
     arch = {0xB7: 'aarch64', 0x3E: 'x86_64'}[machine]
     name = 'nfsmw-%s%s.pak' % (edition, '' if arch == 'aarch64' else '-' + arch)
     with open(os.path.join(out, name), 'wb') as f:

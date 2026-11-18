@@ -8,9 +8,10 @@
 #   NFS Most Wanted.sh/run.sh           the launcher
 #   NFS Most Wanted.sh/padto.keys       Hotkey + Start quits the game
 #   NFS Most Wanted.sh/mods.py          applies mods/<name>/ (e.g. mods/mx5/) over game_root at each start
-#   NFS Most Wanted.sh/nfsmw            the game, with librexruntime.so and librexgpu-xenos.so
-#   NFS Most Wanted.sh/nfsmw.toml       settings
-#   NFS Most Wanted.sh/lib/             libraries the console may not have
+#   NFS Most Wanted.sh/bin/<arch>/      the game for this processor (aarch64 or x86_64): nfsmw, librexruntime.so,
+#                                       librexgpu-xenos.so, lib/ (libraries the console may not have), VERSION; both
+#                                       machines' bin/ can sit in the same folder, the rest is shared
+#   NFS Most Wanted.sh/nfsmw.toml       settings (the launcher copies them next to the executable)
 #   NFS Most Wanted.sh/game_root/       empty: your default.xex, NFS/ and Movies/ go here
 set -euo pipefail
 RAIZ=$(cd "$(dirname "$0")/.." && pwd)
@@ -28,17 +29,18 @@ SDKOUT=${3:-$RAIZ/sdk/out/$SDKARCH}   # librexruntime.so and the GPU plugin, whi
 
 rm -rf "$DEST"
 PKG="$DEST/NFS Most Wanted.sh"
-mkdir -p "$PKG/lib" "$PKG/game_root"
-cp "$EXE" "$PKG/nfsmw"
-llvm-strip-20 --strip-unneeded "$PKG/nfsmw" 2>/dev/null || llvm-strip --strip-unneeded "$PKG/nfsmw" 2>/dev/null || $ARCH-linux-gnu-strip --strip-unneeded "$PKG/nfsmw"
+BIN="$PKG/bin/$ARCH"
+mkdir -p "$BIN/lib" "$PKG/game_root"
+cp "$EXE" "$BIN/nfsmw"
+llvm-strip-20 --strip-unneeded "$BIN/nfsmw" 2>/dev/null || llvm-strip --strip-unneeded "$BIN/nfsmw" 2>/dev/null || $ARCH-linux-gnu-strip --strip-unneeded "$BIN/nfsmw"
 cp "$RAIZ/batocera/nfsmw.toml" "$PKG/nfsmw.toml"
 # Which build this is: the launcher writes it at the top of nfsmw-stdout.log.
-echo "nfsmw-batocera $(git -C "$RAIZ" describe --always --dirty 2>/dev/null || echo unknown) $(date -u '+%F %H:%M UTC') $ARCH" > "$PKG/VERSION"
+echo "nfsmw-batocera $(git -C "$RAIZ" describe --always --dirty 2>/dev/null || echo unknown) $(date -u '+%F %H:%M UTC') $ARCH" > "$BIN/VERSION"
 # The NFS MOST WANTED submenu of EmulationStation's advanced game options (the launcher installs it).
 cp "$RAIZ/batocera/port/es_features_nfsmw.cfg" "$PKG/es_features_nfsmw.cfg"
 cp "$RAIZ/batocera/port/run.sh" "$RAIZ/batocera/port/padto.keys" "$RAIZ/batocera/port/mods.py" "$PKG/"
 cp "$RAIZ/batocera/tools/ps_buttons/jdlz.py" "$PKG/"  # for mods.py: the .patch textures of FRONTB.LZC / GLOBALB.LZC
-chmod +x "$PKG/run.sh" "$PKG/nfsmw"
+chmod +x "$PKG/run.sh" "$BIN/nfsmw"
 
 # Shared libraries the binary needs and Batocera does not always carry (X11/XCB client libraries, used only
 # when there is no Wayland), with their own dependencies. Vulkan, the C library, Wayland, DRM, audio and udev
@@ -52,35 +54,35 @@ system_lib() {
   esac
   return 1
 }
-pending=("$PKG/nfsmw")
+pending=("$BIN/nfsmw")
 # The SDK's own libraries go next to the executable (RUNPATH $ORIGIN; the GPU plugin is opened from there).
 for so in "$SDKOUT"/librex*.so "$BUILD"/librex*.so; do
   [ -f "$so" ] || continue
-  cp -L "$so" "$PKG/"
-  llvm-strip-20 --strip-unneeded "$PKG/$(basename "$so")" 2>/dev/null || true
-  pending+=("$PKG/$(basename "$so")")
+  cp -L "$so" "$BIN/"
+  llvm-strip-20 --strip-unneeded "$BIN/$(basename "$so")" 2>/dev/null || true
+  pending+=("$BIN/$(basename "$so")")
 done
 while [ ${#pending[@]} -gt 0 ]; do
   elf=${pending[0]}; pending=("${pending[@]:1}")
   for lib in $(readelf -d "$elf" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p'); do
     system_lib "$lib" && continue
-    [ -f "$PKG/lib/$lib" ] || [ -f "$PKG/$lib" ] && continue
+    [ -f "$BIN/lib/$lib" ] || [ -f "$BIN/$lib" ] && continue
     if [ -f "$SYSLIB/$lib" ]; then
-      cp -L "$SYSLIB/$lib" "$PKG/lib/"
-      pending+=("$PKG/lib/$lib")
+      cp -L "$SYSLIB/$lib" "$BIN/lib/"
+      pending+=("$BIN/lib/$lib")
     else
       echo "warning: $lib not bundled" >&2
     fi
   done
 done
 
-mkdir -p "$PKG/lib/cxx"
-cp -L "$SYSLIB/libstdc++.so.6" "$SYSLIB/libgcc_s.so.1" "$PKG/lib/cxx/"
+mkdir -p "$BIN/lib/cxx"
+cp -L "$SYSLIB/libstdc++.so.6" "$SYSLIB/libgcc_s.so.1" "$BIN/lib/cxx/"
 
 cat > "$PKG/game_root/LISEZMOI.txt" <<'TXT'
 La page d'installation (https://soaresden.github.io/nfsmw-batocera/) remplit ce dossier a partir de votre propre
 copie du jeu (Xbox 360, l'edition de ce paquet) : default.xex, NFS/, Movies/ et nfsmw_shaders.nfsp.
 TXT
 echo "Batocera package: $DEST"
-readelf -d "$PKG/nfsmw" | grep NEEDED
-ls "$PKG" "$PKG/lib" "$PKG/lib/cxx"
+readelf -d "$BIN/nfsmw" | grep NEEDED
+ls "$PKG" "$BIN" "$BIN/lib" "$BIN/lib/cxx"

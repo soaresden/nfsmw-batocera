@@ -6,8 +6,13 @@
 #                                                    folder with the .sh extension as a game and Batocera runs its
 #                                                    run.sh; the quit keys are its padto.keys). Default.
 #   /userdata/roms/ports/NFS Most Wanted.sh          this script at the top of ports/, next to an nfsmw/ folder.
+#
+# One folder can hold the game for both kinds of machine: what depends on the processor is in bin/aarch64/ (Retroid
+# & co) and bin/x86_64/ (PC), the executable with its libraries; the game (game_root/), the shader library, the saves
+# (data/, saves/), the logs, the mods and the settings (nfsmw.toml, copied next to the executable at each start) are
+# shared. The installation page adds the other machine's bin/ to an existing folder.
 HERE="$(cd "$(dirname "$0")" && pwd)"
-if [ -x "$HERE/nfsmw" ] && [ ! -d "$HERE/nfsmw" ]; then
+if [ -d "$HERE/bin" ] || { [ -x "$HERE/nfsmw" ] && [ ! -d "$HERE/nfsmw" ]; }; then
     GAMEDIR="$HERE"
     ROMNAME="$(basename "$HERE")"
 else
@@ -28,14 +33,38 @@ if [ ! -f "$GAMEDIR/game_root/default.xex" ]; then
     exit 1
 fi
 
-# Processor: the package is built for one (aarch64 for the Retroid & co, x86_64 for a PC). The ELF header says which
-# (e_machine at byte 18: 0xb7 aarch64, 0x3e x86_64); a wrong one would only fail with "cannot execute binary file".
-case "$(od -An -tx1 -j18 -N1 "$GAMEDIR/nfsmw" 2>/dev/null | tr -d ' ')" in
-    b7) BUILT_FOR=aarch64 ;; 3e) BUILT_FOR=x86_64 ;; *) BUILT_FOR=unknown ;;
-esac
+# Processor (ELF e_machine at byte 18: 0xb7 aarch64, 0x3e x86_64).
+elf_arch() {
+    case "$(od -An -tx1 -j18 -N1 "$1" 2>/dev/null | tr -d ' ')" in
+        b7) echo aarch64 ;; 3e) echo x86_64 ;; *) echo unknown ;;
+    esac
+}
 MACHINE="$(uname -m)"
-if [ "$BUILT_FOR" != unknown ] && [ "$BUILT_FOR" != "$MACHINE" ]; then
-    echo "[batocera] $(date '+%F %T') ce paquet est pour $BUILT_FOR, cette machine est $MACHINE : refaites l'installation avec la page en choisissant $MACHINE" \
+# An install made before 2026-11-18 has its executable at the top of the folder: it moves into bin/<processor>/
+# (same disk, nothing is copied), with its pipeline cache; if that bin/ already exists (the page installed the new
+# layout over it), the old files are only removed.
+if [ -f "$GAMEDIR/nfsmw" ]; then
+    OLD="$(elf_arch "$GAMEDIR/nfsmw")"
+    if [ "$OLD" != unknown ]; then
+        if [ -e "$GAMEDIR/bin/$OLD/nfsmw" ]; then
+            rm -rf "$GAMEDIR/nfsmw" "$GAMEDIR/librexruntime.so" "$GAMEDIR/librexgpu-xenos.so" "$GAMEDIR/lib"
+            echo "[batocera] old $OLD files at the top removed (bin/$OLD/ is there)" >> "$GAMEDIR/nfsmw-launcher.log"
+        else
+            mkdir -p "$GAMEDIR/bin/$OLD/cache"
+            for f in nfsmw librexruntime.so librexgpu-xenos.so lib; do
+                [ -e "$GAMEDIR/$f" ] && mv "$GAMEDIR/$f" "$GAMEDIR/bin/$OLD/"
+            done
+            [ -f "$GAMEDIR/cache/nfsmw_nativo_pipelines.bin" ] && mv "$GAMEDIR/cache/nfsmw_nativo_pipelines.bin" "$GAMEDIR/bin/$OLD/cache/"
+            echo "[batocera] $(date '+%F %T') executable moved into bin/$OLD/" >> "$GAMEDIR/nfsmw-launcher.log"
+        fi
+    fi
+fi
+# The shader library goes with the game (the executable looks next to itself, then in game_root/).
+[ -f "$GAMEDIR/nfsmw_shaders.nfsp" ] && mv -f "$GAMEDIR/nfsmw_shaders.nfsp" "$GAMEDIR/game_root/nfsmw_shaders.nfsp"
+EXEDIR="$GAMEDIR/bin/$MACHINE"
+if [ ! -f "$EXEDIR/nfsmw" ]; then
+    HAVE="$(ls "$GAMEDIR/bin" 2>/dev/null | tr '\n' ' ')"
+    echo "[batocera] $(date '+%F %T') pas de version $MACHINE dans ce dossier (presentes : ${HAVE:-aucune}) : refaites l'installation avec la page dans ce meme dossier en choisissant cette machine ($MACHINE), le jeu deja la est garde" \
         | tee "$GAMEDIR/nfsmw-stdout.log" >&2
     exit 1
 fi
@@ -54,10 +83,10 @@ for f in /usr/lib/libstdc++.so.6 /usr/lib64/libstdc++.so.6 /lib/libstdc++.so.6 /
          /usr/lib/x86_64-linux-gnu/libstdc++.so.6; do
     [ -e "$f" ] && SYS_CXX="$(cxx_version "$f")" && break
 done
-OWN_CXX="$(cxx_version "$GAMEDIR/lib/cxx/libstdc++.so.6")"
-LIBS="$GAMEDIR:$GAMEDIR/lib"
+OWN_CXX="$(cxx_version "$EXEDIR/lib/cxx/libstdc++.so.6")"
+LIBS="$EXEDIR:$EXEDIR/lib"
 if [ -z "$SYS_CXX" ] || [ "$(printf '%s\n%s\n' "$SYS_CXX" "$OWN_CXX" | sort -V | head -1)" != "$OWN_CXX" ]; then
-    LIBS="$LIBS:$GAMEDIR/lib/cxx"
+    LIBS="$LIBS:$EXEDIR/lib/cxx"
 fi
 export LD_LIBRARY_PATH="$LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 # SDL3 picks Wayland under Batocera's compositor, otherwise KMS/DRM or X11.
@@ -74,15 +103,15 @@ else
     POINTER="batocera-mouse not found"
 fi
 # Mesa (Turnip on the Adreno, RADV/ANV on a PC): keep its pipeline cache next to the game so later sessions start
-# smoothly.
+# smoothly (Mesa keys it by driver and GPU, so both machines can share it).
 export MESA_SHADER_CACHE_DIR="$GAMEDIR/cache/mesa"
 export MESA_SHADER_CACHE_MAX_SIZE=1G
 mkdir -p "$MESA_SHADER_CACHE_DIR"
 
-chmod +x "$GAMEDIR/nfsmw" 2>/dev/null
+chmod +x "$EXEDIR/nfsmw" 2>/dev/null
 {
     echo "[batocera] $(date '+%F %T') $(cat /usr/share/batocera/batocera.version 2>/dev/null) $(uname -r)"
-    echo "[batocera] port: $(cat "$GAMEDIR/VERSION" 2>/dev/null || echo 'no VERSION file (a build older than 2026-11-15 17:00)') ($BUILT_FOR, machine $MACHINE)"
+    echo "[batocera] port: $(cat "$EXEDIR/VERSION" "$GAMEDIR/VERSION" 2>/dev/null | head -1 || true) (bin/$MACHINE; in this folder: $(ls "$GAMEDIR/bin" | tr '\n' ' '))"
     echo "[batocera] C++ runtime: system ${SYS_CXX:-none}, bundled ${OWN_CXX:-none}; LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
     echo "[batocera] WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-} DISPLAY=${DISPLAY:-} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-} HOME=${HOME:-}"
     echo "[batocera] SDL_GAMECONTROLLERCONFIG: ${SDL_GAMECONTROLLERCONFIG:-(none)}"
@@ -193,5 +222,16 @@ echo "[batocera] options: ${ARGS[*]}" >> "$GAMEDIR/nfsmw-stdout.log"
 # Saves, profiles and caches next to the game (ports/nfsmw/data) instead of /userdata/system/.local/share/nfsmw.
 # user_data_root is read before nfsmw.toml, so it is given on the command line.
 mkdir -p "$GAMEDIR/data"
-"$GAMEDIR/nfsmw" --user_data_root="$GAMEDIR/data" "${ARGS[@]}" "$@" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
+# What the executable would otherwise keep next to itself (in bin/<processor>/) stays shared at the top: the game,
+# the copies of the saves (saves/), the logs (logs/nfsmw_NNN.log, numbered as the game does) and the settings
+# (nfsmw.toml, copied in; changes the game makes to it are copied back after).
+LOGDIR="$GAMEDIR/logs"
+mkdir -p "$LOGDIR"
+N="$(ls "$LOGDIR" 2>/dev/null | sed -n 's/^nfsmw_\([0-9][0-9]*\)\.log$/\1/p' | sort -n | tail -1)"
+LOG="$LOGDIR/$(printf 'nfsmw_%03d.log' $((10#${N:-0} + 1)))"
+[ -f "$GAMEDIR/nfsmw.toml" ] && ! cmp -s "$GAMEDIR/nfsmw.toml" "$EXEDIR/nfsmw.toml" && cp "$GAMEDIR/nfsmw.toml" "$EXEDIR/nfsmw.toml"
+"$EXEDIR/nfsmw" --user_data_root="$GAMEDIR/data" --game_data_root="$GAMEDIR/game_root" \
+    --content_backup_root="$GAMEDIR/saves" --log_file="$LOG" "${ARGS[@]}" "$@" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
 echo "[batocera] exit code $?" >> "$GAMEDIR/nfsmw-stdout.log"
+[ -f "$EXEDIR/nfsmw.toml" ] && ! cmp -s "$EXEDIR/nfsmw.toml" "$GAMEDIR/nfsmw.toml" && cp "$EXEDIR/nfsmw.toml" "$GAMEDIR/nfsmw.toml"
+exit 0
