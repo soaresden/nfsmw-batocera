@@ -67,6 +67,8 @@ def main():
     index_path = os.path.join(out, 'index.json')
     index = json.load(open(index_path)) if os.path.exists(index_path) else {'paquets': []}
     xex_sha = hashlib.sha256(xex).hexdigest()
+    for p in index['paquets']:
+        p.setdefault('arch', 'aarch64')  # entries written before the x86_64 build
     index['paquets'] = [p for p in index['paquets']
                         if (p['xex_sha256'], p.get('arch', 'aarch64')) != (xex_sha, arch)]
     index['paquets'].append({'edition': edition, 'arch': arch, 'xex_sha256': xex_sha, 'fichier': name,
