@@ -59,7 +59,7 @@ if [ -f "$GAMEDIR/nfsmw" ]; then
         fi
     fi
 fi
-# The shader library goes with the game (the executable looks next to itself, then in game_root/).
+# The shader library goes with the game (shared); a copy is put next to the executable below.
 [ -f "$GAMEDIR/nfsmw_shaders.nfsp" ] && mv -f "$GAMEDIR/nfsmw_shaders.nfsp" "$GAMEDIR/game_root/nfsmw_shaders.nfsp"
 EXEDIR="$GAMEDIR/bin/$MACHINE"
 if [ ! -f "$EXEDIR/nfsmw" ]; then
@@ -67,6 +67,11 @@ if [ ! -f "$EXEDIR/nfsmw" ]; then
     echo "[batocera] $(date '+%F %T') pas de version $MACHINE dans ce dossier (presentes : ${HAVE:-aucune}) : refaites l'installation avec la page dans ce meme dossier en choisissant cette machine ($MACHINE), le jeu deja la est garde" \
         | tee "$GAMEDIR/nfsmw-stdout.log" >&2
     exit 1
+fi
+# The shader library also has to sit next to the executable: part of the game (the video path among others,
+# src/nfsmw_shader_hooks.cpp) only looks there. A copy from game_root/, refreshed when it changes (1.5 MB).
+if [ -f "$GAMEDIR/game_root/nfsmw_shaders.nfsp" ] && ! cmp -s "$GAMEDIR/game_root/nfsmw_shaders.nfsp" "$EXEDIR/nfsmw_shaders.nfsp"; then
+    cp "$GAMEDIR/game_root/nfsmw_shaders.nfsp" "$EXEDIR/nfsmw_shaders.nfsp"
 fi
 if [ "$MACHINE" = x86_64 ] && ! grep -qw avx2 /proc/cpuinfo 2>/dev/null; then
     # The x86_64 build needs x86-64-v3 (AVX2): without it the game would stop on an illegal instruction.
