@@ -7,11 +7,15 @@
 // accept message 0x0C407210 asks the main menu to go to the online screens (flag 8 at +300 of the FE object at
 // 0x82A2C684).
 //
-// Two hooks, both off with nfsmw_menu_mods = false:
+// Three hooks, all off with nfsmw_menu_mods = false:
 //  - sub_822BCE60 is the game's text lookup (r3 = text hash -> r3 = guest char*, a binary search over the loaded
 //    language's (hash, string) pairs at 0x82A2C674, count at 0x82A2C66C). For 0x8AC4F1AA it returns "Mods",
 //    written once in the system heap (PrepararMenuMods, from OnPostLoadXexImage). The online screens, the only
 //    other users of that text, cannot be reached any more.
+//  - sub_822E00C0, the carousel's add-entry (r3 = carousel, r4 = entry, which it reads the icon hash from): for the
+//    entry labelled 0x8AC4F1AA the icon becomes 0xB8C8C0D4, the frontend's PERFORMANCE_ICON_PACKAG (a box with an
+//    arrow up, from the performance packages screen) instead of MAIN_ICON_GO_ONLINE. The label, not the vtable,
+//    tells the entry: a text hash is the same in every edition.
 //  - sub_82237080: on accept the port's Mods screen opens (sdk/src/ui/overlay/mods_page.cpp, AbrirPantallaMods)
 //    and the game's own action is skipped; any other message goes to the game.
 // The addresses are the PAL Spanish edition's; tools/editions translates them for the others.
@@ -21,6 +25,7 @@
 #include <rex/cvar.h>
 #include <rex/hook.h>
 #include <rex/logging.h>
+#include <rex/memory/utils.h>
 #include <rex/platform.h>
 #include <rex/system/xmemory.h>
 #include <rex/ui/overlay/settings_overlay.h>
@@ -34,6 +39,7 @@ namespace nfsmw {
 namespace {
 constexpr uint32_t kTextoXboxLive = 0x8AC4F1AA;
 constexpr uint32_t kMensajeAceptar = 0x0C407210;
+constexpr uint32_t kIconoMods = 0xB8C8C0D4;  // PERFORMANCE_ICON_PACKAG in FRONTB.LZC
 uint32_t g_texto_mods = 0;  // guest address of "Mods", 0 while off
 }  // namespace
 
@@ -64,6 +70,17 @@ REX_HOOK_RAW(sub_822BCE60) {
     return;
   }
   __imp__sub_822BCE60(ctx, base);
+}
+
+// The carousel's add-entry: r4 = the entry (+12 icon hash, +44 label hash).
+REX_EXTERN(__imp__sub_822E00C0);
+REX_HOOK_RAW(sub_822E00C0) {
+  const uint32_t entrada = ctx.r4.u32;
+  if (nfsmw::g_texto_mods && entrada >= 0x10000u &&
+      rex::memory::load_and_swap<uint32_t>(base + entrada + 44) == nfsmw::kTextoXboxLive) {
+    rex::memory::store_and_swap<uint32_t>(base + entrada + 12, nfsmw::kIconoMods);
+  }
+  __imp__sub_822E00C0(ctx, base);
 }
 
 // React of the main menu's Xbox Live entry.
