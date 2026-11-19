@@ -38,5 +38,12 @@ if exist "%JEU%\game_root\Movies\movies_report.txt" set "LANGUE=--nfsmw_idioma=0
 rem Black Edition : son logo (GLOBAL\GLOBALA.BUN) n'est dans game_root que si mods.py l'y a mis (option BLACK EDITION).
 set "BLACK="
 if exist "%JEU%\game_root\GLOBAL\GLOBALA.BUN" set "BLACK=--nfsmw_black_edition"
+rem Clavier (sans manette) : fleches pour les menus et la conduite (haut accelere, bas freine), Entree valide,
+rem Echap ou Retour arriere revient, P met en pause. Les touches du jeu par defaut supposent un clavier QWERTY.
+set TOUCHES="--keybind_lstick_up=Up" "--keybind_lstick_down=Down" "--keybind_lstick_left=Left" "--keybind_lstick_right=Right"
+set TOUCHES=%TOUCHES% "--keybind_right_trigger=Up" "--keybind_left_trigger=Down"
+set TOUCHES=%TOUCHES% "--keybind_a=Return,Space" "--keybind_b=Escape,Backspace" "--keybind_start=Return,P"
+set TOUCHES=%TOUCHES% "--keybind_x=X" "--keybind_y=C" "--keybind_back=Tab"
+set TOUCHES=%TOUCHES% "--keybind_rstick_up=I" "--keybind_rstick_down=K" "--keybind_rstick_left=J" "--keybind_rstick_right=L"
 if not exist "%JEU%\data" mkdir "%JEU%\data"
-start "" "%ICI%nfsmw.exe" --game_data_root="%JEU%\game_root" --user_data_root="%JEU%\data" --content_backup_root="%JEU%\saves" %LANGUE% %BLACK% %*
+start "" "%ICI%nfsmw.exe" --game_data_root="%JEU%\game_root" --user_data_root="%JEU%\data" --content_backup_root="%JEU%\saves" %LANGUE% %BLACK% %TOUCHES% %*
