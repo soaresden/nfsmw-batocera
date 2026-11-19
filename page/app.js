@@ -612,7 +612,8 @@ async function destState() {
       if (name.replace(/\.zip$/i, '').toLowerCase().replace(/[^a-z0-9]/g, '') === 'blackedition' && (h.kind === 'directory' || /\.zip$/i.test(name))) black = true;
     }
   } catch { /* no mods/ */ }
-  const tools = existing && black && await destHas(`${state.base}mods/icones`, true);
+  // mods/icones/clavier/ICONOS.BIN (the keyboard keys, 19/11): sets made before it are made again.
+  const tools = existing && black && await destHas(`${state.base}mods/icones/clavier/ICONOS.BIN`);
   return { edition, existing, destDubbed: dubbed, destTools: tools };
 }
 

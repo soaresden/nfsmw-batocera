@@ -210,6 +210,10 @@ les menus. Sans l'option, ou sans le dossier, le jeu reprend ses images d'origin
 
 ### Icônes des boutons : PlayStation, GameCube, Xbox 360
 
+Au clavier (PC), les icônes deviennent les touches du PC en direct, comme dans les jeux récents : Entrée, Retour
+arrière, Ctrl, X, 1, 3, ↓, ↑ dès qu'on touche le clavier, les boutons du style choisi dès qu'on touche la manette.
+Les icônes faites avant le 19/11 n'ont pas les fichiers pour ça : relancez l'installation depuis la page.
+
 `batocera/tools/ps_buttons/` fabrique, à partir de vos fichiers (sortis des archives par
 `batocera/tools/Extraire textures NFSMW.sh`), un zip à décompresser par-dessus `ports/` avec trois styles
 d'icônes : **PlayStation** (✕ ○ □ △), **GameCube** (A B ronds, X Y en haricot) et **Xbox 360** (celles du jeu).

@@ -28,6 +28,7 @@
 namespace rex::memory { class Memory; }
 namespace nfsmw { void AplicarBlackEdition(rex::memory::Memory* memory); }  // nfsmw_black_edition.cpp
 namespace nfsmw { void PrepararMenuMods(rex::memory::Memory* memory); }     // nfsmw_menu_mods.cpp
+namespace nfsmw { void PrepararIconosTeclado(rex::memory::Memory* memory); }  // nfsmw_iconos_teclado.cpp
 #include "nfsmw_ajustes_graficos.h"
 #include "nfsmw_entorno_mesa.h"
 #include "nfsmw_nativo_captura.h"
@@ -77,6 +78,7 @@ class NfsmwApp : public rex::ReXApp {
   void OnPostLoadXexImage() override {
     if (runtime()) nfsmw::AplicarBlackEdition(runtime()->memory());
     if (runtime()) nfsmw::PrepararMenuMods(runtime()->memory());  // "Mods" in the main menu
+    if (runtime()) nfsmw::PrepararIconosTeclado(runtime()->memory());  // keyboard keys while the keyboard is used
   }
 
   // Available hooks, unused:

@@ -17,6 +17,7 @@
 #include <rex/chrono/clock.h>
 #include <rex/cvar.h>
 #include <rex/input/flags.h>
+#include <rex/input/dispositivo.h>
 #include <rex/input/sdl/sdl_input_driver.h>
 #include <rex/logging.h>
 #include <rex/platform.h>
@@ -571,9 +572,15 @@ void SDLInputDriver::ProcessEventLocked(const SDL_Event& event) {
       OnControllerDeviceRemovedLocked(event);
       break;
     case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+      if (event.gaxis.value > 16000 || event.gaxis.value < -16000) {
+        MarcarDispositivo(Dispositivo::kMando);  // nfsmw: rex/input/dispositivo.h
+      }
       OnControllerDeviceAxisMotionLocked(event);
       break;
     case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+      MarcarDispositivo(Dispositivo::kMando);
+      OnControllerDeviceButtonChangedLocked(event);
+      break;
     case SDL_EVENT_GAMEPAD_BUTTON_UP:
       OnControllerDeviceButtonChangedLocked(event);
       break;

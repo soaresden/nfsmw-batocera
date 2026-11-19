@@ -20,6 +20,7 @@
 #include <rex/ui/overlay/settings_overlay.h>
 
 #include <rex/cvar.h>
+#include <rex/input/dispositivo.h>
 #include <rex/logging.h>
 #include <rex/platform.h>
 #include <rex/ui/imgui_dialog.h>
@@ -465,11 +466,20 @@ class PantallaMods final : public ImGuiDialog {
     return v ? std::string(v) : std::string();
   }
 
-  // One hint: the controller button in the game's icon style, then what it does. Returns the x after it. On a
-  // keyboard the game's own keys apply (Entrée accepts, Échap goes back), as in the PC version.
+  // One hint: the PC key while the keyboard is the device used last (rex/input/dispositivo.h, as the game's own
+  // icons, app/src/nfsmw_iconos_teclado.cpp), else the controller button in the chosen icon style; then what it
+  // does. Returns the x after it.
   float Pista(ImDrawList* dl, ImFont* f, float t, float x, float y, bool aceptar, const std::string& que) {
     const ImU32 fondo = IM_COL32(30, 30, 32, 255);
-    {
+    if (rex::input::UltimoDispositivo() == rex::input::Dispositivo::kTeclado) {
+      const std::string tecla = aceptar ? "Entrée" : "Échap";
+      const float w = Ancho(f, t * 0.8f, tecla) + t * 0.8f;
+      dl->AddRectFilled(ImVec2(x, y - t * 0.1f), ImVec2(x + w, y + t * 1.1f), IM_COL32(225, 225, 225, 255), t * 0.18f);
+      dl->AddRect(ImVec2(x, y - t * 0.1f), ImVec2(x + w, y + t * 1.1f), IM_COL32(120, 120, 120, 255), t * 0.18f, 0,
+                  2.0f);
+      Texto(dl, f, t * 0.8f, ImVec2(x + t * 0.4f, y + t * 0.1f), fondo, tecla);
+      x += w;
+    } else {
       const float r = t * 0.62f;
       const ImVec2 c(x + r, y + t * 0.5f);
       const std::string estilo = Estilo();

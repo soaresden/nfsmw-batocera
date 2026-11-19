@@ -5,6 +5,13 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- Keyboard icons, live: while the keyboard is used the game's button icons become the PC keys the Windows launcher
+  binds (Enter, Backspace, Ctrl, X, 1, 3, Down, Up), and the controller's buttons again as soon as it is touched
+  (`app/src/nfsmw_iconos_teclado.cpp`). The input drivers note the device used last (`rex/input/dispositivo.h`);
+  the icon tool writes each style's icons as the game holds them (`ICONOS.BIN`) and the keyboard set
+  (`mods/icones/clavier/`); the game finds the style's icons in memory and writes the other set over them. The Mods
+  screen's hints follow too.
+
 - "Mods" in the game's main menu, in place of Xbox Live (`app/src/nfsmw_menu_mods.cpp`; the main menu is loaded again behind the screen, `sub_82284928` "MainMenu.fng", since accepting an entry has already started its way out; the hints at the bottom show the controller buttons in the chosen icon style, `NFSMW_ICONOS`, and the keyboard keeps the PC version's keys): the text lookup
   `sub_822BCE60` answers "Mods" for its label and its React `sub_82237080` opens a Mods screen drawn in the style
   of the game's menus (Roboto Medium, the game's orange); its icon becomes the frontend's PERFORMANCE_ICON_PACKAG (`sub_822E00C0`); `nfsmw_menu_mods = false` gives Xbox Live back.

@@ -57,6 +57,12 @@ Le zip se décompresse par-dessus `/userdata/roms/ports/` et range dans `NFS Mos
 | `gamecube/` | A et B ronds, X et Y en haricot, L1 R1 L2 R2 | manette GameCube d'EA | par lettre |
 | `xbox360/` | celles du jeu (seul votre `GLOBALMEMORYFILE.BIN` d'origine y est) | celle du jeu | par lettre |
 
+**Touches du clavier** : `mods/icones/clavier/ICONOS.BIN` dessine, à la place des boutons, les touches du PC que
+le lanceur Windows leur donne (A = Entrée ↵, B = Retour arrière ⌫, X = Ctrl, Y = X, LB = 1, RB = 3, LT = ↓,
+RT = ↑). Ce n'est pas un style à choisir : chaque style a aussi son `ICONOS.BIN` (les octets de ses icônes tels que
+le jeu les a en mémoire), et le jeu échange les deux en direct, touches du PC dès qu'on touche le clavier, boutons
+du style choisi dès qu'on touche la manette (`app/src/nfsmw_iconos_teclado.cpp`).
+
 Le choix se fait dans **Options avancées du jeu → NFS MOST WANTED → ICÔNES DES BOUTONS** ; le lanceur pose le
 style choisi dans `game_root/GLOBAL/` à chaque lancement (PlayStation par défaut une fois les styles installés).
 Les gâchettes gardent les noms imprimés sur la Retroid (L1 R1 L2 R2) en PlayStation comme en GameCube. Sur la

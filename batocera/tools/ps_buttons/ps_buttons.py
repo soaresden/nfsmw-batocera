@@ -53,6 +53,20 @@ GAMECUBE = {
     'SQUARE': 'gcX',         # X: kidney
     'CIRCLE': 'gcY',         # Y: kidney
 }
+# Keyboard (style clavier): the PC keys the Windows launcher binds to each 360 button, as in the PC version
+# (batocera/windows/NFS Most Wanted.bat): A Enter, B Backspace, X Ctrl, Y X, LB 1, RB 3, LT Down, RT Up. The game
+# swaps these in while the keyboard is in use (app/src/nfsmw_iconos_teclado.cpp, from ICONOS.BIN).
+CLAVIER = {
+    'CROSS': 'key:\u21b5',      # A: Enter
+    'TRIANGLE': 'key:\u232b',   # B: Backspace
+    'SQUARE': 'key:Ctrl',       # X
+    'CIRCLE': 'key:X',          # Y
+    'L2': 'key:1',              # LB
+    'R2': 'key:3',              # RB
+    'SELECT': 'key:3',          # RB as well
+    'L1': 'key:\u2193',         # LT: Down
+    'R1': 'key:\u2191',         # RT: Up
+}
 TEXTURES = {
     'CROSS': 'cross',        # A
     'TRIANGLE': 'circle',    # B
@@ -200,6 +214,13 @@ def draw_icon(kind, k=8):
         top = s * 0.2
         d.rounded_rectangle((m, top, s - m, s - top), radius=int(9 * k), outline=WHITE, width=lw)
         d.text((c, c + 0.5 * k), kind[2], font=font(int(15 * k)), fill=WHITE, anchor='mm')
+    elif kind.startswith('key:'):  # a keyboard key: a key cap with its label, white on transparent
+        label = kind[4:]
+        m = 1.2 * k
+        d.rounded_rectangle((m, m, s - m, s - m), radius=int(6 * k), outline=WHITE, width=int(2.2 * k))
+        d.line((m + 5 * k, s - m - 4.2 * k, s - m - 5 * k, s - m - 4.2 * k), fill=WHITE, width=int(1.2 * k))
+        px = 19 if len(label) == 1 else (12 if len(label) <= 3 else 10)
+        d.text((c, c - 1.5 * k), label, font=font(int(px * k)), fill=WHITE, anchor='mm')
     else:  # L1/L2/R1/R2: a rounded tab with the name, as the game's LB/RB
         m = 1.5 * k
         top = s * 0.18
@@ -218,6 +239,8 @@ def patch_globalb(blob, retroid=False, log=print, style='playstation'):
     changed, shown = [], []
     if style == 'gamecube':
         textures = dict(TEXTURES, **GAMECUBE)
+    elif style == 'clavier':
+        textures = dict(CLAVIER)
     else:
         textures = dict(TEXTURES, **RETROID) if retroid else TEXTURES
     for name, kind in textures.items():
@@ -240,6 +263,28 @@ def patch_globalb(blob, retroid=False, log=print, style='playstation'):
     assert jdlz.game_decompress(new) == bytes(fe)
     log('GLOBALB.LZC: %d bytes compressed, %d allowed' % (len(new), len(blob)))
     return new + b'\0' * (len(blob) - len(new)), shown
+
+
+ICON_NAMES = ('CROSS', 'TRIANGLE', 'SQUARE', 'CIRCLE', 'L1', 'L2', 'R1', 'R2', 'SELECT')
+ICONOS_MAGIC = b'NFSMWICO'
+
+
+def iconos_bin(globalb):
+    """ICONOS.BIN of a GLOBALB.LZC: the icon textures' bytes as the game holds them in memory (tiled DXT5, mips
+    included), so that the game can find them and swap another style's in while it runs: "NFSMWICO", u32 count,
+    then per texture its name (24 bytes, zero padded), u32 size and the bytes. Little endian."""
+    fe = jdlz.decompress(globalb)
+    found = find_textures(fe)
+    out = [ICONOS_MAGIC, struct.pack('<I', 0)]
+    n = 0
+    for name in ICON_NAMES:
+        t = found.get(name)
+        if t is None:
+            continue
+        out += [name.encode().ljust(24, b'\0'), struct.pack('<I', t['size']), bytes(fe[t['start']:t['start'] + t['size']])]
+        n += 1
+    out[1] = struct.pack('<I', n)
+    return b''.join(out)
 
 
 def patch_memfile(mem, globalb):
@@ -409,6 +454,7 @@ def build_style(style, blob, mem, dyn, retroid=False, log=print):
     files = {}
     new, shown = patch_globalb(blob, retroid, log, style)
     files['GLOBALB.LZC'] = new
+    files['ICONOS.BIN'] = iconos_bin(new)
     if mem:
         files['GLOBALMEMORYFILE.BIN'] = patch_memfile(mem, new)
     dshown = []
@@ -423,9 +469,12 @@ def icon_sets(blob, mem, dyn, log=print):
     out = {}
     if mem:  # Xbox 360: the game's own icons; only the GLOBALMEMORYFILE.BIN to put back
         out['mods/icones/xbox360/GLOBALMEMORYFILE.BIN'] = mem
-    for style in ('playstation', 'gamecube'):
+    out['mods/icones/xbox360/ICONOS.BIN'] = iconos_bin(blob)  # the game's own, to swap back to
+    for style in ('playstation', 'gamecube', 'clavier'):
         log('== ' + style)
         files, shown, dshown = build_style(style, blob, mem, dyn, log=log)
+        if style == 'clavier':  # not a style of its own: only the icons the game swaps in while the keyboard is used
+            files, dshown = {'ICONOS.BIN': files['ICONOS.BIN']}, []
         for name, data in files.items():
             out['mods/icones/%s/%s' % (style, name)] = data
         with tempfile.TemporaryDirectory() as t:
@@ -444,7 +493,7 @@ def main():
     ap.add_argument('--memfile', help='GLOBAL/GLOBALMEMORYFILE.BIN the game uses (its GLOBALB copy is patched)')
     ap.add_argument('--dyntex', help='GLOBAL/DYNTEX.BIN: the controller picture of the loading screens and the '
                                      'controls menu becomes EA\'s one for that style')
-    ap.add_argument('--style', choices=('playstation', 'gamecube'), default='playstation')
+    ap.add_argument('--style', choices=('playstation', 'gamecube', 'clavier'), default='playstation')
     ap.add_argument('--retroid', action='store_true',
                     help='PlayStation: triangle on top and square on the left with the face buttons by letter')
     ap.add_argument('--out', help='game_root: writes GLOBAL/ for --style')

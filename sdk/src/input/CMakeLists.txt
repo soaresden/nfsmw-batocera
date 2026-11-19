@@ -6,6 +6,7 @@ add_library(rexinput OBJECT
     device_assignment.cpp
     state_merge.cpp
     mnk/mnk_input_driver.cpp
+    dispositivo.cpp
     nop/nop_input_driver.cpp
 )
 add_library(rex::input ALIAS rexinput)

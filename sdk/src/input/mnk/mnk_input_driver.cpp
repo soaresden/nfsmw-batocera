@@ -9,6 +9,7 @@
  *              See LICENSE file in the project root for full license text.
  */
 #include <rex/input/mnk/mnk_input_driver.h>
+#include <rex/input/dispositivo.h>
 
 #include <rex/cvar.h>
 #include <rex/input/input.h>
@@ -503,6 +504,7 @@ void MnkInputDriver::OnKeyDown(rex::ui::KeyEvent& e) {
   std::lock_guard lock(state_mutex_);
   uint16_t vk = static_cast<uint16_t>(e.virtual_key());
   SetKeyState(vk, true);
+  MarcarDispositivo(Dispositivo::kTeclado);  // nfsmw: the keyboard icons (rex/input/dispositivo.h)
 }
 
 void MnkInputDriver::OnKeyUp(rex::ui::KeyEvent& e) {

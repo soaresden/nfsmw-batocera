@@ -16,6 +16,7 @@
 #include <rex/chrono/clock.h>
 #include <rex/cvar.h>
 #include <rex/input/flags.h>
+#include <rex/input/dispositivo.h>
 #include <rex/input/xinput/xinput_input_driver.h>
 #include <rex/logging.h>
 #include <rex/ui/virtual_key.h>
@@ -217,6 +218,15 @@ X_RESULT XinputInputDriver::GetDeviceState(DeviceId id, X_INPUT_STATE* out_state
 
   out_state->packet_number = native_state.state.dwPacketNumber;
   out_state->gamepad.buttons = native_state.state.Gamepad.wButtons;
+  {
+    // nfsmw: a button or a stick past half way is the controller in use (rex/input/dispositivo.h).
+    const auto& g = native_state.state.Gamepad;
+    auto lejos = [](int v) { return v > 16000 || v < -16000; };
+    if (g.wButtons || g.bLeftTrigger > 128 || g.bRightTrigger > 128 || lejos(g.sThumbLX) || lejos(g.sThumbLY) ||
+        lejos(g.sThumbRX) || lejos(g.sThumbRY)) {
+      MarcarDispositivo(Dispositivo::kMando);
+    }
+  }
   out_state->gamepad.left_trigger = native_state.state.Gamepad.bLeftTrigger;
   out_state->gamepad.right_trigger = native_state.state.Gamepad.bRightTrigger;
   out_state->gamepad.thumb_lx = native_state.state.Gamepad.sThumbLX;
