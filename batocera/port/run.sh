@@ -181,8 +181,14 @@ prepare_mods() {
     # (xbox360/ only keeps the player's own GLOBALMEMORYFILE.BIN).
     ICONS="$(conf_get nfsmw_icons)"
     # The style chosen in the game's Mods screen (main menu > Mods) wins over the Batocera option.
+    # "clavier" keeps the controller style's files and has the game show the PC keys all the time.
     CHOIX="$(head -n1 "$GAMEDIR/mods/icones/choix.txt" 2>/dev/null | tr -d '\r ')"
-    [ -n "$CHOIX" ] && [ -d "$GAMEDIR/mods/icones/$CHOIX" ] && ICONS="$CHOIX"
+    unset NFSMW_CLAVIER
+    if [ "$CHOIX" = clavier ]; then
+        export NFSMW_CLAVIER=1
+    elif [ -n "$CHOIX" ] && [ -d "$GAMEDIR/mods/icones/$CHOIX" ]; then
+        ICONS="$CHOIX"
+    fi
     if [ -d "$GAMEDIR/mods/icones" ]; then
         [ -n "$ICONS" ] || ICONS=playstation
         SET="$GAMEDIR/mods/icones/$ICONS"

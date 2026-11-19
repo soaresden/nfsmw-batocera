@@ -308,7 +308,7 @@ std::mutex g_mutex_estilo;
 
 std::vector<std::string> Estilos(const fs::path& iconos) {
   std::vector<std::string> out;
-  static const char* const kOrden[] = {"playstation", "xbox360", "gamecube"};
+  static const char* const kOrden[] = {"playstation", "xbox360", "gamecube", "clavier"};
   for (const char* e : kOrden) {
     std::error_code ec;
     if (fs::is_directory(iconos / e, ec)) {
@@ -322,6 +322,7 @@ std::string NombreEstilo(const std::string& e) {
   if (e == "playstation") return "PLAYSTATION";
   if (e == "xbox360") return "XBOX 360";
   if (e == "gamecube") return "GAMECUBE";
+  if (e == "clavier") return "CLAVIER";
   return Mayusculas(e);
 }
 
@@ -419,8 +420,9 @@ class PantallaMods final : public ImGuiDialog {
       actual.pop_back();
     }
     if (actual.empty()) {
+      const char* c = std::getenv("NFSMW_CLAVIER");
       const char* v = std::getenv("NFSMW_ICONOS");
-      actual = v ? v : "";
+      actual = c && *c == '1' ? "clavier" : v ? v : "";
     }
     estilo_ = 0;
     for (size_t i = 0; i < estilos_.size(); ++i) {
@@ -449,7 +451,7 @@ class PantallaMods final : public ImGuiDialog {
     }
     // The face buttons as the launcher sets them for each style (run.sh), unless the player chose them in Batocera.
     const char* auto_botones = std::getenv("NFSMW_BOUTONS_AUTO");
-    if (auto_botones && *auto_botones == '1') {
+    if (auto_botones && *auto_botones == '1' && nuevo != "clavier") {
       rex::cvar::SetFlagByName("input_sdl_por_letra", nuevo == "playstation" ? "false" : "true");
     }
     setenv_estilo(nuevo);
@@ -567,7 +569,7 @@ class PantallaMods final : public ImGuiDialog {
   // does. Returns the x after it.
   float Pista(ImDrawList* dl, ImFont* f, float t, float x, float y, bool aceptar, const std::string& que) {
     const ImU32 fondo = IM_COL32(30, 30, 32, 255);
-    if (rex::input::UltimoDispositivo() == rex::input::Dispositivo::kTeclado) {
+    if (rex::input::UltimoDispositivo() == rex::input::Dispositivo::kTeclado || Estilo() == "clavier") {
       const std::string tecla = aceptar ? "Entrée" : "Échap";
       const float w = Ancho(f, t * 0.8f, tecla) + t * 0.8f;
       dl->AddRectFilled(ImVec2(x, y - t * 0.1f), ImVec2(x + w, y + t * 1.1f), IM_COL32(225, 225, 225, 255), t * 0.18f);
@@ -666,7 +668,7 @@ class PantallaMods final : public ImGuiDialog {
         const float xi = xv - W * 0.012f, xd = b.x - W * 0.004f;
         dl->AddTriangleFilled(ImVec2(xi - r, cy), ImVec2(xi, cy - r), ImVec2(xi, cy + r), sel ? kNaranja : kGris);
         dl->AddTriangleFilled(ImVec2(xd + r, cy), ImVec2(xd, cy - r), ImVec2(xd, cy + r), sel ? kNaranja : kGris);
-        if (estilo_cambiado_) {
+        if (estilo_cambiado_ && estilos_[estilo_] != "clavier") {
           Texto(dl, fuente, t_peque, ImVec2(b.x + W * 0.02f, ty + (t_texto - t_peque) * 0.6f), kGris,
                 "image de manette au prochain lancement");
         }

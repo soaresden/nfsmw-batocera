@@ -18,7 +18,8 @@
 // from the start (every 5 s until the game has loaded them, and says in the log how many copies it found), so that
 // the first key already shows the keys. The Mods screen of the main menu changes the controller's icon style while
 // the game runs (rex::ui::RegistrarCambioEstiloIconos): that style's ICONOS.BIN is written in at once. Without
-// ICONOS.BIN, or with nfsmw_iconos_teclado = false, it does nothing. Not on the Switch or Android.
+// ICONOS.BIN, or with nfsmw_iconos_teclado = false, it does nothing. The style "clavier" (chosen in the Mods screen,
+// NFSMW_CLAVIER=1 from the launcher) shows the keys all the time, the controller style's files staying in place. Not on the Switch or Android.
 #include <algorithm>
 #include <atomic>
 #include <functional>
@@ -65,6 +66,7 @@ std::thread g_hilo;
 fs::path g_carpeta;  // mods/icones
 std::mutex g_mutex;
 std::string g_estilo_pedido;  // a new controller style from the Mods screen, "" if none
+std::atomic<bool> g_forzar_teclado{false};  // style "clavier": the keys always (NFSMW_CLAVIER=1, or the Mods screen)
 
 fs::path DesdeUtf8(const std::string& s) {
 #if defined(__cpp_char8_t)
@@ -230,7 +232,7 @@ void Hilo(rex::memory::Memory* memory) {
       }
     }
 
-    const bool teclado = rex::input::UltimoDispositivo() == rex::input::Dispositivo::kTeclado;
+    const bool teclado = g_forzar_teclado.load() || rex::input::UltimoDispositivo() == rex::input::Dispositivo::kTeclado;
     bool escrito = false;
     for (Icono& ic : g_iconos) {
       const Bytes& quiero = teclado ? ic.teclado : ic.mando;
@@ -277,7 +279,14 @@ void PrepararIconosTeclado(rex::memory::Memory* memory) {
   if (g_iconos.empty()) {
     return;
   }
+  const char* clavier = std::getenv("NFSMW_CLAVIER");
+  g_forzar_teclado.store(clavier && *clavier == '1');
   rex::ui::RegistrarCambioEstiloIconos([](const std::string& nuevo) {
+    if (nuevo == "clavier") {
+      g_forzar_teclado.store(true);
+      return;
+    }
+    g_forzar_teclado.store(false);
     std::lock_guard<std::mutex> cerrojo(g_mutex);
     g_estilo_pedido = nuevo;
   });

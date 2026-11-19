@@ -79,7 +79,7 @@ rem Sans batocera.conf : un fichier black_edition.txt (vide) a cote de ce lanceu
 if exist "%ICI%black_edition.txt" set "BE=on"
 if exist "%CONF%" for /f "tokens=2 delims==" %%S in ('findstr /c:"nfsmw_icons=" "%CONF%"') do set "STYLE=%%S"
 rem Le style choisi dans l'ecran Mods du jeu (menu principal > Mods) passe avant les options de la console.
-if exist "%JEU%\mods\icones\choix.txt" set /p STYLE=<"%JEU%\mods\icones\choix.txt"
+call :choix
 if not defined STYLE set "STYLE=playstation"
 set "BLACK="
 if "%BE%"=="on" set "BLACK=--nfsmw_black_edition"
@@ -99,7 +99,7 @@ set "NFSMW_ICONOS=%STYLE%"
 :lancer
 call :mods
 rem Le style a pu changer dans l'ecran Mods avant le bouton Relancer.
-if exist "%JEU%\mods\icones\choix.txt" set /p STYLE=<"%JEU%\mods\icones\choix.txt"
+call :choix
 set "NFSMW_ICONOS=%STYLE%"
 start "" /wait "%ICI%nfsmw.exe" --game_data_root="%JEU%\game_root" --user_data_root="%JEU%\data" --content_backup_root="%JEU%\saves" %LANGUE% %BLACK% %TOUCHES% %*
 if errorlevel 3 if not errorlevel 4 echo [windows] relance avec les mods choisis dans le menu >> "%JOURNAL%"
@@ -127,4 +127,16 @@ rem %1 : un fichier du style d'icones dans game_root\GLOBAL\ (absent du style : 
 if not exist "%JEU%\mods\icones\%STYLE%" exit /b 0
 if exist "%JEU%\mods\icones\%STYLE%\%1" copy /y "%JEU%\mods\icones\%STYLE%\%1" "%JEU%\game_root\GLOBAL\%1" >nul
 if not exist "%JEU%\mods\icones\%STYLE%\%1" if exist "%JEU%\game_root\GLOBAL\%1" del "%JEU%\game_root\GLOBAL\%1"
+exit /b 0
+
+:choix
+rem mods\icones\choix.txt (ecran Mods du jeu) : un style de manette, ou "clavier" (touches du PC tout le temps,
+rem les fichiers du style de manette restent).
+set "CHOIX="
+set "NFSMW_CLAVIER="
+if exist "%JEU%\mods\icones\choix.txt" set /p CHOIX=<"%JEU%\mods\icones\choix.txt"
+if not defined CHOIX exit /b 0
+if /i "%CHOIX%"=="clavier" set "NFSMW_CLAVIER=1"
+if /i "%CHOIX%"=="clavier" exit /b 0
+if exist "%JEU%\mods\icones\%CHOIX%" set "STYLE=%CHOIX%"
 exit /b 0

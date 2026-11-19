@@ -11,7 +11,8 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
   the icon tool writes each style's icons as the game holds them (`ICONOS.BIN`) and the keyboard set
   (`mods/icones/clavier/`); the game finds the style's icons in memory and writes the other set over them. The Mods
   screen's hints follow too. The icons are searched for from the start (the log says how many copies were found).
-- The Mods screen chooses the controller's icon style (ICÔNES DES BOUTONS): the game's icons change at once, the
+- The Mods screen chooses the controller's icon style (ICÔNES DES BOUTONS; CLAVIER shows the PC keys all the time,
+  `NFSMW_CLAVIER=1`, the controller style's files staying in place): the game's icons change at once, the
   choice is kept in `mods/icones/choix.txt`, which `run.sh` and the Windows launcher read before the Batocera
   option (and again on "Relancer"); with the buttons left to the style, `input_sdl_por_letra` follows at once.
 
