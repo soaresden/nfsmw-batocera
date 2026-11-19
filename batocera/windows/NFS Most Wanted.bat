@@ -35,17 +35,52 @@ if not exist "%JEU%\game_root\nfsmw_shaders.nfsp" if exist "%JEU%\nfsmw_shaders.
 rem Avec la VF de la page (Movies\movies_report.txt), le francais est dans l'emplacement anglais : langue 0.
 set "LANGUE="
 if exist "%JEU%\game_root\Movies\movies_report.txt" set "LANGUE=--nfsmw_idioma=0"
-rem Black Edition : son logo (GLOBAL\GLOBALA.BUN) n'est dans game_root que si mods.py l'y a mis (option BLACK EDITION).
-set "BLACK="
-if exist "%JEU%\game_root\GLOBAL\GLOBALA.BUN" set "BLACK=--nfsmw_black_edition"
-rem ... ou l'option BLACK EDITION de Batocera, si ce dossier est dans une copie de /userdata (system\batocera.conf).
-if exist "%JEU%\..\..\..\system\batocera.conf" findstr /c:"nfsmw_black_edition=on" "%JEU%\..\..\..\system\batocera.conf" >nul 2>&1 && set "BLACK=--nfsmw_black_edition"
-rem Clavier (sans manette) : fleches pour les menus et la conduite (haut accelere, bas freine), Entree valide,
-rem Echap ou Retour arriere revient, P met en pause. Les touches du jeu par defaut supposent un clavier QWERTY.
-set TOUCHES="--keybind_lstick_up=Up" "--keybind_lstick_down=Down" "--keybind_lstick_left=Left" "--keybind_lstick_right=Right"
+rem Clavier (sans manette), comme la version PC d'origine : fleches pour conduire (haut accelere, bas freine) et
+rem pour les menus, Maj = nitro, Ctrl = Speedbreaker, Espace = frein a main, Echap = pause, Entree valide, Retour
+rem arriere revient, C = camera, X = regarder derriere. Sur la manette 360 : nitro A, frein a main B, Speedbreaker X
+rem (le jeu : "Press X to activate Speedbreaker"), regard arriere Y, camera Back. Les touches sont lues a leur place
+rem QWERTY : celles-ci sont au meme endroit sur un clavier AZERTY.
+set TOUCHES="--mnk_modificadores_exactos=false"
+set TOUCHES=%TOUCHES% "--keybind_lstick_up=Up" "--keybind_lstick_down=Down" "--keybind_lstick_left=Left" "--keybind_lstick_right=Right"
 set TOUCHES=%TOUCHES% "--keybind_right_trigger=Up" "--keybind_left_trigger=Down"
-set TOUCHES=%TOUCHES% "--keybind_a=Return,Space" "--keybind_b=Escape,Backspace" "--keybind_start=Return,P"
-set TOUCHES=%TOUCHES% "--keybind_x=X" "--keybind_y=C" "--keybind_back=Tab"
+set TOUCHES=%TOUCHES% "--keybind_a=Return,Shift" "--keybind_b=Space,Backspace" "--keybind_x=Control" "--keybind_y=X"
+set TOUCHES=%TOUCHES% "--keybind_start=Escape,Return" "--keybind_back=C,Tab"
+set TOUCHES=%TOUCHES% "--keybind_dpad_up=Home" "--keybind_dpad_down=End" "--keybind_dpad_left=Delete" "--keybind_dpad_right=PageDown"
 set TOUCHES=%TOUCHES% "--keybind_rstick_up=I" "--keybind_rstick_down=K" "--keybind_rstick_left=J" "--keybind_rstick_right=L"
+rem Options de Batocera, si ce dossier est dans une copie de /userdata (system\batocera.conf) : BLACK EDITION et
+rem ICONES DES BOUTONS. Sinon : Black Edition desactivee, icones PlayStation.
+set "CONF=%JEU%\..\..\..\system\batocera.conf"
+set "BE=off"
+set "STYLE="
+if exist "%CONF%" findstr /c:"nfsmw_black_edition=on" "%CONF%" >nul 2>&1 && set "BE=on"
+rem Sans batocera.conf : un fichier black_edition.txt (vide) a cote de ce lanceur active la Black Edition.
+if exist "%ICI%black_edition.txt" set "BE=on"
+if exist "%CONF%" for /f "tokens=2 delims==" %%S in ('findstr /c:"nfsmw_icons=" "%CONF%"') do set "STYLE=%%S"
+if not defined STYLE set "STYLE=playstation"
+set "BLACK="
+if "%BE%"=="on" set "BLACK=--nfsmw_black_edition"
+rem Mods (comme run.sh sur Batocera) : mods.py remet ce que le dernier lancement avait change, les icones du style
+rem choisi vont dans game_root\GLOBAL\, puis mods\<nom>\ est applique (MX-5...), la Black Edition en dernier et
+rem seulement avec son option. Python est fourni dans python\ (Windows n'en a pas), mods.py et jdlz.py a cote.
+set "PY=%ICI%python\python.exe"
+set "JOURNAL=%ICI%nfsmw-launcher.log"
+echo [windows] %DATE% %TIME% jeu "%JEU%", icones %STYLE%, Black Edition %BE% > "%JOURNAL%"
+if not exist "%PY%" goto sans_mods
+if not exist "%ICI%mods.py" goto sans_mods
+"%PY%" "%ICI%mods.py" restore "%JEU%" >> "%JOURNAL%" 2>&1
+call :icones GLOBALB.LZC
+call :icones GLOBALMEMORYFILE.BIN
+call :icones DYNTEX.BIN
+"%PY%" "%ICI%mods.py" apply "%JEU%" %STYLE% %BE% >> "%JOURNAL%" 2>&1
+:sans_mods
 if not exist "%JEU%\data" mkdir "%JEU%\data"
+echo [windows] options : %LANGUE% %BLACK% >> "%JOURNAL%"
 start "" "%ICI%nfsmw.exe" --game_data_root="%JEU%\game_root" --user_data_root="%JEU%\data" --content_backup_root="%JEU%\saves" %LANGUE% %BLACK% %TOUCHES% %*
+exit /b 0
+
+:icones
+rem %1 : un fichier du style d'icones dans game_root\GLOBAL\ (absent du style : celui du jeu, dans ses archives).
+if not exist "%JEU%\mods\icones\%STYLE%" exit /b 0
+if exist "%JEU%\mods\icones\%STYLE%\%1" copy /y "%JEU%\mods\icones\%STYLE%\%1" "%JEU%\game_root\GLOBAL\%1" >nul
+if not exist "%JEU%\mods\icones\%STYLE%\%1" if exist "%JEU%\game_root\GLOBAL\%1" del "%JEU%\game_root\GLOBAL\%1"
+exit /b 0

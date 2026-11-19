@@ -27,6 +27,9 @@ REXCVAR_DEFINE_BOOL(mnk_mode, false, "Input", "Enable keyboard/mouse controller 
 REXCVAR_DEFINE_BOOL(mnk_mouse, false, "Input",
                     "Use the mouse for the right stick. Off means the right stick comes "
                     "from the keybind_rstick_* keys only");
+REXCVAR_DEFINE_BOOL(mnk_modificadores_exactos, true, "Input",
+                    "Binds without Shift/Ctrl/Alt only fire with none of them held (D-pad on Shift+arrows); off: "
+                    "modifiers held for other binds (Shift = nitro) do not get in the way");
 REXCVAR_DEFINE_DOUBLE(mnk_sensitivity, 1.0, "Input", "Mouse sensitivity for right stick")
     .range(0.01, 10.0);
 
@@ -122,13 +125,27 @@ std::string_view TrimSpaces(std::string_view s) {
   return s;
 }
 
+bool EsModificador(rex::ui::VirtualKey vk) {
+  using rex::ui::VirtualKey;
+  return vk == VirtualKey::kShift || vk == VirtualKey::kControl || vk == VirtualKey::kMenu ||
+         vk == VirtualKey::kLShift || vk == VirtualKey::kRShift || vk == VirtualKey::kLControl ||
+         vk == VirtualKey::kRControl || vk == VirtualKey::kLMenu || vk == VirtualKey::kRMenu;
+}
+
 bool TokenPressed(const bool (&key_down)[256], std::string_view token, uint8_t live_mods) {
   uint8_t want = TakeModifiers(token);
-  if (want != live_mods) {
-    return false;
-  }
   rex::ui::VirtualKey vk = rex::ui::ParseVirtualKey(token);
   if (vk == rex::ui::VirtualKey::kNone) {
+    return false;
+  }
+  // PARCHE LOCAL: a modifier bound on its own ("Shift": the nitro, as on the PC version) fires while it is held; and
+  // with mnk_modificadores_exactos off, the modifiers a bind asks for only have to be held among others, so Up still
+  // accelerates while Shift gives the nitro (the D-pad then needs keys of its own, not Shift+arrows).
+  if (EsModificador(vk) && want == 0) {
+    uint16_t idx = static_cast<uint16_t>(vk);
+    return idx < 256 && key_down[idx];
+  }
+  if (REXCVAR_GET(mnk_modificadores_exactos) ? want != live_mods : (want & live_mods) != want) {
     return false;
   }
   uint16_t idx = static_cast<uint16_t>(vk);
