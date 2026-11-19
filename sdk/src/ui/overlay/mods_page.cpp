@@ -378,7 +378,28 @@ class PantallaMods final : public ImGuiDialog {
     return ImGui::IsKeyPressed(cruceta, true) || ImGui::IsKeyPressed(stick, true) || ImGui::IsKeyPressed(tecla, true);
   }
 
+  // The keyboard or the controller, whichever was used last: the hints at the bottom follow it.
+  void SeguirDispositivo(const ImGuiIO& io) {
+    if (!dispositivo_visto_) {
+      teclado_ = !(io.BackendFlags & ImGuiBackendFlags_HasGamepad);
+      dispositivo_visto_ = true;
+    }
+    for (int k = ImGuiKey_NamedKey_BEGIN; k < ImGuiKey_GamepadStart; ++k) {
+      if (ImGui::IsKeyPressed(ImGuiKey(k), false)) {
+        teclado_ = true;
+        return;
+      }
+    }
+    for (int k = ImGuiKey_GamepadStart; k <= ImGuiKey_GamepadRStickDown; ++k) {
+      if (ImGui::IsKeyPressed(ImGuiKey(k), false)) {
+        teclado_ = false;
+        return;
+      }
+    }
+  }
+
   void Entrada(ImGuiIO& io, Estado& e, int filas, bool relanzar) {
+    SeguirDispositivo(io);
     // The button that opened the screen (or chose in it) acts once released and pressed again.
     if (!armada_) {
       armada_ = !Pulsado(io, kAceptar) && !Pulsado(io, kVolver);
@@ -457,6 +478,53 @@ class PantallaMods final : public ImGuiDialog {
     dl->AddLine(ImVec2(a.x, b.y), ImVec2(a.x, b.y - largo), kNaranja, grosor);
     dl->AddLine(b, ImVec2(b.x - largo, b.y), kNaranja, grosor);
     dl->AddLine(b, ImVec2(b.x, b.y - largo), kNaranja, grosor);
+  }
+
+  // The button icon style the launcher applied (NFSMW_ICONOS: playstation, xbox360, gamecube).
+  static std::string Estilo() {
+    const char* v = std::getenv("NFSMW_ICONOS");
+    return v ? std::string(v) : std::string();
+  }
+
+  // One hint: the key or button, then what it does. Returns the x after it.
+  float Pista(ImDrawList* dl, ImFont* f, float t, float x, float y, bool aceptar, const std::string& que) {
+    const ImU32 fondo = IM_COL32(30, 30, 32, 255);
+    if (teclado_) {
+      const std::string tecla = aceptar ? "Entrée" : "Échap";
+      const float w = Ancho(f, t * 0.8f, tecla) + t * 0.8f;
+      dl->AddRectFilled(ImVec2(x, y - t * 0.1f), ImVec2(x + w, y + t * 1.1f), IM_COL32(225, 225, 225, 255), t * 0.18f);
+      dl->AddRect(ImVec2(x, y - t * 0.1f), ImVec2(x + w, y + t * 1.1f), IM_COL32(120, 120, 120, 255), t * 0.18f, 0, 2.0f);
+      Texto(dl, f, t * 0.8f, ImVec2(x + t * 0.4f, y + t * 0.1f), fondo, tecla);
+      x += w;
+    } else {
+      const float r = t * 0.62f;
+      const ImVec2 c(x + r, y + t * 0.5f);
+      const std::string estilo = Estilo();
+      // Which physical button: the bottom one accepts unless the face buttons are read by letter (A on the right).
+      const bool derecha = ImGui::GetIO().ConfigNavSwapGamepadButtons ? aceptar : !aceptar;
+      if (estilo == "playstation") {
+        dl->AddCircleFilled(c, r, fondo, 32);
+        if (derecha) {
+          dl->AddCircle(c, r * 0.5f, IM_COL32(232, 72, 85, 255), 32, r * 0.17f);  // circle
+        } else {
+          const float q = r * 0.42f;
+          const ImU32 azul = IM_COL32(124, 178, 232, 255);  // cross
+          dl->AddLine(ImVec2(c.x - q, c.y - q), ImVec2(c.x + q, c.y + q), azul, r * 0.17f);
+          dl->AddLine(ImVec2(c.x - q, c.y + q), ImVec2(c.x + q, c.y - q), azul, r * 0.17f);
+        }
+      } else {
+        // Xbox 360 and GameCube icons: the letters, A green and B red.
+        const bool es_a = aceptar;
+        const ImU32 color = estilo == "gamecube" ? (es_a ? IM_COL32(40, 170, 120, 255) : IM_COL32(210, 50, 50, 255))
+                                                 : (es_a ? IM_COL32(96, 178, 56, 255) : IM_COL32(214, 48, 48, 255));
+        dl->AddCircleFilled(c, r, color, 32);
+        const std::string letra = es_a ? "A" : "B";
+        Texto(dl, f, t * 0.85f, ImVec2(c.x - Ancho(f, t * 0.85f, letra) * 0.5f, c.y - t * 0.5f), kBlanco, letra);
+      }
+      x += 2.0f * r;
+    }
+    Texto(dl, f, t, ImVec2(x + t * 0.4f, y), kBlanco, que);
+    return x + t * 0.4f + Ancho(f, t, que) + t * 1.6f;
   }
 
   void Dibujar(Estado& e, ImVec2 tam, bool relanzar) {
@@ -557,7 +625,10 @@ class PantallaMods final : public ImGuiDialog {
     }
     yp += t_peque * 1.9f;
     dl->AddRectFilled(ImVec2(0, yp - H * 0.012f), ImVec2(W, H), IM_COL32(0, 0, 0, 150));
-    Texto(dl, fuente, t_peque, ImVec2(x0, yp), kBlanco, "Valider : changer     Retour : quitter");
+    {
+      float xp = Pista(dl, fuente, t_peque, x0, yp, true, confirmar_ ? "choisir" : "changer");
+      Pista(dl, fuente, t_peque, xp, yp, false, confirmar_ ? "annuler" : "retour");
+    }
 
     if (confirmar_) {
       const ImVec2 a(W * 0.25f, H * 0.36f), b(W * 0.75f, H * 0.64f);
@@ -585,6 +656,8 @@ class PantallaMods final : public ImGuiDialog {
   bool cerrando_ = false;
   bool confirmar_ = false;
   bool si_ = true;
+  bool teclado_ = false;
+  bool dispositivo_visto_ = false;
 };
 
 }  // namespace

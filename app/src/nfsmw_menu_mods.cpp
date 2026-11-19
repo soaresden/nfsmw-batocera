@@ -17,7 +17,11 @@
 //    arrow up, from the performance packages screen) instead of MAIN_ICON_GO_ONLINE. The label, not the vtable,
 //    tells the entry: a text hash is the same in every edition.
 //  - sub_82237080: on accept the port's Mods screen opens (sdk/src/ui/overlay/mods_page.cpp, AbrirPantallaMods)
-//    and the game's own action is skipped; any other message goes to the game.
+//    and the game's own action is skipped; any other message goes to the game. Accepting an entry has already
+//    started the main menu's way out: when it ends, its NotificationMessage (sub_82237498) switches to the screen
+//    the entry's flag asks for, and with no flag it switches to none and the menu stays empty. So the main menu is
+//    loaded again at once, as the game itself does there for message 0x34DC1BCF: sub_82284928(r3 = the FE manager
+//    at 0x82A2C5C4, r4 = "MainMenu.fng" at 0x82075E74, 0, 0, 0). It comes back behind the Mods screen.
 // The addresses are the PAL Spanish edition's; tools/editions translates them for the others.
 #include <cstdint>
 #include <cstring>
@@ -84,11 +88,21 @@ REX_HOOK_RAW(sub_822E00C0) {
 }
 
 // React of the main menu's Xbox Live entry.
+REX_EXTERN(__imp__sub_82284928);
 REX_EXTERN(__imp__sub_82237080);
 REX_HOOK_RAW(sub_82237080) {
   if (nfsmw::g_texto_mods && ctx.r5.u32 == nfsmw::kMensajeAceptar) {
     REXLOG_INFO("[mods] menu principal: entrada Mods elegida");
     rex::ui::AbrirPantallaMods();
+    const uint32_t gestor = rex::memory::load_and_swap<uint32_t>(base + 0x82A2C5C4);
+    if (gestor) {
+      ctx.r3.u64 = gestor;
+      ctx.r4.u64 = 0x82075E74;  // "MainMenu.fng"
+      ctx.r5.u64 = 0;
+      ctx.r6.u64 = 0;
+      ctx.r7.u64 = 0;
+      __imp__sub_82284928(ctx, base);
+    }
     return;
   }
   __imp__sub_82237080(ctx, base);

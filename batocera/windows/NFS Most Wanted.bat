@@ -92,6 +92,8 @@ if not exist "%JEU%\data" mkdir "%JEU%\data"
 echo [windows] options : %LANGUE% %BLACK% >> "%JOURNAL%"
 rem Le bouton Relancer du menu Mods termine le jeu avec le code 3 : mods appliques a nouveau et jeu relance.
 set "NFSMW_RELANCE=1"
+rem Le style d'icones, pour les boutons affiches dans l'ecran Mods du jeu.
+set "NFSMW_ICONOS=%STYLE%"
 :lancer
 call :mods
 start "" /wait "%ICI%nfsmw.exe" --game_data_root="%JEU%\game_root" --user_data_root="%JEU%\data" --content_backup_root="%JEU%\saves" %LANGUE% %BLACK% %TOUCHES% %*
