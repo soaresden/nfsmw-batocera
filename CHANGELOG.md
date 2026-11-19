@@ -5,7 +5,7 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
-- "Mods" in the game's main menu, in place of Xbox Live (`app/src/nfsmw_menu_mods.cpp`; the main menu is loaded again behind the screen, `sub_82284928` "MainMenu.fng", since accepting an entry has already started its way out; the hints at the bottom follow the last device used: keyboard keys or the controller buttons in the chosen icon style, `NFSMW_ICONOS`): the text lookup
+- "Mods" in the game's main menu, in place of Xbox Live (`app/src/nfsmw_menu_mods.cpp`; the main menu is loaded again behind the screen, `sub_82284928` "MainMenu.fng", since accepting an entry has already started its way out; the hints at the bottom show the controller buttons in the chosen icon style, `NFSMW_ICONOS`, and the keyboard keeps the PC version's keys): the text lookup
   `sub_822BCE60` answers "Mods" for its label and its React `sub_82237080` opens a Mods screen drawn in the style
   of the game's menus (Roboto Medium, the game's orange); its icon becomes the frontend's PERFORMANCE_ICON_PACKAG (`sub_822E00C0`); `nfsmw_menu_mods = false` gives Xbox Live back.
 

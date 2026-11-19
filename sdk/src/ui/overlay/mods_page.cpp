@@ -378,28 +378,7 @@ class PantallaMods final : public ImGuiDialog {
     return ImGui::IsKeyPressed(cruceta, true) || ImGui::IsKeyPressed(stick, true) || ImGui::IsKeyPressed(tecla, true);
   }
 
-  // The keyboard or the controller, whichever was used last: the hints at the bottom follow it.
-  void SeguirDispositivo(const ImGuiIO& io) {
-    if (!dispositivo_visto_) {
-      teclado_ = !(io.BackendFlags & ImGuiBackendFlags_HasGamepad);
-      dispositivo_visto_ = true;
-    }
-    for (int k = ImGuiKey_NamedKey_BEGIN; k < ImGuiKey_GamepadStart; ++k) {
-      if (ImGui::IsKeyPressed(ImGuiKey(k), false)) {
-        teclado_ = true;
-        return;
-      }
-    }
-    for (int k = ImGuiKey_GamepadStart; k <= ImGuiKey_GamepadRStickDown; ++k) {
-      if (ImGui::IsKeyPressed(ImGuiKey(k), false)) {
-        teclado_ = false;
-        return;
-      }
-    }
-  }
-
   void Entrada(ImGuiIO& io, Estado& e, int filas, bool relanzar) {
-    SeguirDispositivo(io);
     // The button that opened the screen (or chose in it) acts once released and pressed again.
     if (!armada_) {
       armada_ = !Pulsado(io, kAceptar) && !Pulsado(io, kVolver);
@@ -486,17 +465,11 @@ class PantallaMods final : public ImGuiDialog {
     return v ? std::string(v) : std::string();
   }
 
-  // One hint: the key or button, then what it does. Returns the x after it.
+  // One hint: the controller button in the game's icon style, then what it does. Returns the x after it. On a
+  // keyboard the game's own keys apply (Entrée accepts, Échap goes back), as in the PC version.
   float Pista(ImDrawList* dl, ImFont* f, float t, float x, float y, bool aceptar, const std::string& que) {
     const ImU32 fondo = IM_COL32(30, 30, 32, 255);
-    if (teclado_) {
-      const std::string tecla = aceptar ? "Entrée" : "Échap";
-      const float w = Ancho(f, t * 0.8f, tecla) + t * 0.8f;
-      dl->AddRectFilled(ImVec2(x, y - t * 0.1f), ImVec2(x + w, y + t * 1.1f), IM_COL32(225, 225, 225, 255), t * 0.18f);
-      dl->AddRect(ImVec2(x, y - t * 0.1f), ImVec2(x + w, y + t * 1.1f), IM_COL32(120, 120, 120, 255), t * 0.18f, 0, 2.0f);
-      Texto(dl, f, t * 0.8f, ImVec2(x + t * 0.4f, y + t * 0.1f), fondo, tecla);
-      x += w;
-    } else {
+    {
       const float r = t * 0.62f;
       const ImVec2 c(x + r, y + t * 0.5f);
       const std::string estilo = Estilo();
@@ -656,8 +629,6 @@ class PantallaMods final : public ImGuiDialog {
   bool cerrando_ = false;
   bool confirmar_ = false;
   bool si_ = true;
-  bool teclado_ = false;
-  bool dispositivo_visto_ = false;
 };
 
 }  // namespace
