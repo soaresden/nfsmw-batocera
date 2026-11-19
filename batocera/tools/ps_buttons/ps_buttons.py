@@ -53,17 +53,18 @@ GAMECUBE = {
     'SQUARE': 'gcX',         # X: kidney
     'CIRCLE': 'gcY',         # Y: kidney
 }
-# Keyboard (style clavier): the PC keys the Windows launcher binds to each 360 button, as in the PC version
-# (batocera/windows/NFS Most Wanted.bat): A Enter, B Backspace, X Ctrl, Y X, LB 1, RB 3, LT Down, RT Up. The game
-# swaps these in while the keyboard is in use (app/src/nfsmw_iconos_teclado.cpp, from ICONOS.BIN).
+# Keyboard (style clavier): the PC keys the Windows launcher binds to each 360 button, as the game's controls screen
+# lays them out (batocera/windows/NFS Most Wanted.bat): A Enter (nitro: Shift), B Backspace (handbrake: Space),
+# X D (shift down), Y E (shift up), LB X (look back), RB Ctrl (Speedbreaker), LT Down, RT Up. The game swaps these in
+# while the keyboard is in use (app/src/nfsmw_iconos_teclado.cpp, from ICONOS.BIN).
 CLAVIER = {
     'CROSS': 'key:\u21b5',      # A: Enter
     'TRIANGLE': 'key:\u232b',   # B: Backspace
-    'SQUARE': 'key:Ctrl',       # X
-    'CIRCLE': 'key:X',          # Y
-    'L2': 'key:1',              # LB
-    'R2': 'key:3',              # RB
-    'SELECT': 'key:3',          # RB as well
+    'SQUARE': 'key:D',          # X: shift down
+    'CIRCLE': 'key:E',          # Y: shift up
+    'L2': 'key:X',              # LB: look back
+    'R2': 'key:Ctrl',           # RB: Speedbreaker
+    'SELECT': 'key:Ctrl',       # RB as well
     'L1': 'key:\u2193',         # LT: Down
     'R1': 'key:\u2191',         # RT: Up
 }

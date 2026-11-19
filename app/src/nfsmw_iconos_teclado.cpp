@@ -64,7 +64,8 @@ struct Icono {
   std::string nombre;
   Bytes mando;                   // the controller style's bytes
   Bytes teclado;                 // the keyboard's
-  Bytes puesto;                  // what memory holds (what was found or last written)
+  Bytes inicial;                 // what the game loads (data/iconos-juego.bin): what is searched for
+  Bytes puesto;                  // what memory holds where it was found (what was found or last written)
   std::vector<uint8_t*> copias;  // where (host pointers into guest memory)
   Tramos tramos;
 };
@@ -75,7 +76,8 @@ Tramos CalcularTramos(const Icono& ic) {
   size_t i = 0;
   while (i < n) {
     auto usado = [&](size_t k) {
-      return (k < ic.mando.size() && ic.mando[k]) || (k < ic.teclado.size() && ic.teclado[k]) || ic.puesto[k];
+      return (k < ic.mando.size() && ic.mando[k]) || (k < ic.teclado.size() && ic.teclado[k]) || ic.puesto[k] ||
+             ic.inicial[k];
     };
     if (!usado(i)) {
       ++i;
@@ -267,57 +269,41 @@ std::vector<Zona> Zonas(rex::memory::Memory* memory) {
   return zonas;
 }
 
-// Are the copies still holding what was put there? (a texture pack can be unloaded and its memory reused)
-bool Validas() {
-  size_t total = 0;
-  for (const Icono& ic : g_iconos) {
-    for (uint8_t* p : ic.copias) {
-      if (!Igual(p, ic.puesto, ic.tramos)) {
-        return false;
-      }
-    }
-    total += ic.copias.size();
-  }
-  return total > 0;
-}
-
-size_t BuscarCopias(rex::memory::Memory* memory) {
+// Searches for the icons not found yet, as the game loads them (it loads them some seconds after the start, not all
+// at once: a single early search found 2 of 9, 19/11). Returns how many were found this time.
+size_t BuscarFaltan(rex::memory::Memory* memory) {
   const auto zonas = Zonas(memory);
-  size_t total = 0;
+  size_t nuevas = 0;
   for (bool lento : {false, true}) {
     for (Icono& ic : g_iconos) {
-      ic.copias.clear();
+      if (!ic.copias.empty()) {
+        continue;
+      }
       for (const Zona& z : zonas) {
         if (lento) {
-          Hallar(z.inicio, z.tam, ic.puesto, ic.tramos, ic.copias);
+          Hallar(z.inicio, z.tam, ic.inicial, ic.tramos, ic.copias);
         } else {
-          HallarAlineado(z.inicio, z.tam, z.guest, ic.puesto, ic.tramos, ic.copias);
+          HallarAlineado(z.inicio, z.tam, z.guest, ic.inicial, ic.tramos, ic.copias);
         }
       }
-      total += ic.copias.size();
-    }
-    if (total) {
-      std::string faltan;
-      for (const Icono& ic : g_iconos) {
-        if (ic.copias.empty()) {
-          faltan += (faltan.empty() ? "" : ", ") + ic.nombre;
-        }
+      if (!ic.copias.empty()) {
+        ic.puesto = ic.inicial;
+        nuevas += ic.copias.size();
       }
-      if (!faltan.empty()) {
-        REXLOG_INFO("[iconos] sin encontrar en memoria: {}", faltan);
-      }
-      break;
     }
-    REXLOG_INFO("[iconos] no estan en direcciones de 4 KB: busqueda completa (unos segundos)");
+    if (nuevas) {
+      break;  // the aligned search worked: the slow one is not needed
+    }
   }
-  return total;
+  return nuevas;
 }
 
 void Hilo(rex::memory::Memory* memory) {
-  bool encontrado = false;
-  bool avisado_ausente = false;
+  const auto inicio = std::chrono::steady_clock::now();
+  auto proxima_busqueda = inicio;
+  std::string faltaban;  // what the log last said was missing
   bool teclado_mostrado = false;
-  auto proxima_busqueda = std::chrono::steady_clock::now();
+  bool primera = true;
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
@@ -342,32 +328,55 @@ void Hilo(rex::memory::Memory* memory) {
       }
     }
 
-    if (!encontrado || !Validas()) {
-      if (std::chrono::steady_clock::now() < proxima_busqueda) {
-        continue;
-      }
-      if (!avisado_ausente && !encontrado) {
-        REXLOG_INFO("[iconos] buscando los iconos en memoria...");
-      }
-      const auto t0 = std::chrono::steady_clock::now();
-      const size_t total = BuscarCopias(memory);
-      const auto ms =
-          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-      encontrado = total > 0;
-      proxima_busqueda = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-      if (encontrado || !avisado_ausente) {
-        REXLOG_INFO("[iconos] {} copias de los {} iconos en memoria ({} ms){}", total, g_iconos.size(), ms,
-                    total ? "" : ": todavia no cargados, se busca otra vez cada 5 s");
-        avisado_ausente = !encontrado;
-      }
-      if (!encontrado) {
-        continue;
+    // Copies whose memory no longer holds what was put there (a texture pack unloaded, its memory reused): forgotten,
+    // and searched for again as the game loads them.
+    for (Icono& ic : g_iconos) {
+      for (uint8_t* p : ic.copias) {
+        if (!Igual(p, ic.puesto, ic.tramos)) {
+          ic.copias.clear();
+          ic.puesto = ic.inicial;
+          break;
+        }
       }
     }
 
-    const bool teclado = g_forzar_teclado.load() || rex::input::UltimoDispositivo() == rex::input::Dispositivo::kTeclado;
+    // The ones not found yet: every 5 s for two minutes, then every 30 s.
+    std::string faltan;
+    for (const Icono& ic : g_iconos) {
+      if (ic.copias.empty()) {
+        faltan += (faltan.empty() ? "" : ", ") + ic.nombre;
+      }
+    }
+    const auto ahora = std::chrono::steady_clock::now();
+    if (!faltan.empty() && ahora >= proxima_busqueda) {
+      if (primera) {
+        REXLOG_INFO("[iconos] buscando los iconos en memoria...");
+        primera = false;
+      }
+      const size_t nuevas = BuscarFaltan(memory);
+      const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - ahora).count();
+      proxima_busqueda = std::chrono::steady_clock::now() +
+                         (ahora - inicio < std::chrono::minutes(2) ? std::chrono::seconds(5) : std::chrono::seconds(30));
+      std::string siguen;
+      for (const Icono& ic : g_iconos) {
+        if (ic.copias.empty()) {
+          siguen += (siguen.empty() ? "" : ", ") + ic.nombre;
+        }
+      }
+      if (nuevas || siguen != faltaban) {
+        REXLOG_INFO("[iconos] {} copias nuevas en memoria ({} ms); sin encontrar todavia: {}", nuevas, ms,
+                    siguen.empty() ? "ninguno" : siguen);
+        faltaban = siguen;
+      }
+    }
+
+    const bool teclado =
+        g_forzar_teclado.load() || rex::input::UltimoDispositivo() == rex::input::Dispositivo::kTeclado;
     bool escrito = false;
     for (Icono& ic : g_iconos) {
+      if (ic.copias.empty()) {
+        continue;
+      }
       const Bytes& quiero = teclado ? ic.teclado : ic.mando;
       if (quiero != ic.puesto) {
         for (uint8_t* p : ic.copias) {
@@ -380,7 +389,7 @@ void Hilo(rex::memory::Memory* memory) {
     if (escrito) {
       nfsmw::nativo::ForzarComprobacionTexturas();  // the sample fingerprint may not read the bytes changed
     }
-    if (escrito || teclado != teclado_mostrado) {
+    if (teclado != teclado_mostrado) {
       REXLOG_INFO("[iconos] {}", teclado ? "teclado: teclas del PC" : "mando: botones del estilo elegido");
       teclado_mostrado = teclado;
     }
@@ -417,7 +426,7 @@ void PrepararIconosTeclado(rex::memory::Memory* memory) {
   }
   for (const auto& [nombre, bytes] : mando) {
     if (const Bytes* t = Buscar(teclado, nombre, bytes.size())) {
-      g_iconos.push_back({nombre, bytes, *t, bytes, {}, {}});
+      g_iconos.push_back({nombre, bytes, *t, bytes, bytes, {}, {}});
       g_iconos.back().tramos = CalcularTramos(g_iconos.back());
     }
   }

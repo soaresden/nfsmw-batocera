@@ -36,16 +36,18 @@ if not exist "%JEU%\game_root\nfsmw_shaders.nfsp" if exist "%JEU%\nfsmw_shaders.
 rem Avec la VF de la page (Movies\movies_report.txt), le francais est dans l'emplacement anglais : langue 0.
 set "LANGUE="
 if exist "%JEU%\game_root\Movies\movies_report.txt" set "LANGUE=--nfsmw_idioma=0"
-rem Clavier (sans manette), comme la version PC d'origine : fleches pour conduire (haut accelere, bas freine) et
-rem pour les menus, Maj = nitro, Ctrl = Speedbreaker, Espace = frein a main, Echap = pause, Entree valide, Retour
-rem arriere revient, C = camera, X = regarder derriere. Sur la manette 360 : nitro A, frein a main B, Speedbreaker X
-rem (le jeu : "Press X to activate Speedbreaker"), regard arriere Y, camera Back. Les touches sont lues a leur place
-rem QWERTY : celles-ci sont au meme endroit sur un clavier AZERTY.
+rem Clavier (sans manette), cale sur l'ecran des commandes du jeu (manette 360) : fleches pour conduire (haut
+rem accelere = RT, bas freine = LT) et pour les menus, Maj = nitro (A), Entree valide (A), Espace = frein a main (B),
+rem Retour arriere revient (B), Ctrl = Supercontrole (RB), X = vue arriere (LB), E = rapport superieur (Y),
+rem D = rapport inferieur (X), C = camera (clic du stick droit), R ou Tab = retablir la voiture (Back), Echap = pause.
+rem Les touches sont lues a leur place QWERTY : celles-ci sont au meme endroit sur un clavier AZERTY. Les icones des
+rem boutons deviennent ces touches quand on joue au clavier (mods\icones\clavier\, outil ps_buttons).
 set TOUCHES="--mnk_modificadores_exactos=false"
 set TOUCHES=%TOUCHES% "--keybind_lstick_up=Up" "--keybind_lstick_down=Down" "--keybind_lstick_left=Left" "--keybind_lstick_right=Right"
 set TOUCHES=%TOUCHES% "--keybind_right_trigger=Up" "--keybind_left_trigger=Down"
-set TOUCHES=%TOUCHES% "--keybind_a=Return,Shift" "--keybind_b=Space,Backspace" "--keybind_x=Control" "--keybind_y=X"
-set TOUCHES=%TOUCHES% "--keybind_start=Escape,Return" "--keybind_back=C,Tab"
+set TOUCHES=%TOUCHES% "--keybind_a=Return,Shift" "--keybind_b=Space,Backspace" "--keybind_x=D" "--keybind_y=E"
+set TOUCHES=%TOUCHES% "--keybind_right_shoulder=Control" "--keybind_left_shoulder=X" "--keybind_rstick_press=C"
+set TOUCHES=%TOUCHES% "--keybind_start=Escape,Return" "--keybind_back=R,Tab"
 set TOUCHES=%TOUCHES% "--keybind_dpad_up=Home" "--keybind_dpad_down=End" "--keybind_dpad_left=Delete" "--keybind_dpad_right=PageDown"
 set TOUCHES=%TOUCHES% "--keybind_rstick_up=I" "--keybind_rstick_down=K" "--keybind_rstick_left=J" "--keybind_rstick_right=L"
 rem Synchronisation avec la console (partage reseau \\BATOCERA\share = /userdata), seulement si un fichier

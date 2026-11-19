@@ -216,7 +216,7 @@ icônes changent tout de suite, la photo de manette des chargements au lancement
 `mods/icones/choix.txt`, qui passe avant l'option de Batocera (supprimez-le pour revenir à l'option).
 
 Au clavier (PC), les icônes deviennent les touches du PC en direct, comme dans les jeux récents : Entrée, Retour
-arrière, Ctrl, X, 1, 3, ↓, ↑ dès qu'on touche le clavier, les boutons du style choisi dès qu'on touche la manette.
+arrière, D, E, X, Ctrl, ↓, ↑ dès qu'on touche le clavier, les boutons du style choisi dès qu'on touche la manette.
 Les icônes faites avant le 19/11 n'ont pas les fichiers pour ça : relancez l'installation depuis la page.
 
 `batocera/tools/ps_buttons/` fabrique, à partir de vos fichiers (sortis des archives par
