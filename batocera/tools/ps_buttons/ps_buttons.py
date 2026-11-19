@@ -30,7 +30,7 @@ import struct
 import sys
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import jdlz  # noqa: E402
@@ -270,7 +270,7 @@ ICON_NAMES = ('CROSS', 'TRIANGLE', 'SQUARE', 'CIRCLE', 'L1', 'L2', 'R1', 'R2', '
 ICONOS_MAGIC = b'NFSMWICO'
 
 
-def iconos_bin(globalb):
+def iconos_bin(globalb, extra=None):
     """ICONOS.BIN of a GLOBALB.LZC: the icon textures' bytes as the game holds them in memory (tiled DXT5, mips
     included), so that the game can find them and swap another style's in while it runs: "NFSMWICO", u32 count,
     then per texture its name (24 bytes, zero padded), u32 size and the bytes. Little endian."""
@@ -283,6 +283,9 @@ def iconos_bin(globalb):
         if t is None:
             continue
         out += [name.encode().ljust(24, b'\0'), struct.pack('<I', t['size']), bytes(fe[t['start']:t['start'] + t['size']])]
+        n += 1
+    for name, data in (extra or {}).items():  # the controls screen's pictures (DYNTEX_<hash>)
+        out += [name.encode().ljust(24, b'\0'), struct.pack('<I', len(data)), bytes(data)]
         n += 1
     out[1] = struct.pack('<I', n)
     return b''.join(out)
@@ -354,6 +357,74 @@ def argb32_encode(img, original):
         off += len(lv)
         w //= 2
     return bytes(out)
+
+
+# The controls screen's picture (LOADING_CONTROLLER_X360, two variants) as a keyboard, for the clavier set: the
+# callout lines end where the 360 picture's do (left edge y 11, 80, 250; right edge y 12, 80, 140, 200, 250), so the
+# game's labels point at the keys the Windows launcher binds: Down brake, Left/Right steer, Up accelerate, E shift
+# up, Space handbrake, Shift nitro, D shift down. AZERTY letters (the keys are read by position: E and D are the
+# same on both). The Guide label points at nothing.
+def keyboard_picture(k=4):
+    W = 256 * k
+    white, grey, text = (245, 245, 245, 255), (200, 200, 205, 255), (40, 40, 45, 255)
+    S = lambda *v: [x * k for x in v]
+    im = Image.new('RGBA', (W, W), (0, 0, 0, 0))
+    body = Image.new('RGBA', (W, W), (0, 0, 0, 0))
+    db = ImageDraw.Draw(body)
+    db.rounded_rectangle(S(52, 74, 244, 196), radius=8 * k, fill=(232, 232, 236, 255))
+    glow = body.filter(ImageFilter.GaussianBlur(9 * k))
+    a = glow.split()[3].point(lambda v: min(255, v * 2))
+    im.alpha_composite(Image.merge('RGBA', (a.point(lambda v: 255),) * 3 + (a,)))
+    db.rounded_rectangle(S(52, 74, 244, 196), radius=8 * k, outline=(180, 180, 188, 255), width=2 * k)
+    im.alpha_composite(body)
+    d = ImageDraw.Draw(im)
+
+    def key(x0, y0, x1, y1, label, px=11):
+        d.rounded_rectangle(S(x0, y0, x1, y1), radius=3 * k, fill=white, outline=grey, width=k)
+        d.rounded_rectangle(S(x0 + 1.5, y1 - 3, x1 - 1.5, y1 - 1), radius=k, fill=(225, 225, 230, 255))
+        d.text(S((x0 + x1) / 2, (y0 + y1) / 2 - 1), label, font=font(int(px * k)), fill=text, anchor='mm')
+    for x, label in ((62, '\u2190'), (84, '\u2193'), (106, '\u2191'), (128, '\u2192')):
+        key(x, 82, x + 20, 102, label, 13)
+    for i, label in enumerate('AZERT'):
+        key(116 + 20 * i, 108, 134 + 20 * i, 126, label)
+    for i, label in enumerate('QSDFG'):
+        key(121 + 20 * i, 130, 139 + 20 * i, 148, label)
+    key(60, 152, 119, 170, 'Maj', 9)
+    for i, label in enumerate('WXCV'):
+        key(121 + 20 * i, 152, 139 + 20 * i, 170, label)
+    key(201, 152, 238, 170, 'Maj', 9)
+    key(60, 174, 92, 190, 'Ctrl', 9)
+    key(94, 174, 198, 190, 'Espace', 9)
+
+    def line(*pts):
+        d.line(S(*pts), fill=(30, 30, 34, 255), width=5 * k, joint='curve')
+        d.line(S(*pts), fill=white, width=3 * k, joint='curve')
+    line(0, 11, 94, 11, 94, 82)                    # Freiner/Reculer -> Down
+    line(0, 250, 40, 250, 40, 92, 62, 92)          # Direction -> Left
+    line(255, 12, 116, 12, 116, 82)                # Accelerer -> Up
+    line(255, 80, 166, 80, 166, 108)               # Rapport superieur -> E
+    line(255, 140, 249, 140, 249, 182, 198, 182)   # Frein a main -> Space
+    line(255, 200, 228, 200, 228, 170)             # Nitro -> right Shift
+    line(255, 250, 162, 250, 162, 148)             # Rapport inferieur -> D
+    return im.resize((256, 256), Image.LANCZOS)
+
+
+def controller_pictures(d):
+    """{name in ICONOS.BIN: pixels as the game holds them} of the controls screen's 360 pictures in a DYNTEX.BIN."""
+    ent = {h: (o, off, size, usize) for o, h, off, size, usize in tpk_entries(d)}
+    out = {}
+    for h in (X360_C1, X360_C2):
+        if h in ent:
+            _, off, size, _ = ent[h]
+            raw = unpack(bytes(d[off:off + size]))
+            out['DYNTEX_%08X' % h] = raw[:len(raw) - 0x9C]
+    return out
+
+
+def keyboard_controllers(d):
+    """The keyboard picture in place of each 360 picture of a DYNTEX.BIN, same layout (tiled ARGB, 5 levels)."""
+    pic = keyboard_picture()
+    return {name: argb32_encode(pic, px) for name, px in controller_pictures(d).items()}
 
 
 def patch_dyntex(d, log=print, style='playstation'):
@@ -455,11 +526,14 @@ def build_style(style, blob, mem, dyn, retroid=False, log=print):
     files = {}
     new, shown = patch_globalb(blob, retroid, log, style)
     files['GLOBALB.LZC'] = new
-    files['ICONOS.BIN'] = iconos_bin(new)
+    pictures = {}
+    if dyn:
+        pictures = keyboard_controllers(dyn) if style == 'clavier' else controller_pictures(patch_dyntex(dyn, lambda *a: None, style)[0])
+    files['ICONOS.BIN'] = iconos_bin(new, pictures)
     if mem:
         files['GLOBALMEMORYFILE.BIN'] = patch_memfile(mem, new)
     dshown = []
-    if dyn:
+    if dyn and style != 'clavier':
         files['DYNTEX.BIN'], dshown = patch_dyntex(dyn, log, style)
     return files, shown, dshown
 
@@ -470,7 +544,8 @@ def icon_sets(blob, mem, dyn, log=print):
     out = {}
     if mem:  # Xbox 360: the game's own icons; only the GLOBALMEMORYFILE.BIN to put back
         out['mods/icones/xbox360/GLOBALMEMORYFILE.BIN'] = mem
-    out['mods/icones/xbox360/ICONOS.BIN'] = iconos_bin(blob)  # the game's own, to swap back to
+    # the game's own, to swap back to (its controller pictures too)
+    out['mods/icones/xbox360/ICONOS.BIN'] = iconos_bin(blob, controller_pictures(dyn) if dyn else None)
     for style in ('playstation', 'gamecube', 'clavier'):
         log('== ' + style)
         files, shown, dshown = build_style(style, blob, mem, dyn, log=log)

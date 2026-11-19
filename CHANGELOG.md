@@ -5,6 +5,12 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- Keyboard: the controls screen's controller picture becomes a drawn keyboard while the keyboard is used, its
+  callout lines ending where the game's labels are (Down brake, arrows steer, Up accelerate, E/D gears, Space
+  handbrake, Shift nitro); the keys follow the controls screen (Ctrl Speedbreaker, X look back, C camera, R reset).
+  The pictures (`DYNTEX_<hash>` in ICONOS.BIN, from `DYNTEX.BIN`) are searched for every 3 s, since the game loads
+  them only for that screen and the loading screens. The renderer gets a full texture recheck after each swap.
+
 - Keyboard icons, live: while the keyboard is used the game's button icons become the PC keys the Windows launcher
   binds (Enter, Backspace, Ctrl, X, 1, 3, Down, Up), and the controller's buttons again as soon as it is touched
   (`app/src/nfsmw_iconos_teclado.cpp`). The input drivers note the device used last (`rex/input/dispositivo.h`);

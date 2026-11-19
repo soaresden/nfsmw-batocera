@@ -324,6 +324,24 @@ def icon_textures(fe):
     return found
 
 
+CONTROLLERS = (0xEC3C0443, 0xEC3C0444)  # LOADING_CONTROLLER_X360, the controls screen's two pictures
+
+
+def controller_pictures(dyn):
+    """{DYNTEX_<hash>: pixels} of the controls screen's pictures in a DYNTEX.BIN (its compressed TPK index)."""
+    import jdlz
+    out = {}
+    b = find_chunk(dyn, 0x33310003, 0, len(dyn))
+    if not b:
+        return out
+    for o in range(b[0], b[1] - 23, 24):
+        h, off, size, usize, _, _ = struct.unpack_from('<IIiiII', dyn, o)
+        if h in CONTROLLERS and dyn[off:off + 4] == b'JDLZ':
+            raw = jdlz.decompress(dyn[off:off + size])
+            out['DYNTEX_%08X' % h] = raw[:len(raw) - 0x9C]
+    return out
+
+
 def icons(port):
     """data/iconos-juego.bin: the button icons as the game will hold them in memory this time (from the copy of
     GLOBALB.LZC that GLOBALMEMORYFILE.BIN preloads, else the loose GLOBALB.LZC), so that the game finds them to swap
@@ -342,25 +360,30 @@ def icons(port):
     if src is None:
         src = read(os.path.join(root, GLOBALB))
     out = os.path.join(port, 'data', 'iconos-juego.bin')
+    dyn = read(os.path.join(root, 'GLOBAL', 'DYNTEX.BIN')) or b''  # the style's controller pictures, if it has them
     if not src or src[:4] != b'JDLZ':
         if os.path.exists(out):
             os.remove(out)
         return
-    key = hashlib.sha1(src).hexdigest()
+    key = hashlib.sha1(src + dyn).hexdigest()
     if read(out + '.sha1') == key.encode():
         return
     import jdlz
     found = icon_textures(jdlz.decompress(src))
-    blob = [b'NFSMWICO', struct.pack('<I', len(found))]
+    pictures = controller_pictures(dyn) if dyn else {}
+    blob = [b'NFSMWICO', struct.pack('<I', len(found) + len(pictures))]
     for name in ICON_NAMES:
         if name in found:
             blob += [name.encode().ljust(24, b'\0'), struct.pack('<I', len(found[name])), found[name]]
+    for name, data in pictures.items():
+        blob += [name.encode().ljust(24, b'\0'), struct.pack('<I', len(data)), data]
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, 'wb') as w:
         w.write(b''.join(blob))
     with open(out + '.sha1', 'w') as w:
         w.write(key)
-    print('[mods] icons as the game loads them: %d in data/iconos-juego.bin' % len(found))
+    print('[mods] icons as the game loads them: %d in data/iconos-juego.bin, %d controller pictures'
+          % (len(found), len(pictures)))
 
 
 if __name__ == '__main__':

@@ -68,6 +68,9 @@ struct Icono {
   Bytes puesto;                  // what memory holds where it was found (what was found or last written)
   std::vector<uint8_t*> copias;  // where (host pointers into guest memory)
   Tramos tramos;
+  // The controls screen's pictures (DYNTEX_<hash>): loaded only while that screen or a loading screen shows, so
+  // searched for often, while what they should show differs from what the game loads.
+  bool transitoria = false;
 };
 
 Tramos CalcularTramos(const Icono& ic) {
@@ -271,12 +274,12 @@ std::vector<Zona> Zonas(rex::memory::Memory* memory) {
 
 // Searches for the icons not found yet, as the game loads them (it loads them some seconds after the start, not all
 // at once: a single early search found 2 of 9, 19/11). Returns how many were found this time.
-size_t BuscarFaltan(rex::memory::Memory* memory) {
+size_t BuscarFaltan(rex::memory::Memory* memory, bool transitorias) {
   const auto zonas = Zonas(memory);
   size_t nuevas = 0;
   for (bool lento : {false, true}) {
     for (Icono& ic : g_iconos) {
-      if (!ic.copias.empty()) {
+      if (!ic.copias.empty() || ic.transitoria != transitorias) {
         continue;
       }
       for (const Zona& z : zonas) {
@@ -301,6 +304,7 @@ size_t BuscarFaltan(rex::memory::Memory* memory) {
 void Hilo(rex::memory::Memory* memory) {
   const auto inicio = std::chrono::steady_clock::now();
   auto proxima_busqueda = inicio;
+  auto proxima_transitorias = inicio;
   std::string faltaban;  // what the log last said was missing
   bool teclado_mostrado = false;
   bool primera = true;
@@ -340,26 +344,42 @@ void Hilo(rex::memory::Memory* memory) {
       }
     }
 
-    // The ones not found yet: every 5 s for two minutes, then every 30 s.
+    const bool teclado =
+        g_forzar_teclado.load() || rex::input::UltimoDispositivo() == rex::input::Dispositivo::kTeclado;
+
+    // The controls screen's pictures: every 3 s while one is missing and should look different from the game's.
+    const auto ahora = std::chrono::steady_clock::now();
+    bool buscar_transitorias = false;
+    for (const Icono& ic : g_iconos) {
+      buscar_transitorias = buscar_transitorias ||
+                            (ic.transitoria && ic.copias.empty() && (teclado ? ic.teclado : ic.mando) != ic.inicial);
+    }
+    if (buscar_transitorias && ahora >= proxima_transitorias) {
+      if (BuscarFaltan(memory, true)) {
+        REXLOG_INFO("[iconos] imagen de la pantalla de controles encontrada");
+      }
+      proxima_transitorias = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    }
+
+    // The icons not found yet: every 5 s for two minutes, then every 30 s.
     std::string faltan;
     for (const Icono& ic : g_iconos) {
-      if (ic.copias.empty()) {
+      if (ic.copias.empty() && !ic.transitoria) {
         faltan += (faltan.empty() ? "" : ", ") + ic.nombre;
       }
     }
-    const auto ahora = std::chrono::steady_clock::now();
     if (!faltan.empty() && ahora >= proxima_busqueda) {
       if (primera) {
         REXLOG_INFO("[iconos] buscando los iconos en memoria...");
         primera = false;
       }
-      const size_t nuevas = BuscarFaltan(memory);
+      const size_t nuevas = BuscarFaltan(memory, false);
       const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - ahora).count();
       proxima_busqueda = std::chrono::steady_clock::now() +
                          (ahora - inicio < std::chrono::minutes(2) ? std::chrono::seconds(5) : std::chrono::seconds(30));
       std::string siguen;
       for (const Icono& ic : g_iconos) {
-        if (ic.copias.empty()) {
+        if (ic.copias.empty() && !ic.transitoria) {
           siguen += (siguen.empty() ? "" : ", ") + ic.nombre;
         }
       }
@@ -370,8 +390,6 @@ void Hilo(rex::memory::Memory* memory) {
       }
     }
 
-    const bool teclado =
-        g_forzar_teclado.load() || rex::input::UltimoDispositivo() == rex::input::Dispositivo::kTeclado;
     bool escrito = false;
     for (Icono& ic : g_iconos) {
       if (ic.copias.empty()) {
@@ -415,9 +433,23 @@ void PrepararIconosTeclado(rex::memory::Memory* memory) {
   // style's own ICONOS.BIN can differ by a few bytes (the page draws its sets with the browser's Pillow) and then
   // would never be found in memory (19/11: 0 copies).
   const fs::path juego = raiz.parent_path() / "data" / "iconos-juego.bin";
-  if (!LeerIconos(juego, mando)) {
+  const bool hay_juego = LeerIconos(juego, mando);
+  if (!hay_juego) {
     mando.clear();
-    LeerIconos(g_carpeta / estilo / "ICONOS.BIN", mando);
+  }
+  // What iconos-juego.bin lacks: the controller pictures when game_root has no DYNTEX.BIN, so the game loads the
+  // disc's, the Xbox 360 ones (mods/icones/xbox360/ICONOS.BIN); without iconos-juego.bin at all, everything from the
+  // style's ICONOS.BIN.
+  Juego del_estilo;
+  LeerIconos(g_carpeta / (hay_juego ? std::string("xbox360") : estilo) / "ICONOS.BIN", del_estilo);
+  for (auto& [nombre, bytes] : del_estilo) {
+    bool esta = false;
+    for (const auto& [n, b] : mando) {
+      esta = esta || n == nombre;
+    }
+    if (!esta) {
+      mando.emplace_back(nombre, std::move(bytes));
+    }
   }
   if (mando.empty() || !LeerIconos(g_carpeta / "clavier" / "ICONOS.BIN", teclado)) {
     REXLOG_INFO("[iconos] sin mods/icones/{}/ICONOS.BIN o mods/icones/clavier/ICONOS.BIN: los iconos no siguen al "
@@ -426,7 +458,7 @@ void PrepararIconosTeclado(rex::memory::Memory* memory) {
   }
   for (const auto& [nombre, bytes] : mando) {
     if (const Bytes* t = Buscar(teclado, nombre, bytes.size())) {
-      g_iconos.push_back({nombre, bytes, *t, bytes, bytes, {}, {}});
+      g_iconos.push_back({nombre, bytes, *t, bytes, bytes, {}, {}, nombre.rfind("DYNTEX_", 0) == 0});
       g_iconos.back().tramos = CalcularTramos(g_iconos.back());
     }
   }
