@@ -45,6 +45,10 @@ REXCVAR_DEFINE_BOOL(nfsmw_iconos_teclado, true, "NFSMW",
                     "elegido) en cuanto se toca el mando. Hace falta mods/icones/clavier/ICONOS.BIN")
     .lifecycle(rex::cvar::Lifecycle::kInitOnly);
 
+namespace nfsmw::nativo {
+void ForzarComprobacionTexturas();  // nfsmw_nativo_dibujos.cpp
+}
+
 namespace nfsmw {
 namespace {
 
@@ -52,13 +56,58 @@ namespace fs = std::filesystem;
 using Bytes = std::vector<uint8_t>;
 using Juego = std::vector<std::pair<std::string, Bytes>>;
 
+// The ranges of a 32 KB icon region that hold texels (the rest is the tiling's padding, zero in the file): only
+// they are compared and written, so whatever memory holds in the padding does not matter and is never touched.
+using Tramos = std::vector<std::pair<uint32_t, uint32_t>>;  // [begin, end)
+
 struct Icono {
   std::string nombre;
   Bytes mando;                   // the controller style's bytes
   Bytes teclado;                 // the keyboard's
   Bytes puesto;                  // what memory holds (what was found or last written)
   std::vector<uint8_t*> copias;  // where (host pointers into guest memory)
+  Tramos tramos;
 };
+
+Tramos CalcularTramos(const Icono& ic) {
+  Tramos t;
+  const size_t n = ic.puesto.size();
+  size_t i = 0;
+  while (i < n) {
+    auto usado = [&](size_t k) {
+      return (k < ic.mando.size() && ic.mando[k]) || (k < ic.teclado.size() && ic.teclado[k]) || ic.puesto[k];
+    };
+    if (!usado(i)) {
+      ++i;
+      continue;
+    }
+    size_t fin = i;
+    size_t ceros = 0;
+    while (fin < n && ceros < 64) {
+      ceros = usado(fin) ? 0 : ceros + 1;
+      ++fin;
+    }
+    fin -= ceros;
+    t.emplace_back(uint32_t(i), uint32_t(fin));
+    i = fin;
+  }
+  return t;
+}
+
+bool Igual(const uint8_t* mem, const Bytes& b, const Tramos& t) {
+  for (const auto& [i, f] : t) {
+    if (std::memcmp(mem + i, b.data() + i, f - i) != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void Poner(uint8_t* mem, const Bytes& b, const Tramos& t) {
+  for (const auto& [i, f] : t) {
+    std::memcpy(mem + i, b.data() + i, f - i);
+  }
+}
 
 std::vector<Icono> g_iconos;
 std::thread g_hilo;
@@ -145,7 +194,8 @@ size_t Ancla(const Bytes& b) {
 
 // A texture's base address is a multiple of 4 KB on the Xenos (its fetch constant holds it in 4 KB units): checking
 // those addresses only is enough, and instant.
-void HallarAlineado(uint8_t* inicio, size_t tam, uint32_t guest_inicio, const Bytes& aguja, std::vector<uint8_t*>& out) {
+void HallarAlineado(uint8_t* inicio, size_t tam, uint32_t guest_inicio, const Bytes& aguja, const Tramos& tramos,
+                    std::vector<uint8_t*>& out) {
   constexpr size_t kAncla = 32;
   if (aguja.size() < 64 || tam < aguja.size()) {
     return;
@@ -154,15 +204,14 @@ void HallarAlineado(uint8_t* inicio, size_t tam, uint32_t guest_inicio, const By
   const size_t primero = (0x1000 - (guest_inicio & 0xFFF)) & 0xFFF;
   for (size_t o = primero; o + aguja.size() <= tam; o += 0x1000) {
     uint8_t* base = inicio + o;
-    if (std::memcmp(base + off, aguja.data() + off, kAncla) == 0 &&
-        std::memcmp(base, aguja.data(), aguja.size()) == 0) {
+    if (std::memcmp(base + off, aguja.data() + off, kAncla) == 0 && Igual(base, aguja, tramos)) {
       out.push_back(base);
     }
   }
 }
 
 // Every place of `aguja` in [inicio, inicio + tam), at any address (the slow way, if the aligned one finds nothing).
-void Hallar(uint8_t* inicio, size_t tam, const Bytes& aguja, std::vector<uint8_t*>& out) {
+void Hallar(uint8_t* inicio, size_t tam, const Bytes& aguja, const Tramos& tramos, std::vector<uint8_t*>& out) {
   constexpr size_t kAncla = 32;
   if (aguja.size() < 64 || tam < aguja.size()) {
     return;
@@ -177,7 +226,7 @@ void Hallar(uint8_t* inicio, size_t tam, const Bytes& aguja, std::vector<uint8_t
       break;
     }
     uint8_t* base = hallado - off;
-    if (std::memcmp(base, aguja.data(), aguja.size()) == 0) {
+    if (base >= inicio && Igual(base, aguja, tramos)) {
       out.push_back(base);
       p = base + aguja.size() + off;
     } else {
@@ -223,7 +272,7 @@ bool Validas() {
   size_t total = 0;
   for (const Icono& ic : g_iconos) {
     for (uint8_t* p : ic.copias) {
-      if (std::memcmp(p, ic.puesto.data(), ic.puesto.size()) != 0) {
+      if (!Igual(p, ic.puesto, ic.tramos)) {
         return false;
       }
     }
@@ -240,14 +289,23 @@ size_t BuscarCopias(rex::memory::Memory* memory) {
       ic.copias.clear();
       for (const Zona& z : zonas) {
         if (lento) {
-          Hallar(z.inicio, z.tam, ic.puesto, ic.copias);
+          Hallar(z.inicio, z.tam, ic.puesto, ic.tramos, ic.copias);
         } else {
-          HallarAlineado(z.inicio, z.tam, z.guest, ic.puesto, ic.copias);
+          HallarAlineado(z.inicio, z.tam, z.guest, ic.puesto, ic.tramos, ic.copias);
         }
       }
       total += ic.copias.size();
     }
     if (total) {
+      std::string faltan;
+      for (const Icono& ic : g_iconos) {
+        if (ic.copias.empty()) {
+          faltan += (faltan.empty() ? "" : ", ") + ic.nombre;
+        }
+      }
+      if (!faltan.empty()) {
+        REXLOG_INFO("[iconos] sin encontrar en memoria: {}", faltan);
+      }
       break;
     }
     REXLOG_INFO("[iconos] no estan en direcciones de 4 KB: busqueda completa (unos segundos)");
@@ -275,6 +333,7 @@ void Hilo(rex::memory::Memory* memory) {
         for (Icono& ic : g_iconos) {
           if (const Bytes* b = Buscar(nuevo, ic.nombre, ic.mando.size())) {
             ic.mando = *b;
+            ic.tramos = CalcularTramos(ic);
           }
         }
         REXLOG_INFO("[iconos] estilo del mando: {}", pedido);
@@ -312,11 +371,14 @@ void Hilo(rex::memory::Memory* memory) {
       const Bytes& quiero = teclado ? ic.teclado : ic.mando;
       if (quiero != ic.puesto) {
         for (uint8_t* p : ic.copias) {
-          std::memcpy(p, quiero.data(), quiero.size());
+          Poner(p, quiero, ic.tramos);
         }
         ic.puesto = quiero;
         escrito = true;
       }
+    }
+    if (escrito) {
+      nfsmw::nativo::ForzarComprobacionTexturas();  // the sample fingerprint may not read the bytes changed
     }
     if (escrito || teclado != teclado_mostrado) {
       REXLOG_INFO("[iconos] {}", teclado ? "teclado: teclas del PC" : "mando: botones del estilo elegido");
@@ -355,7 +417,8 @@ void PrepararIconosTeclado(rex::memory::Memory* memory) {
   }
   for (const auto& [nombre, bytes] : mando) {
     if (const Bytes* t = Buscar(teclado, nombre, bytes.size())) {
-      g_iconos.push_back({nombre, bytes, *t, bytes, {}});
+      g_iconos.push_back({nombre, bytes, *t, bytes, {}, {}});
+      g_iconos.back().tramos = CalcularTramos(g_iconos.back());
     }
   }
   if (g_iconos.empty()) {

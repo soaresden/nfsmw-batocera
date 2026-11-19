@@ -1112,6 +1112,14 @@ bool SinSombras(bool del_usuario);
 
 namespace nfsmw::nativo {
 
+// The button icons swapped in memory while the game runs (nfsmw_iconos_teclado.cpp) change bytes the sample
+// fingerprint may not read (it hashes 4 KB blocks 0, 8, 16... and the last): after a swap every texture gets one full
+// check at its next turn.
+std::atomic<uint32_t> g_epoca_texturas{0};
+void ForzarComprobacionTexturas() {
+  g_epoca_texturas.fetch_add(1, std::memory_order_relaxed);
+}
+
 // Incremented by the ring thread when it handles a WAIT_REG_MEM (nfsmw_nativo_sistema.cpp). That is the
 // point where vertex deduplication must forget what it recorded.
 std::atomic<uint32_t> g_sincronizaciones_anillo{0};
@@ -1874,6 +1882,7 @@ struct Textura {
   // consecutive rechecks have been accepted on it alone (nfsmw_nativo_huellas_muestreo).
   uint64_t huella_muestra = 0;
   bool muestra_valida = false;
+  uint32_t epoca = 0;  // nfsmw::nativo::ForzarComprobacionTexturas: a full check when it is behind
   uint8_t muestras_seguidas = 0;
   bool subir = false;
   std::vector<uint8_t> datos;  // levels already laid out for the host: level after level and, in each, layer after layer
@@ -8865,6 +8874,13 @@ class DibujosVulkanImpl final : public DibujosVulkan {
     ranura = RanuraVista(textura.imagen.imagen, formato_host, swizzle, tf.swizzle_host, monton);
     ancho_host_out = textura.imagen.ancho;  // the host's, which is what the shader sees
     alto_host_out = textura.imagen.alto;
+    if (const uint32_t epoca = nfsmw::nativo::g_epoca_texturas.load(std::memory_order_relaxed);
+        textura.epoca != epoca) {
+      textura.epoca = epoca;
+      textura.muestra_valida = false;  // the next check hashes everything
+      textura.siguiente = 0;
+      textura.fotograma = UINT64_MAX;
+    }
     if (textura.fotograma == fotograma_) {
       // Valid until the frame before the next check (if it changed now, only this frame)
       valido_hasta = std::max<uint64_t>(fotograma_, textura.siguiente ? textura.siguiente - 1 : 0);
