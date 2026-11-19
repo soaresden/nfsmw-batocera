@@ -51,6 +51,8 @@ set TOUCHES=%TOUCHES% "--keybind_rstick_up=I" "--keybind_rstick_down=K" "--keybi
 rem Options de Batocera, si ce dossier est dans une copie de /userdata (system\batocera.conf) : BLACK EDITION et
 rem ICONES DES BOUTONS. Sinon : Black Edition desactivee, icones PlayStation.
 set "CONF=%JEU%\..\..\..\system\batocera.conf"
+rem ... sinon celui de la console, par le partage reseau de Batocera (\\BATOCERA\share = /userdata).
+if not exist "%CONF%" set "CONF=\\BATOCERA\share\system\batocera.conf"
 set "BE=off"
 set "STYLE="
 if exist "%CONF%" findstr /c:"nfsmw_black_edition=on" "%CONF%" >nul 2>&1 && set "BE=on"
@@ -65,7 +67,7 @@ rem choisi vont dans game_root\GLOBAL\, puis mods\<nom>\ est applique (MX-5...),
 rem seulement avec son option. Python est fourni dans python\ (Windows n'en a pas), mods.py et jdlz.py a cote.
 set "PY=%ICI%python\python.exe"
 set "JOURNAL=%ICI%nfsmw-launcher.log"
-echo [windows] %DATE% %TIME% jeu "%JEU%", icones %STYLE%, Black Edition %BE% > "%JOURNAL%"
+echo [windows] %DATE% %TIME% jeu "%JEU%", icones %STYLE%, Black Edition %BE% (options : %CONF%) > "%JOURNAL%"
 if not exist "%PY%" goto sans_mods
 if not exist "%ICI%mods.py" goto sans_mods
 "%PY%" "%ICI%mods.py" restore "%JEU%" >> "%JOURNAL%" 2>&1
