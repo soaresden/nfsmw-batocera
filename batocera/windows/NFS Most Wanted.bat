@@ -78,6 +78,8 @@ if exist "%CONF%" findstr /c:"nfsmw_black_edition=on" "%CONF%" >nul 2>&1 && set 
 rem Sans batocera.conf : un fichier black_edition.txt (vide) a cote de ce lanceur active la Black Edition.
 if exist "%ICI%black_edition.txt" set "BE=on"
 if exist "%CONF%" for /f "tokens=2 delims==" %%S in ('findstr /c:"nfsmw_icons=" "%CONF%"') do set "STYLE=%%S"
+rem Le style choisi dans l'ecran Mods du jeu (menu principal > Mods) passe avant les options de la console.
+if exist "%JEU%\mods\icones\choix.txt" set /p STYLE=<"%JEU%\mods\icones\choix.txt"
 if not defined STYLE set "STYLE=playstation"
 set "BLACK="
 if "%BE%"=="on" set "BLACK=--nfsmw_black_edition"
@@ -96,6 +98,9 @@ rem Le style d'icones, pour les boutons affiches dans l'ecran Mods du jeu.
 set "NFSMW_ICONOS=%STYLE%"
 :lancer
 call :mods
+rem Le style a pu changer dans l'ecran Mods avant le bouton Relancer.
+if exist "%JEU%\mods\icones\choix.txt" set /p STYLE=<"%JEU%\mods\icones\choix.txt"
+set "NFSMW_ICONOS=%STYLE%"
 start "" /wait "%ICI%nfsmw.exe" --game_data_root="%JEU%\game_root" --user_data_root="%JEU%\data" --content_backup_root="%JEU%\saves" %LANGUE% %BLACK% %TOUCHES% %*
 if errorlevel 3 if not errorlevel 4 echo [windows] relance avec les mods choisis dans le menu >> "%JOURNAL%"
 if errorlevel 3 if not errorlevel 4 goto lancer

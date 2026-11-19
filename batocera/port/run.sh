@@ -180,6 +180,9 @@ prepare_mods() {
     # in game_root/GLOBAL/. A file the style does not have is removed there: the game reads it from its archives
     # (xbox360/ only keeps the player's own GLOBALMEMORYFILE.BIN).
     ICONS="$(conf_get nfsmw_icons)"
+    # The style chosen in the game's Mods screen (main menu > Mods) wins over the Batocera option.
+    CHOIX="$(head -n1 "$GAMEDIR/mods/icones/choix.txt" 2>/dev/null | tr -d '\r ')"
+    [ -n "$CHOIX" ] && [ -d "$GAMEDIR/mods/icones/$CHOIX" ] && ICONS="$CHOIX"
     if [ -d "$GAMEDIR/mods/icones" ]; then
         [ -n "$ICONS" ] || ICONS=playstation
         SET="$GAMEDIR/mods/icones/$ICONS"
@@ -206,14 +209,19 @@ prepare_mods
 export NFSMW_ICONOS="${ICONS:-}"  # the Mods screen draws its button hints in this style
 # PlayStation icons are drawn by position, as on a PlayStation pad; Xbox 360 and GameCube ones by letter (the
 # Retroid's labels). The menu (BOUTONS A/B X/Y) has the last word.
-case "$(conf_get nfsmw_buttons)" in
-    lettre) ARGS+=("--input_sdl_por_letra") ;;
-    position) ARGS+=("--no-input_sdl_por_letra") ;;
-    *) case "$ICONS" in
-           playstation) ARGS+=("--no-input_sdl_por_letra") ;;
-           xbox360|gamecube) ARGS+=("--input_sdl_por_letra") ;;
-       esac ;;
-esac
+boutons() {
+    BOUTONS=()
+    case "$(conf_get nfsmw_buttons)" in
+        lettre) BOUTONS=("--input_sdl_por_letra") ;;
+        position) BOUTONS=("--no-input_sdl_por_letra") ;;
+        *) export NFSMW_BOUTONS_AUTO=1  # the Mods screen sets them again when the style changes
+           case "$ICONS" in
+               playstation) BOUTONS=("--no-input_sdl_por_letra") ;;
+               xbox360|gamecube) BOUTONS=("--input_sdl_por_letra") ;;
+           esac ;;
+    esac
+}
+boutons
 # Controller: Batocera passes SDL_GAMECONTROLLERCONFIG built with ITS SDL3's button numbers (3.4.x); the game
 # carries its own SDL3 (3.5), which numbers the Retroid Pocket 5 pad one lower (seen in the log with
 # input_sdl_diag: L1 arrived as x, Start as back, Home as start). The game's SDL maps the pad itself from the
@@ -228,7 +236,7 @@ esac
 case "$(conf_get nfsmw_black_edition)" in
     on) ARGS+=("--nfsmw_black_edition") ;;
 esac
-echo "[batocera] options: ${ARGS[*]}" >> "$GAMEDIR/nfsmw-stdout.log"
+echo "[batocera] options: ${ARGS[*]} ${BOUTONS[*]}" >> "$GAMEDIR/nfsmw-stdout.log"
 
 # Saves, profiles and caches next to the game (ports/nfsmw/data) instead of /userdata/system/.local/share/nfsmw.
 # user_data_root is read before nfsmw.toml, so it is given on the command line.
@@ -244,12 +252,14 @@ while :; do
     LOG="$LOGDIR/$(printf 'nfsmw_%03d.log' $((10#${N:-0} + 1)))"
     [ -f "$GAMEDIR/nfsmw.toml" ] && ! cmp -s "$GAMEDIR/nfsmw.toml" "$EXEDIR/nfsmw.toml" && cp "$GAMEDIR/nfsmw.toml" "$EXEDIR/nfsmw.toml"
     "$EXEDIR/nfsmw" --user_data_root="$GAMEDIR/data" --game_data_root="$GAMEDIR/game_root" \
-        --content_backup_root="$GAMEDIR/saves" --log_file="$LOG" "${ARGS[@]}" "$@" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
+        --content_backup_root="$GAMEDIR/saves" --log_file="$LOG" "${ARGS[@]}" "${BOUTONS[@]}" "$@" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
     RC=$?
     echo "[batocera] exit code $RC" >> "$GAMEDIR/nfsmw-stdout.log"
     [ -f "$EXEDIR/nfsmw.toml" ] && ! cmp -s "$EXEDIR/nfsmw.toml" "$GAMEDIR/nfsmw.toml" && cp "$EXEDIR/nfsmw.toml" "$GAMEDIR/nfsmw.toml"
     [ "$RC" = 3 ] || break
     echo "[batocera] started again with the mods chosen in the menu" >> "$GAMEDIR/nfsmw-stdout.log"
     prepare_mods
+    export NFSMW_ICONOS="${ICONS:-}"
+    boutons
 done
 exit 0

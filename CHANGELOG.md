@@ -10,7 +10,10 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
   (`app/src/nfsmw_iconos_teclado.cpp`). The input drivers note the device used last (`rex/input/dispositivo.h`);
   the icon tool writes each style's icons as the game holds them (`ICONOS.BIN`) and the keyboard set
   (`mods/icones/clavier/`); the game finds the style's icons in memory and writes the other set over them. The Mods
-  screen's hints follow too.
+  screen's hints follow too. The icons are searched for from the start (the log says how many copies were found).
+- The Mods screen chooses the controller's icon style (ICÔNES DES BOUTONS): the game's icons change at once, the
+  choice is kept in `mods/icones/choix.txt`, which `run.sh` and the Windows launcher read before the Batocera
+  option (and again on "Relancer"); with the buttons left to the style, `input_sdl_por_letra` follows at once.
 
 - "Mods" in the game's main menu, in place of Xbox Live (`app/src/nfsmw_menu_mods.cpp`; the main menu is loaded again behind the screen, `sub_82284928` "MainMenu.fng", since accepting an entry has already started its way out; the hints at the bottom show the controller buttons in the chosen icon style, `NFSMW_ICONOS`, and the keyboard keeps the PC version's keys): the text lookup
   `sub_822BCE60` answers "Mods" for its label and its React `sub_82237080` opens a Mods screen drawn in the style

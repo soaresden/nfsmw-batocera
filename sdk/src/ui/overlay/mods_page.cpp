@@ -38,6 +38,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
+#include <functional>
 #include <set>
 #include <string>
 #include <system_error>
@@ -299,11 +301,36 @@ std::string Mayusculas(const std::string& s) {
   return out;
 }
 
+// The controller's icon style (mods/icones/<style>/): the one the launcher applied (NFSMW_ICONOS), or the one chosen
+// in this screen, kept in mods/icones/choix.txt (the launchers read it first, before the Batocera option).
+std::function<void(const std::string&)> g_cambio_estilo;  // the game's icons, live (app/src/nfsmw_iconos_teclado.cpp)
+std::mutex g_mutex_estilo;
+
+std::vector<std::string> Estilos(const fs::path& iconos) {
+  std::vector<std::string> out;
+  static const char* const kOrden[] = {"playstation", "xbox360", "gamecube"};
+  for (const char* e : kOrden) {
+    std::error_code ec;
+    if (fs::is_directory(iconos / e, ec)) {
+      out.push_back(e);
+    }
+  }
+  return out;
+}
+
+std::string NombreEstilo(const std::string& e) {
+  if (e == "playstation") return "PLAYSTATION";
+  if (e == "xbox360") return "XBOX 360";
+  if (e == "gamecube") return "GAMECUBE";
+  return Mayusculas(e);
+}
+
 class PantallaMods final : public ImGuiDialog {
  public:
   explicit PantallaMods(ImGuiDrawer* dibujante) : ImGuiDialog(dibujante) {
     g_abierta.store(true);
     Leer(Datos());
+    LeerEstilos();
     REXLOG_INFO("[mods] pantalla Mods abierta ({} mods)", Datos().mods.size());
   }
   ~PantallaMods() override {
@@ -317,8 +344,8 @@ class PantallaMods final : public ImGuiDialog {
     if (std::chrono::steady_clock::now() - e.ultima_lectura > std::chrono::seconds(2)) {
       Leer(e);
     }
-    const bool relanzar = PuedeRelanzar() && e.al_empezar != e.apagados;
-    const int filas = int(e.mods.size()) + (relanzar ? 1 : 0);
+    const bool relanzar = PuedeRelanzar() && (e.al_empezar != e.apagados || estilo_cambiado_);
+    const int filas = Primera() + int(e.mods.size()) + (relanzar ? 1 : 0);
     if (seleccion_ >= filas) {
       seleccion_ = filas > 0 ? filas - 1 : 0;
     }
@@ -379,6 +406,65 @@ class PantallaMods final : public ImGuiDialog {
     return ImGui::IsKeyPressed(cruceta, true) || ImGui::IsKeyPressed(stick, true) || ImGui::IsKeyPressed(tecla, true);
   }
 
+  // Row 0 is the icon style when mods/icones/ has styles; the mods come after it.
+  int Primera() const { return estilos_.empty() ? 0 : 1; }
+
+  void LeerEstilos() {
+    const fs::path iconos = Datos().carpeta / "icones";
+    estilos_ = Estilos(iconos);
+    std::string actual;
+    std::ifstream f(iconos / "choix.txt");
+    std::getline(f, actual);
+    while (!actual.empty() && (actual.back() == '\r' || actual.back() == ' ')) {
+      actual.pop_back();
+    }
+    if (actual.empty()) {
+      const char* v = std::getenv("NFSMW_ICONOS");
+      actual = v ? v : "";
+    }
+    estilo_ = 0;
+    for (size_t i = 0; i < estilos_.size(); ++i) {
+      if (estilos_[i] == actual) {
+        estilo_ = int(i);
+      }
+    }
+  }
+
+  void CambiarEstilo(int paso) {
+    if (estilos_.empty()) {
+      return;
+    }
+    estilo_ = (estilo_ + int(estilos_.size()) + paso) % int(estilos_.size());
+    const std::string& nuevo = estilos_[estilo_];
+    const fs::path archivo = Datos().carpeta / "icones" / "choix.txt";
+    std::ofstream f(archivo, std::ios::binary | std::ios::trunc);
+    f << nuevo << "\n";
+    Datos().error = f ? std::string() : "Impossible d'écrire " + AUtf8(archivo);
+    estilo_cambiado_ = true;
+    {
+      std::lock_guard<std::mutex> cerrojo(g_mutex_estilo);
+      if (g_cambio_estilo) {
+        g_cambio_estilo(nuevo);  // the game's icons change at once
+      }
+    }
+    // The face buttons as the launcher sets them for each style (run.sh), unless the player chose them in Batocera.
+    const char* auto_botones = std::getenv("NFSMW_BOUTONS_AUTO");
+    if (auto_botones && *auto_botones == '1') {
+      rex::cvar::SetFlagByName("input_sdl_por_letra", nuevo == "playstation" ? "false" : "true");
+    }
+    setenv_estilo(nuevo);
+    REXLOG_INFO("[mods] pantalla: iconos {}", nuevo);
+  }
+
+  // The hints of this screen follow the style chosen.
+  static void setenv_estilo(const std::string& e) {
+#if defined(_WIN32)
+    _putenv_s("NFSMW_ICONOS", e.c_str());
+#else
+    setenv("NFSMW_ICONOS", e.c_str(), 1);
+#endif
+  }
+
   void Entrada(ImGuiIO& io, Estado& e, int filas, bool relanzar) {
     // The button that opened the screen (or chose in it) acts once released and pressed again.
     if (!armada_) {
@@ -422,9 +508,19 @@ class PantallaMods final : public ImGuiDialog {
     if (abajo) {
       seleccion_ = (seleccion_ + 1) % filas;
     }
-    if (aceptar || ((izquierda || derecha) && seleccion_ < int(e.mods.size()))) {
-      if (seleccion_ < int(e.mods.size())) {
-        const std::string& nombre = e.mods[seleccion_];
+    const int o = Primera();
+    if (o && seleccion_ == 0) {
+      if (aceptar || derecha) {
+        CambiarEstilo(1);
+      } else if (izquierda) {
+        CambiarEstilo(-1);
+      }
+      return;
+    }
+    const int m = seleccion_ - o;  // the mod's index
+    if (aceptar || ((izquierda || derecha) && m < int(e.mods.size()))) {
+      if (m < int(e.mods.size())) {
+        const std::string& nombre = e.mods[m];
         const std::string bajo = Minusculas(nombre);
         const bool activar = e.apagados.count(bajo) != 0;
         if (activar) {
@@ -536,7 +632,8 @@ class PantallaMods final : public ImGuiDialog {
     const float alto_fila = H * 0.078f;
     const float y_lista = y;
     const int visibles = std::max(1, int((H * 0.80f - y_lista) / alto_fila));
-    const int filas = int(e.mods.size()) + (relanzar ? 1 : 0);
+    const int o = Primera();
+    const int filas = o + int(e.mods.size()) + (relanzar ? 1 : 0);
     if (seleccion_ < primera_) {
       primera_ = seleccion_;
     }
@@ -545,9 +642,9 @@ class PantallaMods final : public ImGuiDialog {
     }
 
     if (e.mods.empty()) {
-      Texto(dl, fuente, t_texto, ImVec2(x0, y), kBlanco, "Aucun mod");
-      y += t_texto * 1.4f;
-      Texto(dl, fuente, t_peque, ImVec2(x0, y), kGris,
+      const float ym = y_lista + float(o) * alto_fila + alto_fila * 0.2f;
+      Texto(dl, fuente, t_texto, ImVec2(x0, ym), kBlanco, "Aucun mod");
+      Texto(dl, fuente, t_peque, ImVec2(x0, ym + t_texto * 1.4f), kGris,
             "Mettez un dossier ou un .zip par mod dans " + AUtf8(e.carpeta));
     }
     for (int i = primera_; i < filas && i < primera_ + visibles; ++i) {
@@ -559,8 +656,25 @@ class PantallaMods final : public ImGuiDialog {
         Esquinas(dl, ImVec2(a.x - 4, a.y - 4), ImVec2(b.x + 4, b.y + 4), alto_fila * 0.28f, 3.0f);
       }
       const float ty = fy + (alto_fila * 0.86f - t_texto) * 0.5f;
-      if (i < int(e.mods.size())) {
-        const std::string& nombre = e.mods[i];
+      if (o && i == 0) {  // the icon style: < PLAYSTATION >
+        Texto(dl, fuente, t_texto, ImVec2(a.x + W * 0.015f, ty), kBlanco, "ICÔNES DES BOUTONS");
+        const std::string valor = NombreEstilo(estilos_[estilo_]);
+        const float wv = Ancho(fuente, t_texto, valor);
+        const float xv = b.x - W * 0.015f - wv;
+        Texto(dl, fuente, t_texto, ImVec2(xv, ty), kNaranja, valor);
+        const float r = t_texto * 0.28f, cy = ty + t_texto * 0.55f;
+        const float xi = xv - W * 0.012f, xd = b.x - W * 0.004f;
+        dl->AddTriangleFilled(ImVec2(xi - r, cy), ImVec2(xi, cy - r), ImVec2(xi, cy + r), sel ? kNaranja : kGris);
+        dl->AddTriangleFilled(ImVec2(xd + r, cy), ImVec2(xd, cy - r), ImVec2(xd, cy + r), sel ? kNaranja : kGris);
+        if (estilo_cambiado_) {
+          Texto(dl, fuente, t_peque, ImVec2(b.x + W * 0.02f, ty + (t_texto - t_peque) * 0.6f), kGris,
+                "image de manette au prochain lancement");
+        }
+        continue;
+      }
+      const int k = i - o;
+      if (k < int(e.mods.size())) {
+        const std::string& nombre = e.mods[k];
         const bool activo = e.apagados.count(Minusculas(nombre)) == 0;
         std::string etiqueta = Mayusculas(EsZip(nombre) ? nombre.substr(0, nombre.size() - 4) : nombre);
         Texto(dl, fuente, t_texto, ImVec2(a.x + W * 0.015f, ty), activo ? kBlanco : kGris, etiqueta);
@@ -598,7 +712,7 @@ class PantallaMods final : public ImGuiDialog {
     if (!e.error.empty()) {
       Texto(dl, fuente, t_peque, ImVec2(x0, yp - t_peque * 1.4f), IM_COL32(230, 80, 60, 255), e.error);
     }
-    if (e.al_empezar != e.apagados) {
+    if (e.al_empezar != e.apagados || estilo_cambiado_) {
       Texto(dl, fuente, t_peque, ImVec2(x0, yp), kNaranja,
             relanzar ? "Les changements s'appliquent au prochain lancement : « Relancer le jeu maintenant » le fait tout de suite."
                      : "Les changements s'appliquent au prochain lancement du jeu.");
@@ -639,6 +753,9 @@ class PantallaMods final : public ImGuiDialog {
   bool cerrando_ = false;
   bool confirmar_ = false;
   bool si_ = true;
+  std::vector<std::string> estilos_;
+  int estilo_ = 0;
+  bool estilo_cambiado_ = false;
 };
 
 }  // namespace
@@ -666,6 +783,11 @@ void AbrirPantallaMods() {
     g_abierta.store(false);
   }
 #endif
+}
+
+void RegistrarCambioEstiloIconos(std::function<void(const std::string&)> cambio) {
+  std::lock_guard<std::mutex> cerrojo(g_mutex_estilo);
+  g_cambio_estilo = std::move(cambio);
 }
 
 bool PantallaModsAbierta() {

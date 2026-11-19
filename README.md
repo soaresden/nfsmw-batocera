@@ -210,6 +210,10 @@ les menus. Sans l'option, ou sans le dossier, le jeu reprend ses images d'origin
 
 ### Icônes des boutons : PlayStation, GameCube, Xbox 360
 
+Le style se change aussi dans le jeu : menu principal → **Mods** → **ICÔNES DES BOUTONS** (gauche/droite). Les
+icônes changent tout de suite, la photo de manette des chargements au lancement suivant ; le choix est gardé dans
+`mods/icones/choix.txt`, qui passe avant l'option de Batocera (supprimez-le pour revenir à l'option).
+
 Au clavier (PC), les icônes deviennent les touches du PC en direct, comme dans les jeux récents : Entrée, Retour
 arrière, Ctrl, X, 1, 3, ↓, ↑ dès qu'on touche le clavier, les boutons du style choisi dès qu'on touche la manette.
 Les icônes faites avant le 19/11 n'ont pas les fichiers pour ça : relancez l'installation depuis la page.

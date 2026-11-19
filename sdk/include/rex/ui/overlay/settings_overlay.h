@@ -39,6 +39,10 @@ void RegistrarPaginaMods(ImGuiDrawer* dibujante, WindowedAppContext* contexto);
 // (app/src/nfsmw_menu_mods.cpp). Can be called from any thread; does nothing if it is already open.
 void AbrirPantallaMods();
 
+// The game's button icons follow a new controller style chosen in the Mods screen at once
+// (app/src/nfsmw_iconos_teclado.cpp registers it). Called on the UI thread.
+void RegistrarCambioEstiloIconos(std::function<void(const std::string&)> cambio);
+
 // True while the Mods screen is open (or about to be): the game does not get the controller meanwhile.
 bool PantallaModsAbierta();
 
