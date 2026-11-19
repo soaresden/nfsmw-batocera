@@ -5,54 +5,54 @@
    "arch": "aarch64",
    "xex_sha256": "e2ea2ff11bf84cb30430d824d7bfe699a3acf3e7400d21b9a7c938e3d7a10474",
    "fichier": "nfsmw-pal_en.pak",
-   "version": "nfsmw-batocera 18bc35f 2026-11-19 14:02 UTC aarch64",
-   "taille": 22078370,
-   "sha256": "1bc0dd279ebdc4a805475485a1f1950844b920557160190c1f2d1c95cad006a4"
+   "version": "nfsmw-batocera 9a1cb68 2026-11-19 14:19 UTC aarch64",
+   "taille": 22084395,
+   "sha256": "9366de00fea938b3feb4e1285e665cca05fa19fd044fedd50d9c005e8022d479"
   },
   {
    "edition": "pal_en",
    "arch": "x86_64",
    "xex_sha256": "e2ea2ff11bf84cb30430d824d7bfe699a3acf3e7400d21b9a7c938e3d7a10474",
    "fichier": "nfsmw-pal_en-x86_64.pak",
-   "version": "nfsmw-batocera 18bc35f 2026-11-19 14:02 UTC x86_64",
-   "taille": 23987186,
-   "sha256": "a6d24cb061ef48431c35a521b22cc82cf37f1796d9ca4977d2ac1b8083cc5376"
+   "version": "nfsmw-batocera 9a1cb68 2026-11-19 14:19 UTC x86_64",
+   "taille": 23991575,
+   "sha256": "21da0a639ea4caefb09856a24aac4411133f3a832fb029b8ed35b4b92a2ec405"
   },
   {
    "edition": "pal_es",
    "arch": "aarch64",
    "xex_sha256": "aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694",
    "fichier": "nfsmw-pal_es.pak",
-   "version": "nfsmw-batocera 18bc35f 2026-11-19 14:02 UTC aarch64",
-   "taille": 22080444,
-   "sha256": "b0a95b6cd2c5d65c54225396b48f72d5374f8412ee3ebb3558685522bbe80dc2"
+   "version": "nfsmw-batocera 9a1cb68 2026-11-19 14:19 UTC aarch64",
+   "taille": 22084078,
+   "sha256": "87b3617a493cb16b51ed0524c847b5702c0cd1f767896a0f93565cf6784c100f"
   },
   {
    "edition": "pal_es",
    "arch": "x86_64",
    "xex_sha256": "aad15fc218d034de3131f746e0b763dd8049a40dd676efc87667fcaf4fc72694",
    "fichier": "nfsmw-pal_es-x86_64.pak",
-   "version": "nfsmw-batocera 18bc35f 2026-11-19 14:02 UTC x86_64",
-   "taille": 23987057,
-   "sha256": "3a5666076a2e3945828aabf5c8845c5a2a45bc9c3d67aba3eaf555f060fd66f4"
+   "version": "nfsmw-batocera 9a1cb68 2026-11-19 14:19 UTC x86_64",
+   "taille": 23992561,
+   "sha256": "959ec649f27cd30493de461b73e0d0227511a84259ea569bca51f8a24c68c1df"
   },
   {
    "edition": "usa",
    "arch": "aarch64",
    "xex_sha256": "aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c",
    "fichier": "nfsmw-usa.pak",
-   "version": "nfsmw-batocera 18bc35f 2026-11-19 14:02 UTC aarch64",
-   "taille": 22078476,
-   "sha256": "b553c322d992287669dead32ecacd42cad139ab4f8f3e1c315aafa2e658241c3"
+   "version": "nfsmw-batocera 9a1cb68 2026-11-19 14:19 UTC aarch64",
+   "taille": 22083952,
+   "sha256": "a30cba06882a793527835781fbdc637774b22282bb28cfa0bfb649cfbc85c863"
   },
   {
    "edition": "usa",
    "arch": "x86_64",
    "xex_sha256": "aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c",
    "fichier": "nfsmw-usa-x86_64.pak",
-   "version": "nfsmw-batocera 18bc35f 2026-11-19 14:02 UTC x86_64",
-   "taille": 23987255,
-   "sha256": "99ca6e8121da0eb1756ed90a04f80b75a74e90edfb7e2cd3eae6488fa995ca68"
+   "version": "nfsmw-batocera 9a1cb68 2026-11-19 14:19 UTC x86_64",
+   "taille": 23992481,
+   "sha256": "ed7d375daeeae8cdac209c3844cb20549d209aa5e22f2555e5912bb6ddfee89f"
   }
  ]
 }
