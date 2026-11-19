@@ -7,9 +7,8 @@
 // mods/icones/clavier/ICONOS.BIN, with the PC keys the Windows launcher binds to each button (Enter, Backspace,
 // Ctrl, X, 1, 3, Down, Up).
 //
-// The icons live in the console's memory (the physical 512 MB, where the GPU reads textures from; the committed
-// virtual heaps are searched too, in case): the first time a swap is needed, memory is searched for the style's own
-// bytes (the launcher applied that style, NFSMW_ICONOS),
+// The icons live in the console's physical memory (512 MB, where the GPU reads textures from): memory is searched
+// for the style's own bytes (the launcher applied that style, NFSMW_ICONOS),
 // every copy is noted, and from then on the other set's bytes are written over them. The native renderer notices on
 // its own: it checks a texture's content again every few frames (an XXH3 of the bytes, nfsmw_nativo_dibujos.cpp).
 // Before each write the bytes found are checked again; if the memory was reused, the search starts over.
@@ -187,30 +186,34 @@ void Hallar(uint8_t* inicio, size_t tam, const Bytes& aguja, std::vector<uint8_t
   }
 }
 
-// Where to look: the physical memory (512 MB, where the GPU reads textures from), then, in case, the committed
-// regions of the virtual heaps below the executable.
+// Where to look: the physical memory (512 MB, where the GPU reads textures from, so where the icons are), its
+// committed and readable regions only, as its heap lists them: a page the heap has released or guards is protected,
+// and reading it kills the game (an access violation in a virtual heap, 19/11, which is no longer searched).
 struct Zona {
   uint8_t* inicio;
   size_t tam;
-  uint32_t guest;  // its guest address (physical memory: 0)
+  uint32_t guest;  // its physical address
 };
 
 std::vector<Zona> Zonas(rex::memory::Memory* memory) {
   std::vector<Zona> zonas;
-  zonas.push_back({memory->physical_membase(), size_t(512) * 1024 * 1024, 0});
-  uint32_t dir = 0x00010000;
-  while (dir < 0x80000000u) {
+  rex::memory::BaseHeap* heap = memory->GetPhysicalHeap();
+  if (!heap) {
+    return zonas;
+  }
+  uint8_t* fisica = memory->physical_membase();
+  uint64_t dir = 0;
+  while (dir < 0x20000000u) {
     rex::memory::HeapAllocationInfo info{};
-    rex::memory::BaseHeap* heap = memory->LookupHeap(dir);
-    if (!heap || !heap->QueryRegionInfo(dir, &info) || !info.region_size) {
-      dir += 0x10000;
+    if (!heap->QueryRegionInfo(uint32_t(dir), &info) || !info.region_size) {
+      dir += 0x1000;
       continue;
     }
-    if (info.state & rex::memory::kMemoryAllocationCommit) {
-      zonas.push_back({memory->TranslateVirtual(info.base_address), size_t(info.region_size), info.base_address});
+    if ((info.state & rex::memory::kMemoryAllocationCommit) && (info.protect & rex::memory::kMemoryProtectRead)) {
+      zonas.push_back({fisica + info.base_address, size_t(info.region_size), info.base_address});
     }
     const uint64_t siguiente = uint64_t(info.base_address) + info.region_size;
-    dir = siguiente > dir ? uint32_t(std::min<uint64_t>(siguiente, 0x80000000u)) : dir + 0x10000;
+    dir = siguiente > dir ? siguiente : dir + 0x1000;
   }
   return zonas;
 }
