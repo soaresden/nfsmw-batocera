@@ -1,6 +1,6 @@
 @echo off
 rem NFS Most Wanted (Xbox 360, recompile) pour Windows / RetroBat : lance nfsmw.exe (a cote de ce fichier).
-rem Le jeu est pris dans game_root\ a cote de ce fichier, sinon dans le dossier Batocera "NFS Most Wanted.sh" voisin
+rem Le jeu est pris d'abord dans le dossier Batocera "NFS Most Wanted.sh" (roms\ports\, avec ses mods), sinon dans game_root\ a cote de ce fichier
 rem (..\NFS Most Wanted.sh\, ou le dossier parent si ce fichier est dans NFS Most Wanted.sh\bin\x86_64-windows\) :
 rem pas de copie en double, et les sauvegardes (data\, saves\) sont celles de la Retroid.
 rem Pas de blocs entre parentheses : un chemin avec "(Windows)" les casserait.
@@ -12,11 +12,12 @@ rem D:\batocera\roms\ports\NFS Most Wanted.sh
 if exist "%ICI%chemin_du_jeu.txt" set /p JEU=<"%ICI%chemin_du_jeu.txt"
 if defined JEU if not exist "%JEU%\game_root\default.xex" echo chemin_du_jeu.txt : pas de game_root\default.xex dans "%JEU%"
 if defined JEU if not exist "%JEU%\game_root\default.xex" set "JEU="
-if not defined JEU if exist "%ICI%game_root\default.xex" set "JEU=%ICI%."
 if not defined JEU if exist "%ICI%..\NFS Most Wanted.sh\game_root\default.xex" set "JEU=%ICI%..\NFS Most Wanted.sh"
 rem RetroBat : ce dossier dans roms\windows\, le jeu dans roms\ports\NFS Most Wanted.sh
 if not defined JEU if exist "%ICI%..\..\ports\NFS Most Wanted.sh\game_root\default.xex" set "JEU=%ICI%..\..\ports\NFS Most Wanted.sh"
 if not defined JEU if exist "%ICI%..\..\game_root\default.xex" set "JEU=%ICI%..\.."
+rem En dernier seulement : une copie du jeu dans game_root\ a cote de ce fichier (sans les mods de ports\).
+if not defined JEU if exist "%ICI%game_root\default.xex" set "JEU=%ICI%."
 if defined JEU goto trouve
 echo Jeu introuvable : copiez default.xex, NFS\ et Movies\ dans game_root\ (voir LISEZMOI.txt),
 echo ou mettez ce dossier a cote de "NFS Most Wanted.sh" (le dossier Batocera),
