@@ -7,12 +7,19 @@ rem Pas de blocs entre parentheses : un chemin avec "(Windows)" les casserait.
 setlocal
 set "ICI=%~dp0"
 set "JEU="
-if exist "%ICI%game_root\default.xex" set "JEU=%ICI%."
+rem chemin_du_jeu.txt (a cote de ce fichier) : le dossier du jeu sur une ligne, par exemple
+rem D:\batocera\roms\ports\NFS Most Wanted.sh
+if exist "%ICI%chemin_du_jeu.txt" set /p JEU=<"%ICI%chemin_du_jeu.txt"
+if defined JEU if not exist "%JEU%\game_root\default.xex" echo chemin_du_jeu.txt : pas de game_root\default.xex dans "%JEU%"
+if defined JEU if not exist "%JEU%\game_root\default.xex" set "JEU="
+if not defined JEU if exist "%ICI%game_root\default.xex" set "JEU=%ICI%."
 if not defined JEU if exist "%ICI%..\NFS Most Wanted.sh\game_root\default.xex" set "JEU=%ICI%..\NFS Most Wanted.sh"
 if not defined JEU if exist "%ICI%..\..\game_root\default.xex" set "JEU=%ICI%..\.."
 if defined JEU goto trouve
 echo Jeu introuvable : copiez default.xex, NFS\ et Movies\ dans game_root\ (voir LISEZMOI.txt),
-echo ou mettez ce dossier a cote de "NFS Most Wanted.sh" (le dossier Batocera).
+echo ou mettez ce dossier a cote de "NFS Most Wanted.sh" (le dossier Batocera),
+echo ou ecrivez le chemin de "NFS Most Wanted.sh" dans chemin_du_jeu.txt a cote de ce fichier.
+echo Ce fichier est dans : %ICI%
 pause
 exit /b 1
 :trouve
