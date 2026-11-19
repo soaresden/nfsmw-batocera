@@ -48,11 +48,26 @@ set TOUCHES=%TOUCHES% "--keybind_a=Return,Shift" "--keybind_b=Space,Backspace" "
 set TOUCHES=%TOUCHES% "--keybind_start=Escape,Return" "--keybind_back=C,Tab"
 set TOUCHES=%TOUCHES% "--keybind_dpad_up=Home" "--keybind_dpad_down=End" "--keybind_dpad_left=Delete" "--keybind_dpad_right=PageDown"
 set TOUCHES=%TOUCHES% "--keybind_rstick_up=I" "--keybind_rstick_down=K" "--keybind_rstick_left=J" "--keybind_rstick_right=L"
-rem Options de Batocera, si ce dossier est dans une copie de /userdata (system\batocera.conf) : BLACK EDITION et
-rem ICONES DES BOUTONS. Sinon : Black Edition desactivee, icones PlayStation.
-set "CONF=%JEU%\..\..\..\system\batocera.conf"
-rem ... sinon celui de la console, par le partage reseau de Batocera (\\BATOCERA\share = /userdata).
-if not exist "%CONF%" set "CONF=\\BATOCERA\share\system\batocera.conf"
+rem Synchronisation avec la console (partage reseau \\BATOCERA\share = /userdata), si elle est allumee et que le
+rem jeu n'est pas lu directement chez elle : ses mods recopies a l'identique, les sauvegardes les plus recentes des
+rem deux cotes (data\, saves\ ; sans les fichiers de travail de mods.py) et ses options NFS dans options-console.txt.
+rem Console eteinte : on joue avec ce qui est deja la. Une autre console : CONSOLE=\\nom\share avant de lancer.
+if not defined CONSOLE set "CONSOLE=\\BATOCERA\share"
+set "RETROID=%CONSOLE%\roms\ports\NFS Most Wanted.sh"
+set "SYNCHRO=non"
+if /i "%JEU%"=="%RETROID%" goto options
+if not exist "%RETROID%\game_root\default.xex" goto options
+set "SYNCHRO=oui"
+echo Synchronisation avec la console...
+robocopy "%RETROID%\mods" "%JEU%\mods" /MIR /R:1 /W:1 /NP /NJH /NJS /NDL >nul
+robocopy "%RETROID%\data" "%JEU%\data" /E /XO /R:1 /W:1 /XD mods-cache mods-originals cache /XF mods-state.json /NP /NJH /NJS /NDL >nul
+robocopy "%RETROID%\saves" "%JEU%\saves" /E /XO /R:1 /W:1 /NP /NJH /NJS /NDL >nul
+if exist "%CONSOLE%\system\batocera.conf" findstr /c:"nfsmw_" "%CONSOLE%\system\batocera.conf" > "%JEU%\options-console.txt"
+:options
+rem Options NFS de la console (BLACK EDITION, ICONES DES BOUTONS) : options-console.txt de la derniere synchronisation,
+rem ou system\batocera.conf si ce dossier est dans une copie de /userdata. Sinon : pas de Black Edition, icones PlayStation.
+set "CONF=%JEU%\options-console.txt"
+if not exist "%CONF%" set "CONF=%JEU%\..\..\..\system\batocera.conf"
 set "BE=off"
 set "STYLE="
 if exist "%CONF%" findstr /c:"nfsmw_black_edition=on" "%CONF%" >nul 2>&1 && set "BE=on"
@@ -67,7 +82,7 @@ rem choisi vont dans game_root\GLOBAL\, puis mods\<nom>\ est applique (MX-5...),
 rem seulement avec son option. Python est fourni dans python\ (Windows n'en a pas), mods.py et jdlz.py a cote.
 set "PY=%ICI%python\python.exe"
 set "JOURNAL=%ICI%nfsmw-launcher.log"
-echo [windows] %DATE% %TIME% jeu "%JEU%", icones %STYLE%, Black Edition %BE% (options : %CONF%) > "%JOURNAL%"
+echo [windows] %DATE% %TIME% jeu "%JEU%", synchro console %SYNCHRO%, icones %STYLE%, Black Edition %BE% (options : %CONF%) > "%JOURNAL%"
 if not exist "%PY%" goto sans_mods
 if not exist "%ICI%mods.py" goto sans_mods
 "%PY%" "%ICI%mods.py" restore "%JEU%" >> "%JOURNAL%" 2>&1
@@ -78,7 +93,13 @@ call :icones DYNTEX.BIN
 :sans_mods
 if not exist "%JEU%\data" mkdir "%JEU%\data"
 echo [windows] options : %LANGUE% %BLACK% >> "%JOURNAL%"
-start "" "%ICI%nfsmw.exe" --game_data_root="%JEU%\game_root" --user_data_root="%JEU%\data" --content_backup_root="%JEU%\saves" %LANGUE% %BLACK% %TOUCHES% %*
+rem Le jeu, puis (avec la console) les sauvegardes plus recentes renvoyees vers elle.
+start "" /wait "%ICI%nfsmw.exe" --game_data_root="%JEU%\game_root" --user_data_root="%JEU%\data" --content_backup_root="%JEU%\saves" %LANGUE% %BLACK% %TOUCHES% %*
+if not "%SYNCHRO%"=="oui" exit /b 0
+if not exist "%RETROID%\game_root\default.xex" exit /b 0
+robocopy "%JEU%\data" "%RETROID%\data" /E /XO /R:1 /W:1 /XD mods-cache mods-originals cache /XF mods-state.json /NP /NJH /NJS /NDL >nul
+robocopy "%JEU%\saves" "%RETROID%\saves" /E /XO /R:1 /W:1 /NP /NJH /NJS /NDL >nul
+echo [windows] sauvegardes renvoyees vers la console >> "%JOURNAL%"
 exit /b 0
 
 :icones
