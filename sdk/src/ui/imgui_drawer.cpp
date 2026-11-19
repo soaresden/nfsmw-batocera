@@ -28,6 +28,7 @@
 #include <SDL3/SDL_gamepad.h>
 // nfsmw: the menus with an SDL controller too (Batocera handhelds have no keyboard): see LeerMandoSdl.
 #define REX_IMGUI_MANDO_SDL 1
+#include "fuente_roboto_medium.inc"
 #else
 #define REX_IMGUI_MANDO_SDL 0
 #endif
@@ -211,6 +212,21 @@ void ImGuiDrawer::Initialize() {
   };
   io.Fonts->AddFontFromMemoryCompressedBase85TTF(kProggyTinyCompressedDataBase85, 10.0f,
                                                  &font_config, font_glyph_ranges);
+#if REX_IMGUI_MANDO_SDL
+  {
+    // nfsmw: the Mods screen of the game's main menu (overlay/mods_page.cpp) is drawn in the style of the game's
+    // menus, which needs a real typeface: Roboto Medium (Apache 2.0, from Dear ImGui's misc/fonts), rasterized
+    // large and scaled down to the screen. Fonts[1] for the text, Fonts[2] for the title; Fonts[0] stays the
+    // SDK menus' default.
+    ImFontConfig grande;
+    grande.OversampleH = 2;
+    grande.OversampleV = 1;
+    io.Fonts->AddFontFromMemoryCompressedBase85TTF(kRobotoMedium_compressed_data_base85, 36.0f, &grande,
+                                                   font_glyph_ranges);
+    io.Fonts->AddFontFromMemoryCompressedBase85TTF(kRobotoMedium_compressed_data_base85, 72.0f, &grande,
+                                                   font_glyph_ranges);
+  }
+#endif
 
 #if REX_PLATFORM_WIN32
   // TODO(benvanik): jp font on other platforms?

@@ -27,6 +27,7 @@
 
 namespace rex::memory { class Memory; }
 namespace nfsmw { void AplicarBlackEdition(rex::memory::Memory* memory); }  // nfsmw_black_edition.cpp
+namespace nfsmw { void PrepararMenuMods(rex::memory::Memory* memory); }     // nfsmw_menu_mods.cpp
 #include "nfsmw_ajustes_graficos.h"
 #include "nfsmw_entorno_mesa.h"
 #include "nfsmw_nativo_captura.h"
@@ -72,9 +73,10 @@ class NfsmwApp : public rex::ReXApp {
   }
 
   // Data patches, once the XEX is mapped and before the game starts: the Black Edition content
-  // (nfsmw_black_edition, src/nfsmw_black_edition.cpp).
+  // (nfsmw_black_edition, src/nfsmw_black_edition.cpp) and the "Mods" text of the main menu.
   void OnPostLoadXexImage() override {
     if (runtime()) nfsmw::AplicarBlackEdition(runtime()->memory());
+    if (runtime()) nfsmw::PrepararMenuMods(runtime()->memory());  // "Mods" in the main menu
   }
 
   // Available hooks, unused:

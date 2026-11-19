@@ -36,6 +36,7 @@ Libraries used by the SDK, the NRO and the code generator, fetched from the subm
 | [SIMDe](https://github.com/simd-everywhere/simde) | MIT |
 | [toml++](https://github.com/marzer/tomlplusplus) | MIT |
 | [Dear ImGui](https://github.com/ocornut/imgui) | MIT |
+| Roboto Medium (Christian Robertson, Google), from Dear ImGui's `misc/fonts`, embedded in `sdk/src/ui/fuente_roboto_medium.inc` for the Mods screen | Apache 2.0 |
 | [o1heap](https://github.com/pavel-kirienko/o1heap) | MIT |
 | [utfcpp](https://github.com/nemtrif/utfcpp) | BSL-1.0 |
 | [CLI11](https://github.com/CLIUtils/CLI11) | BSD-3-Clause |

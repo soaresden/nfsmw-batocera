@@ -133,6 +133,7 @@ set(NFSMW_SOURCES
     src/nfsmw_pgo.cpp
     # Black Edition content (cvar nfsmw_black_edition): tuhana's data patch, written after the XEX is mapped.
     src/nfsmw_black_edition.cpp
+    src/nfsmw_menu_mods.cpp
 )
 
 if(ANDROID)

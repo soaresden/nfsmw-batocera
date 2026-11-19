@@ -181,7 +181,10 @@ mod rend le jeu de base au lancement suivant. Le `GLOBALMEMORYFILE.BIN` d'un mod
 autres mods ; le résultat est gardé dans `data/mods-cache/` (le premier lancement après un changement prend une
 demi-minute de plus).
 
-**Activer ou désactiver un mod sans le supprimer** : menu Réglages (**L + R + Droite**, ou F4) → onglet **Mods**,
+**Activer ou désactiver un mod sans le supprimer** : dans le menu principal du jeu, l'entrée **Mods** (à la place
+de Xbox Live, entre Mes voitures et le Gestionnaire de profils : le jeu en ligne n'existe pas dans le port) ouvre la
+liste des mods, haut/bas pour choisir, Valider pour changer, Retour pour revenir. La même liste est dans le menu
+Réglages du port (**L + R + Droite**, ou F4) → onglet **Mods**,
 une case par dossier ou zip de `mods/` (sauf `icones/`, qui suit l'option des icônes). Une case décochée écrit le
 nom du mod dans `mods/desactives.txt`, que `mods.py` saute. Les fichiers du jeu sont déjà chargés : le changement
 compte au lancement suivant, et le bouton **Relancer le jeu maintenant** relance tout de suite (le lanceur réapplique

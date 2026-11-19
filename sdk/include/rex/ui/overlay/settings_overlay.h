@@ -28,9 +28,19 @@ void OcultarAjustesEnMenu(const std::vector<std::string>& nombres);
 // menu window.
 void RegistrarPaginaMenu(const std::string& nombre, std::function<void()> dibujar);
 
+class WindowedAppContext;
+
 // nfsmw: the Mods tab (mods_page.cpp): the mods in mods/ next to game_data_root, with a switch each,
-// written to mods/desactives.txt for the launcher's mods.py; applied at the next start.
-void RegistrarPaginaMods();
+// written to mods/desactives.txt for the launcher's mods.py; applied at the next start. The drawer and
+// the UI thread's context are for the Mods screen below.
+void RegistrarPaginaMods(ImGuiDrawer* dibujante, WindowedAppContext* contexto);
+
+// nfsmw: the same list as a full screen in the style of the game's menus, opened from the game's main menu
+// (app/src/nfsmw_menu_mods.cpp). Can be called from any thread; does nothing if it is already open.
+void AbrirPantallaMods();
+
+// True while the Mods screen is open (or about to be): the game does not get the controller meanwhile.
+bool PantallaModsAbierta();
 
 class SettingsDialog : public ImGuiDialog {
  public:

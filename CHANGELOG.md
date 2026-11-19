@@ -5,6 +5,10 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- "Mods" in the game's main menu, in place of Xbox Live (`app/src/nfsmw_menu_mods.cpp`): the text lookup
+  `sub_822BCE60` answers "Mods" for its label and its React `sub_82237080` opens a Mods screen drawn in the style
+  of the game's menus (Roboto Medium, the game's orange); `nfsmw_menu_mods = false` gives Xbox Live back.
+
 - Mods tab in the settings menu (`sdk/src/ui/overlay/mods_page.cpp`): a switch per mod in `mods/`, written to
   `mods/desactives.txt`, which `mods.py` skips; applied at the next start, or at once with "Relancer le jeu
   maintenant" (the game ends with code 3 and `run.sh` / the Windows launcher apply the mods and start it again,

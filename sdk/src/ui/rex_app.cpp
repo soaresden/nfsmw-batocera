@@ -274,6 +274,8 @@ bool ReXApp::ConstructRuntime(const PathConfig& paths) {
     auto* input_sys = static_cast<rex::input::InputSystem*>(runtime_->input_system());
     if (input_sys) {
       input_sys->SetActiveCallback([this]() {
+        if (rex::ui::PantallaModsAbierta())
+          return false;  // nfsmw: the Mods screen of the main menu has the controller
         if (!debug_overlay_ && !console_overlay_ && !settings_overlay_ && !achievements_overlay_)
           return true;
 #if REX_PLATFORM_SWITCH || !REX_PLATFORM_ANDROID
@@ -454,7 +456,7 @@ void ReXApp::SetupOverlays(rex::ui::Presenter* presenter, rex::ui::ImmediateDraw
     }
   });
   // nfsmw: the Mods tab of that menu (mods_page.cpp; nothing on the Switch or Android).
-  rex::ui::RegistrarPaginaMods();
+  rex::ui::RegistrarPaginaMods(imgui_drawer_.get(), &app_context());
   rex::ui::RegisterBind("bind_achievements", "F7", "Toggle achievements overlay", [this] {
     if (achievements_overlay_) {
       achievements_overlay_.reset();
