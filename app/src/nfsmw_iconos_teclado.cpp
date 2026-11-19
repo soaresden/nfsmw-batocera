@@ -116,30 +116,88 @@ const Bytes* Buscar(const Juego& juego, const std::string& nombre, size_t tam) {
   return nullptr;
 }
 
-// Every place of `aguja` in [inicio, inicio + tam) (Boyer-Moore-Horspool: with a needle of a kilobyte or more it
-// skips most of the bytes).
-void Hallar(uint8_t* inicio, size_t tam, const Bytes& aguja, std::vector<uint8_t*>& out) {
+// The icons are 32 KB regions, mostly zero (a 32x32 tiled texture is spread over the tiling's padding), and so is
+// much of memory: searching for the whole region makes Boyer-Moore-Horspool crawl. So a short anchor is searched
+// for, 32 bytes of the texture with no zero at either end and as many different bytes as possible, and the whole
+// region is compared only where the anchor is.
+size_t Ancla(const Bytes& b) {
+  constexpr size_t kAncla = 32;
+  size_t mejor = 0;
+  int mejor_puntos = -1;
+  for (size_t o = 0; o + kAncla <= b.size(); o += 4) {
+    if (!b[o] || !b[o + kAncla - 1]) {
+      continue;
+    }
+    bool visto[256] = {};
+    int distintos = 0;
+    for (size_t i = 0; i < kAncla; ++i) {
+      if (!visto[b[o + i]]) {
+        visto[b[o + i]] = true;
+        ++distintos;
+      }
+    }
+    if (distintos > mejor_puntos) {
+      mejor_puntos = distintos;
+      mejor = o;
+    }
+  }
+  return mejor;
+}
+
+// A texture's base address is a multiple of 4 KB on the Xenos (its fetch constant holds it in 4 KB units): checking
+// those addresses only is enough, and instant.
+void HallarAlineado(uint8_t* inicio, size_t tam, uint32_t guest_inicio, const Bytes& aguja, std::vector<uint8_t*>& out) {
+  constexpr size_t kAncla = 32;
   if (aguja.size() < 64 || tam < aguja.size()) {
     return;
   }
-  const std::boyer_moore_horspool_searcher buscador(aguja.begin(), aguja.end());
-  uint8_t* p = inicio;
-  uint8_t* fin = inicio + tam;
-  while (true) {
+  const size_t off = Ancla(aguja);
+  const size_t primero = (0x1000 - (guest_inicio & 0xFFF)) & 0xFFF;
+  for (size_t o = primero; o + aguja.size() <= tam; o += 0x1000) {
+    uint8_t* base = inicio + o;
+    if (std::memcmp(base + off, aguja.data() + off, kAncla) == 0 &&
+        std::memcmp(base, aguja.data(), aguja.size()) == 0) {
+      out.push_back(base);
+    }
+  }
+}
+
+// Every place of `aguja` in [inicio, inicio + tam), at any address (the slow way, if the aligned one finds nothing).
+void Hallar(uint8_t* inicio, size_t tam, const Bytes& aguja, std::vector<uint8_t*>& out) {
+  constexpr size_t kAncla = 32;
+  if (aguja.size() < 64 || tam < aguja.size()) {
+    return;
+  }
+  const size_t off = Ancla(aguja);
+  const std::boyer_moore_horspool_searcher buscador(aguja.begin() + off, aguja.begin() + off + kAncla);
+  uint8_t* p = inicio + off;
+  uint8_t* fin = inicio + tam - (aguja.size() - off - kAncla);
+  while (p < fin) {
     uint8_t* hallado = std::search(p, fin, buscador);
     if (hallado == fin) {
       break;
     }
-    out.push_back(hallado);
-    p = hallado + aguja.size();
+    uint8_t* base = hallado - off;
+    if (std::memcmp(base, aguja.data(), aguja.size()) == 0) {
+      out.push_back(base);
+      p = base + aguja.size() + off;
+    } else {
+      p = hallado + 1;
+    }
   }
 }
 
 // Where to look: the physical memory (512 MB, where the GPU reads textures from), then, in case, the committed
 // regions of the virtual heaps below the executable.
-std::vector<std::pair<uint8_t*, size_t>> Zonas(rex::memory::Memory* memory) {
-  std::vector<std::pair<uint8_t*, size_t>> zonas;
-  zonas.emplace_back(memory->physical_membase(), size_t(512) * 1024 * 1024);
+struct Zona {
+  uint8_t* inicio;
+  size_t tam;
+  uint32_t guest;  // its guest address (physical memory: 0)
+};
+
+std::vector<Zona> Zonas(rex::memory::Memory* memory) {
+  std::vector<Zona> zonas;
+  zonas.push_back({memory->physical_membase(), size_t(512) * 1024 * 1024, 0});
   uint32_t dir = 0x00010000;
   while (dir < 0x80000000u) {
     rex::memory::HeapAllocationInfo info{};
@@ -149,7 +207,7 @@ std::vector<std::pair<uint8_t*, size_t>> Zonas(rex::memory::Memory* memory) {
       continue;
     }
     if (info.state & rex::memory::kMemoryAllocationCommit) {
-      zonas.emplace_back(memory->TranslateVirtual(info.base_address), size_t(info.region_size));
+      zonas.push_back({memory->TranslateVirtual(info.base_address), size_t(info.region_size), info.base_address});
     }
     const uint64_t siguiente = uint64_t(info.base_address) + info.region_size;
     dir = siguiente > dir ? uint32_t(std::min<uint64_t>(siguiente, 0x80000000u)) : dir + 0x10000;
@@ -174,12 +232,22 @@ bool Validas() {
 size_t BuscarCopias(rex::memory::Memory* memory) {
   const auto zonas = Zonas(memory);
   size_t total = 0;
-  for (Icono& ic : g_iconos) {
-    ic.copias.clear();
-    for (const auto& [inicio, tam] : zonas) {
-      Hallar(inicio, tam, ic.puesto, ic.copias);
+  for (bool lento : {false, true}) {
+    for (Icono& ic : g_iconos) {
+      ic.copias.clear();
+      for (const Zona& z : zonas) {
+        if (lento) {
+          Hallar(z.inicio, z.tam, ic.puesto, ic.copias);
+        } else {
+          HallarAlineado(z.inicio, z.tam, z.guest, ic.puesto, ic.copias);
+        }
+      }
+      total += ic.copias.size();
     }
-    total += ic.copias.size();
+    if (total) {
+      break;
+    }
+    REXLOG_INFO("[iconos] no estan en direcciones de 4 KB: busqueda completa (unos segundos)");
   }
   return total;
 }
@@ -215,6 +283,9 @@ void Hilo(rex::memory::Memory* memory) {
     if (!encontrado || !Validas()) {
       if (std::chrono::steady_clock::now() < proxima_busqueda) {
         continue;
+      }
+      if (!avisado_ausente && !encontrado) {
+        REXLOG_INFO("[iconos] buscando los iconos en memoria...");
       }
       const auto t0 = std::chrono::steady_clock::now();
       const size_t total = BuscarCopias(memory);
