@@ -5,6 +5,15 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- Mods tab in the settings menu (`sdk/src/ui/overlay/mods_page.cpp`): a switch per mod in `mods/`, written to
+  `mods/desactives.txt`, which `mods.py` skips; applied at the next start, or at once with "Relancer le jeu
+  maintenant" (the game ends with code 3 and `run.sh` / the Windows launcher apply the mods and start it again,
+  `NFSMW_RELANCE=1`).
+- The port's menus on an SDL controller (Batocera, Windows), as on the Switch: L+R+Right settings, L+R+Up counters,
+  L+R+Down log, L+R+Left achievements; the menus are driven with the controller, which the game does not get while
+  one has focus.
+- Windows launcher: the sync with the console is now off unless `synchro_console.txt` sits next to it.
+
 - One folder for both machines: `bin/aarch64/` and `bin/x86_64/` hold what depends on the processor; the game,
   shader library (now in `game_root/`), saves, logs, mods and settings are shared. The launcher picks
   `bin/$(uname -m)/` and moves an older install's executable into `bin/<its processor>/`; the page adds a machine

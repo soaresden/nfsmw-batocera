@@ -17,6 +17,7 @@
 #include <imgui.h>
 
 #include <algorithm>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <set>
@@ -36,6 +37,22 @@ std::set<std::string>& AjustesOcultos() {
   return ocultos;
 }
 }  // namespace
+
+namespace {
+std::mutex& MutexPaginas() {
+  static std::mutex m;
+  return m;
+}
+std::map<std::string, std::function<void()>>& Paginas() {
+  static std::map<std::string, std::function<void()>> p;
+  return p;
+}
+}  // namespace
+
+void RegistrarPaginaMenu(const std::string& nombre, std::function<void()> dibujar) {
+  std::lock_guard<std::mutex> cerrojo(MutexPaginas());
+  Paginas()[nombre] = std::move(dibujar);
+}
 
 void OcultarAjustesEnMenu(const std::vector<std::string>& nombres) {
   std::lock_guard<std::mutex> cerrojo(MutexAjustesOcultos());
@@ -192,6 +209,15 @@ void SettingsDialog::OnDraw(ImGuiIO& /*io*/) {
     category_set.insert(entry.category);
   }
 
+  std::map<std::string, std::function<void()>> paginas;
+  {
+    std::lock_guard<std::mutex> cerrojo(MutexPaginas());
+    paginas = Paginas();
+  }
+  for (auto& [nombre, _] : paginas) {
+    category_set.insert(nombre);
+  }
+
   // Build tree: for each category path like "Input/Keybinds/Controller",
   // also register the parent paths "Input" and "Input/Keybinds" as nodes.
   struct CatNode {
@@ -322,7 +348,14 @@ void SettingsDialog::OnDraw(ImGuiIO& /*io*/) {
   // enters at its first value and not at a remembered one that is no longer shown.
   ImGui::PushID(selected_category_.c_str());
   ImGui::BeginChild("##cvars", ImVec2(0, -30.0f), false);
+  auto pagina = searching ? paginas.end() : paginas.find(selected_category_);
+  if (pagina != paginas.end()) {
+    pagina->second();  // nfsmw: RegistrarPaginaMenu
+  }
   for (auto& entry : registry) {
+    if (pagina != paginas.end()) {
+      break;
+    }
     if (ocultos.count(entry.name)) {
       continue;  // nfsmw: OcultarAjustesEnMenu
     }

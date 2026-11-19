@@ -7,6 +7,8 @@ run.sh calls, at every start:
     python3 mods.py apply <NFS Most Wanted.sh> <style>    after them
 
 mods/black-edition/ (the Black Edition title screen) is applied only when the BLACK EDITION option is on, and last.
+mods/desactives.txt (written by the Mods tab of the game's menu, one mod name per line) lists the mods switched off:
+they stay in mods/ but are not applied.
 restore puts back what the last apply replaced (originals kept in data/mods-originals/, the list in
 data/mods-state.json), so a removed mod folder means the base game again. apply copies every mod file over
 game_root/. A mod's GLOBAL/GLOBALMEMORYFILE.BIN (a pack the game preloads) gets the chosen icon style's changes: every
@@ -196,6 +198,18 @@ def is_black(name):
     return ''.join(c for c in os.path.splitext(name)[0].lower() if c.isalnum()) == 'blackedition'
 
 
+OFF = 'desactives.txt'
+
+
+def switched_off(mods):
+    """The names in mods/desactives.txt, lowercase (the menu writes them as listed in mods/)."""
+    try:
+        with open(os.path.join(mods, OFF), encoding='utf-8', errors='replace') as f:
+            return {l.strip().lower() for l in f if l.strip() and not l.startswith('#')}
+    except OSError:
+        return set()
+
+
 def apply(port, style, black=False):
     root, mods = os.path.join(port, 'game_root'), os.path.join(port, 'mods')
     backup = os.path.join(port, 'data', 'mods-originals')
@@ -205,6 +219,10 @@ def apply(port, style, black=False):
     # One Black Edition only: the page's mods/black-edition/ first, else the first one found (blackedition...).
     be = sorted((n for n in names if is_black(n)), key=lambda n: (n != BLACK, n))[:1]
     names = [n for n in names if not is_black(n)] + (be if black else [])
+    off = switched_off(mods)
+    for n in [n for n in names if n.lower() in off]:
+        print('[mods] %s: switched off in the menu' % n)
+        names.remove(n)
 
     dubbed = os.path.exists(os.path.join(root, 'Movies', 'movies_report.txt'))
 

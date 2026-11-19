@@ -167,37 +167,42 @@ add_arg nfsmw_antialiasing "$(conf_get nfsmw_antialiasing)"
 add_arg nfsmw_posproceso "$(conf_get nfsmw_postprocess)"
 # Mods (mods.py): mods/<name>/ laid out as game_root/, e.g. mods/mx5/. What the last start applied is put back first,
 # so a removed mod folder gives the base game again; they are applied after the icons, which they keep.
-MODS_PY=0
-if command -v python3 >/dev/null 2>&1 && [ -f "$GAMEDIR/mods.py" ]; then
-    MODS_PY=1
-    python3 "$GAMEDIR/mods.py" restore "$GAMEDIR" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
-fi
-# Button icons (batocera/tools/ps_buttons --icon-sets): mods/icones/<style>/ holds the GLOBAL/ files of each
-# style; the one chosen in the menu (ICONES DES BOUTONS, PlayStation by default once the sets are installed) is put
-# in game_root/GLOBAL/. A file the style does not have is removed there: the game reads it from its archives
-# (xbox360/ only keeps the player's own GLOBALMEMORYFILE.BIN).
-ICONS="$(conf_get nfsmw_icons)"
-if [ -d "$GAMEDIR/mods/icones" ]; then
-    [ -n "$ICONS" ] || ICONS=playstation
-    SET="$GAMEDIR/mods/icones/$ICONS"
-    if [ -d "$SET" ]; then
-        mkdir -p "$GAMEDIR/game_root/GLOBAL"
-        for f in GLOBALB.LZC GLOBALMEMORYFILE.BIN DYNTEX.BIN; do
-            dst="$GAMEDIR/game_root/GLOBAL/$f"
-            if [ -f "$SET/$f" ]; then
-                cmp -s "$SET/$f" "$dst" || cp "$SET/$f" "$dst"
-            else
-                rm -f "$dst"
-            fi
-        done
-        echo "[batocera] button icons: $ICONS" >> "$GAMEDIR/nfsmw-stdout.log"
-    else
-        echo "[batocera] button icons: no set '$ICONS' in mods/icones" >> "$GAMEDIR/nfsmw-stdout.log"
+# Mods switched off in the menu (Mods tab, written to mods/desactives.txt) are skipped by mods.py; the menu's
+# "Relancer" ends the game with code 3 and it is started again below with the new choice.
+prepare_mods() {
+    MODS_PY=0
+    if command -v python3 >/dev/null 2>&1 && [ -f "$GAMEDIR/mods.py" ]; then
+        MODS_PY=1
+        python3 "$GAMEDIR/mods.py" restore "$GAMEDIR" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
     fi
-elif [ -d "$GAMEDIR/mods/boutons-playstation" ]; then
-    ICONS=playstation  # the earlier single PlayStation mod
-fi
-[ "$MODS_PY" = 1 ] && python3 "$GAMEDIR/mods.py" apply "$GAMEDIR" "${ICONS:-}" "$(conf_get nfsmw_black_edition)" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
+    # Button icons (batocera/tools/ps_buttons --icon-sets): mods/icones/<style>/ holds the GLOBAL/ files of each
+    # style; the one chosen in the menu (ICONES DES BOUTONS, PlayStation by default once the sets are installed) is put
+    # in game_root/GLOBAL/. A file the style does not have is removed there: the game reads it from its archives
+    # (xbox360/ only keeps the player's own GLOBALMEMORYFILE.BIN).
+    ICONS="$(conf_get nfsmw_icons)"
+    if [ -d "$GAMEDIR/mods/icones" ]; then
+        [ -n "$ICONS" ] || ICONS=playstation
+        SET="$GAMEDIR/mods/icones/$ICONS"
+        if [ -d "$SET" ]; then
+            mkdir -p "$GAMEDIR/game_root/GLOBAL"
+            for f in GLOBALB.LZC GLOBALMEMORYFILE.BIN DYNTEX.BIN; do
+                dst="$GAMEDIR/game_root/GLOBAL/$f"
+                if [ -f "$SET/$f" ]; then
+                    cmp -s "$SET/$f" "$dst" || cp "$SET/$f" "$dst"
+                else
+                    rm -f "$dst"
+                fi
+            done
+            echo "[batocera] button icons: $ICONS" >> "$GAMEDIR/nfsmw-stdout.log"
+        else
+            echo "[batocera] button icons: no set '$ICONS' in mods/icones" >> "$GAMEDIR/nfsmw-stdout.log"
+        fi
+    elif [ -d "$GAMEDIR/mods/boutons-playstation" ]; then
+        ICONS=playstation  # the earlier single PlayStation mod
+    fi
+    [ "$MODS_PY" = 1 ] && python3 "$GAMEDIR/mods.py" apply "$GAMEDIR" "${ICONS:-}" "$(conf_get nfsmw_black_edition)" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
+}
+prepare_mods
 # PlayStation icons are drawn by position, as on a PlayStation pad; Xbox 360 and GameCube ones by letter (the
 # Retroid's labels). The menu (BOUTONS A/B X/Y) has the last word.
 case "$(conf_get nfsmw_buttons)" in
@@ -232,11 +237,18 @@ mkdir -p "$GAMEDIR/data"
 # (nfsmw.toml, copied in; changes the game makes to it are copied back after).
 LOGDIR="$GAMEDIR/logs"
 mkdir -p "$LOGDIR"
-N="$(ls "$LOGDIR" 2>/dev/null | sed -n 's/^nfsmw_\([0-9][0-9]*\)\.log$/\1/p' | sort -n | tail -1)"
-LOG="$LOGDIR/$(printf 'nfsmw_%03d.log' $((10#${N:-0} + 1)))"
-[ -f "$GAMEDIR/nfsmw.toml" ] && ! cmp -s "$GAMEDIR/nfsmw.toml" "$EXEDIR/nfsmw.toml" && cp "$GAMEDIR/nfsmw.toml" "$EXEDIR/nfsmw.toml"
-"$EXEDIR/nfsmw" --user_data_root="$GAMEDIR/data" --game_data_root="$GAMEDIR/game_root" \
-    --content_backup_root="$GAMEDIR/saves" --log_file="$LOG" "${ARGS[@]}" "$@" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
-echo "[batocera] exit code $?" >> "$GAMEDIR/nfsmw-stdout.log"
-[ -f "$EXEDIR/nfsmw.toml" ] && ! cmp -s "$EXEDIR/nfsmw.toml" "$GAMEDIR/nfsmw.toml" && cp "$EXEDIR/nfsmw.toml" "$GAMEDIR/nfsmw.toml"
+export NFSMW_RELANCE=1  # the menu offers to start the game again (exit code 3)
+while :; do
+    N="$(ls "$LOGDIR" 2>/dev/null | sed -n 's/^nfsmw_\([0-9][0-9]*\)\.log$/\1/p' | sort -n | tail -1)"
+    LOG="$LOGDIR/$(printf 'nfsmw_%03d.log' $((10#${N:-0} + 1)))"
+    [ -f "$GAMEDIR/nfsmw.toml" ] && ! cmp -s "$GAMEDIR/nfsmw.toml" "$EXEDIR/nfsmw.toml" && cp "$GAMEDIR/nfsmw.toml" "$EXEDIR/nfsmw.toml"
+    "$EXEDIR/nfsmw" --user_data_root="$GAMEDIR/data" --game_data_root="$GAMEDIR/game_root" \
+        --content_backup_root="$GAMEDIR/saves" --log_file="$LOG" "${ARGS[@]}" "$@" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
+    RC=$?
+    echo "[batocera] exit code $RC" >> "$GAMEDIR/nfsmw-stdout.log"
+    [ -f "$EXEDIR/nfsmw.toml" ] && ! cmp -s "$EXEDIR/nfsmw.toml" "$GAMEDIR/nfsmw.toml" && cp "$EXEDIR/nfsmw.toml" "$GAMEDIR/nfsmw.toml"
+    [ "$RC" = 3 ] || break
+    echo "[batocera] started again with the mods chosen in the menu" >> "$GAMEDIR/nfsmw-stdout.log"
+    prepare_mods
+done
 exit 0

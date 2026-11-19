@@ -20,7 +20,11 @@
 #include <rex/input/sdl/sdl_input_driver.h>
 #include <rex/logging.h>
 #include <rex/platform.h>
+#include <rex/ui/keybinds.h>
+#include <rex/ui/ui_event.h>
 #include <rex/ui/virtual_key.h>
+#include <rex/ui/window.h>
+#include <rex/ui/windowed_app_context.h>
 
 // PARCHE LOCAL - Batocera: every button press in the log (the SDL button, its label and the Xbox button sent).
 REXCVAR_DEFINE_BOOL(input_sdl_diag, false, "Input",
@@ -261,9 +265,8 @@ X_RESULT SDLInputDriver::GetDeviceState(DeviceId id, X_INPUT_STATE* out_state) {
 
   auto is_active = this->is_active();
 
-  if (is_active) {
-    QueueControllerUpdate();
-  }
+  // nfsmw: also while a menu has the controller, so that L+R+D-pad closes it again.
+  QueueControllerUpdate();
 
   auto guard = DrainAndLock();
 
@@ -272,6 +275,9 @@ X_RESULT SDLInputDriver::GetDeviceState(DeviceId id, X_INPUT_STATE* out_state) {
     return X_ERROR_DEVICE_NOT_CONNECTED;
   }
 
+  if (!controller->is_touch) {
+    DispatchMenuShortcuts(*controller);
+  }
   if (controller->is_touch) {
     const auto old_gamepad = controller->state.gamepad;
     const TouchPad pad = LeerTouch();
@@ -390,9 +396,8 @@ X_RESULT SDLInputDriver::GetDeviceKeystroke(DeviceId id, uint32_t flags,
 
   auto is_active = this->is_active();
 
-  if (is_active) {
-    QueueControllerUpdate();
-  }
+  // nfsmw: also while a menu has the controller, so that L+R+D-pad closes it again.
+  QueueControllerUpdate();
 
   auto guard = DrainAndLock();
 
@@ -475,6 +480,53 @@ X_RESULT SDLInputDriver::GetDeviceKeystroke(DeviceId id, uint32_t flags,
     }
   }
   return X_ERROR_EMPTY;
+}
+
+/*
+ * nfsmw: the SDK menus on the controller, as on the Switch (switch_input_driver.cpp). On the PC they are
+ * function keys (F3 debug, F4 settings, F7 achievements, the tilde key for the log console); a handheld
+ * under Batocera has no keyboard, so L+R and the D-pad open and close them:
+ *
+ *   L + R + Up    -> debug overlay
+ *   L + R + Right -> settings (with the Mods tab)
+ *   L + R + Down  -> log console
+ *   L + R + Left  -> achievements
+ *
+ * Once per press. The buttons are read before the menu takes the controller (is_active), so the same
+ * shortcut closes the menu again. The menu is made and destroyed on the UI thread.
+ */
+void SDLInputDriver::DispatchMenuShortcuts(ControllerState& controller) {
+  struct Atajo {
+    uint16_t boton;
+    rex::ui::VirtualKey tecla;
+  };
+  static const Atajo kAtajos[] = {
+      {X_INPUT_GAMEPAD_DPAD_UP, rex::ui::VirtualKey::kF3},
+      {X_INPUT_GAMEPAD_DPAD_RIGHT, rex::ui::VirtualKey::kF4},
+      {X_INPUT_GAMEPAD_DPAD_DOWN, rex::ui::VirtualKey::kOem3},
+      {X_INPUT_GAMEPAD_DPAD_LEFT, rex::ui::VirtualKey::kF7},
+  };
+  constexpr uint16_t kModificador = X_INPUT_GAMEPAD_LEFT_SHOULDER | X_INPUT_GAMEPAD_RIGHT_SHOULDER;
+  const uint16_t held = controller.state.gamepad.buttons;
+  const bool modificador = (held & kModificador) == kModificador;
+  for (size_t i = 0; i < std::size(kAtajos); ++i) {
+    const uint8_t bit = uint8_t(1u << i);
+    const bool ahora = modificador && (held & kAtajos[i].boton) != 0;
+    const bool antes = (controller.menu_shortcuts & bit) != 0;
+    if (ahora && !antes) {
+      const rex::ui::VirtualKey vk = kAtajos[i].tecla;
+      auto pulsar = [vk] {
+        rex::ui::KeyEvent tecla(nullptr, vk, 1, false, false, false, false, false);
+        rex::ui::ProcessKeyEvent(tecla);
+      };
+      rex::ui::Window* const ventana = attached_window_ ? attached_window_ : window();
+      if (!ventana || !ventana->app_context().CallInUIThread(pulsar)) {
+        pulsar();
+      }
+      REXLOG_INFO("atajo de menu: {}", rex::ui::VirtualKeyToString(vk));
+    }
+    controller.menu_shortcuts = ahora ? (controller.menu_shortcuts | bit) : (controller.menu_shortcuts & ~bit);
+  }
 }
 
 void SDLInputDriver::HandleEvent(const SDL_Event& event) {

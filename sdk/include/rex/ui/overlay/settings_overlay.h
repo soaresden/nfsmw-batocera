@@ -11,6 +11,7 @@
  */
 #pragma once
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 #include <rex/ui/imgui_dialog.h>
@@ -21,6 +22,15 @@ namespace rex::ui {
 // example, the emulated path's ones when its own renderer draws). They are only hidden: the command
 // line and the configuration file still read them. Can be called at any time; calls accumulate.
 void OcultarAjustesEnMenu(const std::vector<std::string>& nombres);
+
+// nfsmw: a page of the settings menu drawn by its own code (the Mods tab): listed with the categories
+// under `nombre`, and drawn instead of the cvars when chosen. `dibujar` runs on the UI thread, inside the
+// menu window.
+void RegistrarPaginaMenu(const std::string& nombre, std::function<void()> dibujar);
+
+// nfsmw: the Mods tab (mods_page.cpp): the mods in mods/ next to game_data_root, with a switch each,
+// written to mods/desactives.txt for the launcher's mods.py; applied at the next start.
+void RegistrarPaginaMods();
 
 class SettingsDialog : public ImGuiDialog {
  public:

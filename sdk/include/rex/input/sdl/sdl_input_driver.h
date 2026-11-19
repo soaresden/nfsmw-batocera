@@ -73,7 +73,11 @@ class SDLInputDriver final : public InputDriver, public rex::ui::WindowListener 
     bool is_touch;
     // Per pad rather than per guest user, so it survives reassignment.
     KeystrokeState keystroke;
+    // L+R+D-pad menu shortcuts still held (DispatchMenuShortcuts).
+    uint8_t menu_shortcuts = 0;
   };
+
+  void DispatchMenuShortcuts(ControllerState& controller);
 
   // WindowListener
   void OnClosing(rex::ui::UIEvent& e) override;

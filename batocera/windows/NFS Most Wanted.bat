@@ -2,7 +2,7 @@
 rem NFS Most Wanted (Xbox 360, recompile) pour Windows / RetroBat : lance nfsmw.exe (a cote de ce fichier).
 rem Le jeu est pris d'abord dans le dossier Batocera "NFS Most Wanted.sh" (roms\ports\, avec ses mods), sinon dans game_root\ a cote de ce fichier
 rem (..\NFS Most Wanted.sh\, ou le dossier parent si ce fichier est dans NFS Most Wanted.sh\bin\x86_64-windows\) :
-rem pas de copie en double, et les sauvegardes (data\, saves\) sont celles de la Retroid.
+rem pas de copie en double : les sauvegardes (data\, saves\) et les mods sont ceux de ce dossier.
 rem Pas de blocs entre parentheses : un chemin avec "(Windows)" les casserait.
 setlocal
 set "ICI=%~dp0"
@@ -48,13 +48,17 @@ set TOUCHES=%TOUCHES% "--keybind_a=Return,Shift" "--keybind_b=Space,Backspace" "
 set TOUCHES=%TOUCHES% "--keybind_start=Escape,Return" "--keybind_back=C,Tab"
 set TOUCHES=%TOUCHES% "--keybind_dpad_up=Home" "--keybind_dpad_down=End" "--keybind_dpad_left=Delete" "--keybind_dpad_right=PageDown"
 set TOUCHES=%TOUCHES% "--keybind_rstick_up=I" "--keybind_rstick_down=K" "--keybind_rstick_left=J" "--keybind_rstick_right=L"
-rem Synchronisation avec la console (partage reseau \\BATOCERA\share = /userdata), si elle est allumee et que le
-rem jeu n'est pas lu directement chez elle : ses mods recopies a l'identique, les sauvegardes les plus recentes des
-rem deux cotes (data\, saves\ ; sans les fichiers de travail de mods.py) et ses options NFS dans options-console.txt.
-rem Console eteinte : on joue avec ce qui est deja la. Une autre console : CONSOLE=\\nom\share avant de lancer.
+rem Synchronisation avec la console (partage reseau \\BATOCERA\share = /userdata), seulement si un fichier
+rem synchro_console.txt est a cote de ce lanceur (vide, ou avec le partage d'une autre console sur une ligne, par
+rem exemple \\RETROID\share) : ses mods recopies a l'identique, les sauvegardes les plus recentes des deux cotes
+rem (data\, saves\ ; sans les fichiers de travail de mods.py) et ses options NFS dans options-console.txt.
+rem Console eteinte : on joue avec ce qui est deja la.
+set "SYNCHRO=non"
+if not exist "%ICI%synchro_console.txt" goto options
+set "CONSOLE="
+set /p CONSOLE=<"%ICI%synchro_console.txt"
 if not defined CONSOLE set "CONSOLE=\\BATOCERA\share"
 set "RETROID=%CONSOLE%\roms\ports\NFS Most Wanted.sh"
-set "SYNCHRO=non"
 if /i "%JEU%"=="%RETROID%" goto options
 if not exist "%RETROID%\game_root\default.xex" goto options
 set "SYNCHRO=oui"
@@ -79,27 +83,36 @@ set "BLACK="
 if "%BE%"=="on" set "BLACK=--nfsmw_black_edition"
 rem Mods (comme run.sh sur Batocera) : mods.py remet ce que le dernier lancement avait change, les icones du style
 rem choisi vont dans game_root\GLOBAL\, puis mods\<nom>\ est applique (MX-5...), la Black Edition en dernier et
-rem seulement avec son option. Python est fourni dans python\ (Windows n'en a pas), mods.py et jdlz.py a cote.
+rem seulement avec son option. Les mods decoches dans le menu du jeu (L + R + Droite ou F4, onglet Mods :
+rem mods\desactives.txt) sont sautes. Python est fourni dans python\ (Windows n'en a pas), mods.py et jdlz.py a cote.
 set "PY=%ICI%python\python.exe"
 set "JOURNAL=%ICI%nfsmw-launcher.log"
 echo [windows] %DATE% %TIME% jeu "%JEU%", synchro console %SYNCHRO%, icones %STYLE%, Black Edition %BE% (options : %CONF%) > "%JOURNAL%"
-if not exist "%PY%" goto sans_mods
-if not exist "%ICI%mods.py" goto sans_mods
-"%PY%" "%ICI%mods.py" restore "%JEU%" >> "%JOURNAL%" 2>&1
-call :icones GLOBALB.LZC
-call :icones GLOBALMEMORYFILE.BIN
-call :icones DYNTEX.BIN
-"%PY%" "%ICI%mods.py" apply "%JEU%" %STYLE% %BE% >> "%JOURNAL%" 2>&1
-:sans_mods
 if not exist "%JEU%\data" mkdir "%JEU%\data"
 echo [windows] options : %LANGUE% %BLACK% >> "%JOURNAL%"
-rem Le jeu, puis (avec la console) les sauvegardes plus recentes renvoyees vers elle.
+rem Le bouton Relancer du menu Mods termine le jeu avec le code 3 : mods appliques a nouveau et jeu relance.
+set "NFSMW_RELANCE=1"
+:lancer
+call :mods
 start "" /wait "%ICI%nfsmw.exe" --game_data_root="%JEU%\game_root" --user_data_root="%JEU%\data" --content_backup_root="%JEU%\saves" %LANGUE% %BLACK% %TOUCHES% %*
+if errorlevel 3 if not errorlevel 4 echo [windows] relance avec les mods choisis dans le menu >> "%JOURNAL%"
+if errorlevel 3 if not errorlevel 4 goto lancer
+rem Avec la console : les sauvegardes plus recentes renvoyees vers elle.
 if not "%SYNCHRO%"=="oui" exit /b 0
 if not exist "%RETROID%\game_root\default.xex" exit /b 0
 robocopy "%JEU%\data" "%RETROID%\data" /E /XO /R:1 /W:1 /XD mods-cache mods-originals cache /XF mods-state.json /NP /NJH /NJS /NDL >nul
 robocopy "%JEU%\saves" "%RETROID%\saves" /E /XO /R:1 /W:1 /NP /NJH /NJS /NDL >nul
 echo [windows] sauvegardes renvoyees vers la console >> "%JOURNAL%"
+exit /b 0
+
+:mods
+if not exist "%PY%" exit /b 0
+if not exist "%ICI%mods.py" exit /b 0
+"%PY%" "%ICI%mods.py" restore "%JEU%" >> "%JOURNAL%" 2>&1
+call :icones GLOBALB.LZC
+call :icones GLOBALMEMORYFILE.BIN
+call :icones DYNTEX.BIN
+"%PY%" "%ICI%mods.py" apply "%JEU%" %STYLE% %BE% >> "%JOURNAL%" 2>&1
 exit /b 0
 
 :icones

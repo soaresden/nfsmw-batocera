@@ -22,8 +22,14 @@
 #include <rex/ui/imgui_drawer.h>
 #include <rex/ui/ui_event.h>
 #include <rex/ui/window.h>
-#if REX_PLATFORM_SWITCH
 #include <rex/ui/switch_imgui_input.h>
+#if !REX_PLATFORM_SWITCH && !REX_PLATFORM_ANDROID
+#include <rex/cvar.h>
+#include <SDL3/SDL_gamepad.h>
+// nfsmw: the menus with an SDL controller too (Batocera handhelds have no keyboard): see LeerMandoSdl.
+#define REX_IMGUI_MANDO_SDL 1
+#else
+#define REX_IMGUI_MANDO_SDL 0
 #endif
 
 #include <imgui.h>
@@ -188,9 +194,9 @@ void ImGuiDrawer::Initialize() {
   // Windows.
   io.IniFilename = nullptr;
 
-#if REX_PLATFORM_SWITCH
+#if REX_PLATFORM_SWITCH || REX_IMGUI_MANDO_SDL
   // No mouse or keyboard: the menus are driven with the controller and the touch
-  // screen (switch_imgui_input.h).
+  // screen (switch_imgui_input.h). nfsmw: under Batocera and Windows with an SDL controller as well.
   nx::ConfigurarNavegacion(io);
 #endif
 
@@ -449,6 +455,60 @@ void ImGuiDrawer::Draw(UIDrawContext& ui_draw_context) {
     nx::LeerEntradaUi(entrada,
                       float(window_->GetActualPhysicalWidth()) / 1280.0f * physical_to_logical,
                       float(window_->GetActualPhysicalHeight()) / 720.0f * physical_to_logical);
+    nx::AplicarEntrada(io, entrada, estado_entrada);
+  }
+#elif REX_IMGUI_MANDO_SDL
+  {
+    // The first SDL controller (opened by the SDL input driver) in the Switch's terms, so that the same
+    // AplicarEntrada drives the menu: bottom button accepts, right one goes back, as in the game with
+    // the PlayStation icons; with input_sdl_por_letra (Xbox/GameCube labels on a Nintendo-style pad)
+    // the one the game takes as A accepts. L+R+D-pad stays the shortcuts' (sdl_input_driver.cpp).
+    static nx::EstadoEntradaUi estado_entrada;
+    nx::EntradaUi entrada;
+    int cuantos = 0;
+    SDL_JoystickID* ids = SDL_GetGamepads(&cuantos);
+    SDL_Gamepad* mando = nullptr;
+    for (int i = 0; ids && i < cuantos && !mando; ++i) {
+      mando = SDL_GetGamepadFromID(ids[i]);
+    }
+    SDL_free(ids);
+    if (mando) {
+      entrada.mando_conectado = true;
+      struct Boton {
+        SDL_GamepadButton sdl;
+        uint64_t bit;
+      };
+      static constexpr Boton kBotones[] = {
+          {SDL_GAMEPAD_BUTTON_SOUTH, nx::kBotonB},          {SDL_GAMEPAD_BUTTON_EAST, nx::kBotonA},
+          {SDL_GAMEPAD_BUTTON_NORTH, nx::kBotonX},          {SDL_GAMEPAD_BUTTON_WEST, nx::kBotonY},
+          {SDL_GAMEPAD_BUTTON_DPAD_UP, nx::kBotonArriba},   {SDL_GAMEPAD_BUTTON_DPAD_DOWN, nx::kBotonAbajo},
+          {SDL_GAMEPAD_BUTTON_DPAD_LEFT, nx::kBotonIzquierda}, {SDL_GAMEPAD_BUTTON_DPAD_RIGHT, nx::kBotonDerecha},
+          {SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, nx::kBotonL},  {SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, nx::kBotonR},
+          {SDL_GAMEPAD_BUTTON_LEFT_STICK, nx::kBotonStickL}, {SDL_GAMEPAD_BUTTON_RIGHT_STICK, nx::kBotonStickR},
+          {SDL_GAMEPAD_BUTTON_START, nx::kBotonPlus},       {SDL_GAMEPAD_BUTTON_BACK, nx::kBotonMinus},
+      };
+      for (const Boton& b : kBotones) {
+        if (SDL_GetGamepadButton(mando, b.sdl)) {
+          entrada.botones |= b.bit;
+        }
+      }
+      if (SDL_GetGamepadAxis(mando, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > 16000) {
+        entrada.botones |= nx::kBotonZL;
+      }
+      if (SDL_GetGamepadAxis(mando, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > 16000) {
+        entrada.botones |= nx::kBotonZR;
+      }
+      // SDL: down is positive; HID: up.
+      auto eje = [mando](SDL_GamepadAxis a, bool invertir) {
+        const int v = SDL_GetGamepadAxis(mando, a);
+        return int32_t(invertir ? -(v < -32767 ? -32767 : v) : v);
+      };
+      entrada.stick_izq_x = eje(SDL_GAMEPAD_AXIS_LEFTX, false);
+      entrada.stick_izq_y = eje(SDL_GAMEPAD_AXIS_LEFTY, true);
+      entrada.stick_der_x = eje(SDL_GAMEPAD_AXIS_RIGHTX, false);
+      entrada.stick_der_y = eje(SDL_GAMEPAD_AXIS_RIGHTY, true);
+    }
+    entrada.por_posicion = rex::cvar::GetFlagByName("input_sdl_por_letra") != "true";
     nx::AplicarEntrada(io, entrada, estado_entrada);
   }
 #endif

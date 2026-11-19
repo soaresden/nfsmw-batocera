@@ -42,10 +42,10 @@
 #include <rex/ui/graphics_provider.h>
 #include <rex/ui/keybinds.h>
 #include <rex/version.h>
+#include <rex/ui/switch_imgui_input.h>
 
 #if REX_PLATFORM_SWITCH
 #include <cstdio>
-#include <rex/ui/switch_imgui_input.h>
 // Only the syscall header: switch.h drags typedefs that collide with rex.
 extern "C" {
 #include <switch/types.h>
@@ -276,9 +276,10 @@ bool ReXApp::ConstructRuntime(const PathConfig& paths) {
       input_sys->SetActiveCallback([this]() {
         if (!debug_overlay_ && !console_overlay_ && !settings_overlay_ && !achievements_overlay_)
           return true;
-#if REX_PLATFORM_SWITCH
+#if REX_PLATFORM_SWITCH || !REX_PLATFORM_ANDROID
         // The menu and the game share the controller: while a menu window
-        // has navigation focus, the buttons belong to the menu.
+        // has navigation focus, the buttons belong to the menu. nfsmw: on
+        // Batocera and Windows too, where the menu is driven with the controller.
         return rex::ui::nx::JuegoRecibeMando(imgui_drawer_->GetIO());
 #else
         return !imgui_drawer_->GetIO().WantCaptureMouse;
@@ -452,6 +453,8 @@ void ReXApp::SetupOverlays(rex::ui::Presenter* presenter, rex::ui::ImmediateDraw
       settings_overlay_ = std::make_unique<ui::SettingsDialog>(imgui_drawer_.get(), config_path_);
     }
   });
+  // nfsmw: the Mods tab of that menu (mods_page.cpp; nothing on the Switch or Android).
+  rex::ui::RegistrarPaginaMods();
   rex::ui::RegisterBind("bind_achievements", "F7", "Toggle achievements overlay", [this] {
     if (achievements_overlay_) {
       achievements_overlay_.reset();

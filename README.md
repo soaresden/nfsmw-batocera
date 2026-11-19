@@ -138,8 +138,19 @@ la manette vue par SDL : **envoyez ce fichier et `logs/nfsmw_00X.log` avec chaqu
 ## Commandes et options
 
 Avec les icônes PlayStation (par défaut), le bouton du bas (✕) valide, celui de droite (○) revient, et la nitro
-est sur ✕ en course ; gâchettes pour accélérer et freiner, **Start** pour la pause. **Hotkey + Start** quitte le jeu. Le menu de debug s'ouvre avec
-**L + R + Droite**.
+est sur ✕ en course ; gâchettes pour accélérer et freiner, **Start** pour la pause. **Hotkey + Start** quitte le jeu.
+
+Menus du port, à la manette (le combo est relu tant qu'il est tenu : le même ferme le menu) ou au clavier :
+
+| Combo | Touche | Menu |
+|---|---|---|
+| **L + R + Droite** | F4 | Réglages, avec l'onglet **Mods** |
+| L + R + Haut | F3 | Compteurs (FPS, temps de rendu) |
+| L + R + Bas | ² / ` | Journal |
+| L + R + Gauche | F7 | Succès |
+
+Dans un menu, la croix déplace, le bouton du bas valide, celui de droite revient ; tant qu'il est ouvert, le jeu ne
+reçoit plus la manette.
 
 **Options avancées du jeu → NFS MOST WANTED** dans EmulationStation (installé par le lanceur, visible après un
 redémarrage d'EmulationStation) :
@@ -169,6 +180,13 @@ mod rend le jeu de base au lancement suivant. Le `GLOBALMEMORYFILE.BIN` d'un mod
 `GLOBALB.LZC`, et la copie de `GLOBALB.LZC` préchargée dans `GLOBALMEMORYFILE.BIN`), par-dessus les icônes et les
 autres mods ; le résultat est gardé dans `data/mods-cache/` (le premier lancement après un changement prend une
 demi-minute de plus).
+
+**Activer ou désactiver un mod sans le supprimer** : menu Réglages (**L + R + Droite**, ou F4) → onglet **Mods**,
+une case par dossier ou zip de `mods/` (sauf `icones/`, qui suit l'option des icônes). Une case décochée écrit le
+nom du mod dans `mods/desactives.txt`, que `mods.py` saute. Les fichiers du jeu sont déjà chargés : le changement
+compte au lancement suivant, et le bouton **Relancer le jeu maintenant** relance tout de suite (le lanceur réapplique
+les mods ; une partie non sauvegardée est perdue). `black-edition` n'est appliqué qu'avec l'option Black Edition, même
+coché.
 
 ### Black Edition
 
