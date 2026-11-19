@@ -5,6 +5,7 @@ zip of the MX-5 page (MazdaMx5-nd-rf-ingames) inside (its game_root/ prefix is s
 run.sh calls, at every start:
     python3 mods.py restore <NFS Most Wanted.sh>          before the button icons are put in place
     python3 mods.py apply <NFS Most Wanted.sh> <style>    after them
+    python3 mods.py icons <NFS Most Wanted.sh>            then: the icons as the game will load them
 
 mods/black-edition/ (the Black Edition title screen) is applied only when the BLACK EDITION option is on, and last.
 mods/desactives.txt (written by the Mods tab of the game's menu, one mod name per line) lists the mods switched off:
@@ -278,9 +279,95 @@ def apply(port, style, black=False):
             json.dump(state, w, indent=1)
 
 
+ICON_NAMES = ('CROSS', 'TRIANGLE', 'SQUARE', 'CIRCLE', 'L1', 'L2', 'R1', 'R2', 'SELECT')
+GLOBALB = 'GLOBAL/GLOBALB.LZC'
+
+
+def chunks(d, off, end):
+    while off + 8 <= end:
+        cid, size = struct.unpack_from('<II', d, off)
+        yield cid, off + 8, off + 8 + size
+        off += 8 + size
+
+
+def find_chunk(d, cid, off, end):
+    for c, b, e in chunks(d, off, end):
+        if c == cid:
+            return b, e
+        if c & 0x80000000:
+            r = find_chunk(d, cid, b, e)
+            if r:
+                return r
+    return None
+
+
+def icon_textures(fe):
+    """{name: bytes} of the button icon textures in a decompressed GLOBALB.LZC, as the game holds them."""
+    found = {}
+
+    def walk(off, end):
+        for c, b, e in chunks(fe, off, end):
+            if c == 0xB3300000:  # a texture pack
+                info, data = find_chunk(fe, 0x33310004, b, e), find_chunk(fe, 0x33320003, b, e)
+                if not info or not data:
+                    continue
+                base = (data[0] + 0xFFF) & ~0xFFF
+                for o in range(info[0], info[1], 0x7C):
+                    name = fe[o + 0x0C:o + 0x24].split(b'\0')[0].decode('latin-1')
+                    if name in ICON_NAMES and name not in found:
+                        off_t, = struct.unpack_from('<I', fe, o + 0x30)
+                        size, = struct.unpack_from('<i', fe, o + 0x38)
+                        found[name] = bytes(fe[base + off_t:base + off_t + size])
+            elif c & 0x80000000:
+                walk(b, e)
+    walk(0, len(fe))
+    return found
+
+
+def icons(port):
+    """data/iconos-juego.bin: the button icons as the game will hold them in memory this time (from the copy of
+    GLOBALB.LZC that GLOBALMEMORYFILE.BIN preloads, else the loose GLOBALB.LZC), so that the game finds them to swap
+    the keyboard keys in (app/src/nfsmw_iconos_teclado.cpp). The icon sets' own ICONOS.BIN may have been drawn by
+    another Pillow (the page's, in the browser) and differ by a few bytes. Kept until the source changes."""
+    root = os.path.join(port, 'game_root')
+    src = None
+    pack = read(os.path.join(root, PACK))
+    e = entries(pack or b'')
+    h = bstringhash(GLOBALB.replace('/', '\\'))
+    if h in e:
+        _, off, stored = e[h]
+        comp = struct.unpack_from('<I', pack, off + 12)[0] if pack[off:off + 4] == b'JDLZ' else 0
+        if 0 < comp <= stored:
+            src = pack[off:off + comp]
+    if src is None:
+        src = read(os.path.join(root, GLOBALB))
+    out = os.path.join(port, 'data', 'iconos-juego.bin')
+    if not src or src[:4] != b'JDLZ':
+        if os.path.exists(out):
+            os.remove(out)
+        return
+    key = hashlib.sha1(src).hexdigest()
+    if read(out + '.sha1') == key.encode():
+        return
+    import jdlz
+    found = icon_textures(jdlz.decompress(src))
+    blob = [b'NFSMWICO', struct.pack('<I', len(found))]
+    for name in ICON_NAMES:
+        if name in found:
+            blob += [name.encode().ljust(24, b'\0'), struct.pack('<I', len(found[name])), found[name]]
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, 'wb') as w:
+        w.write(b''.join(blob))
+    with open(out + '.sha1', 'w') as w:
+        w.write(key)
+    print('[mods] icons as the game loads them: %d in data/iconos-juego.bin' % len(found))
+
+
 if __name__ == '__main__':
     if len(sys.argv) >= 3 and sys.argv[1] == 'restore':
         restore(sys.argv[2])
+    elif len(sys.argv) >= 3 and sys.argv[1] == 'icons':
+        icons(sys.argv[2])
     elif len(sys.argv) >= 3 and sys.argv[1] == 'apply':
         apply(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '', len(sys.argv) > 4 and sys.argv[4] == 'on')
     else:

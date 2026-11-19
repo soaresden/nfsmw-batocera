@@ -120,6 +120,8 @@ call :icones GLOBALB.LZC
 call :icones GLOBALMEMORYFILE.BIN
 call :icones DYNTEX.BIN
 "%PY%" "%ICI%mods.py" apply "%JEU%" %STYLE% %BE% >> "%JOURNAL%" 2>&1
+rem Les icones telles que le jeu va les charger, pour y echanger les touches du clavier pendant le jeu.
+"%PY%" "%ICI%mods.py" icons "%JEU%" >> "%JOURNAL%" 2>&1
 exit /b 0
 
 :icones

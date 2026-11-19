@@ -340,7 +340,15 @@ void PrepararIconosTeclado(rex::memory::Memory* memory) {
   const char* e = std::getenv("NFSMW_ICONOS");
   const std::string estilo = e && *e ? e : "xbox360";
   Juego mando, teclado;
-  if (!LeerIconos(g_carpeta / estilo / "ICONOS.BIN", mando) || !LeerIconos(g_carpeta / "clavier" / "ICONOS.BIN", teclado)) {
+  // data/iconos-juego.bin (mods.py icons, at each start): the icons exactly as the game loads them this time. The
+  // style's own ICONOS.BIN can differ by a few bytes (the page draws its sets with the browser's Pillow) and then
+  // would never be found in memory (19/11: 0 copies).
+  const fs::path juego = raiz.parent_path() / "data" / "iconos-juego.bin";
+  if (!LeerIconos(juego, mando)) {
+    mando.clear();
+    LeerIconos(g_carpeta / estilo / "ICONOS.BIN", mando);
+  }
+  if (mando.empty() || !LeerIconos(g_carpeta / "clavier" / "ICONOS.BIN", teclado)) {
     REXLOG_INFO("[iconos] sin mods/icones/{}/ICONOS.BIN o mods/icones/clavier/ICONOS.BIN: los iconos no siguen al "
                 "teclado (rehaga los iconos desde la pagina de instalacion)", estilo);
     return;

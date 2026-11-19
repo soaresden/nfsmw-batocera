@@ -10,7 +10,10 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
   (`app/src/nfsmw_iconos_teclado.cpp`). The input drivers note the device used last (`rex/input/dispositivo.h`);
   the icon tool writes each style's icons as the game holds them (`ICONOS.BIN`) and the keyboard set
   (`mods/icones/clavier/`); the game finds the style's icons in memory and writes the other set over them. The Mods
-  screen's hints follow too. The icons are searched for from the start (the log says how many copies were found).
+  screen's hints follow too. The icons are searched for from the start (the log says how many copies were found),
+  among those the game really loads: `mods.py icons` writes them from the copy of GLOBALB.LZC that
+  GLOBALMEMORYFILE.BIN preloads (`data/iconos-juego.bin`; the page's sets, drawn by the browser's Pillow, differ by a
+  few bytes from the tool's).
 - The Mods screen chooses the controller's icon style (ICÔNES DES BOUTONS; CLAVIER shows the PC keys all the time,
   `NFSMW_CLAVIER=1`, the controller style's files staying in place): the game's icons change at once, the
   choice is kept in `mods/icones/choix.txt`, which `run.sh` and the Windows launcher read before the Batocera
