@@ -17,6 +17,9 @@ echo "== codegen ($APP)"
 "$REXGLUE" codegen nfsmw_manifest.toml > codegen.log 2>&1 || { echo "codegen failed, see $APP/codegen.log"; exit 1; }
 cd "$RAIZ"
 echo "== direct calls"
+# Undone first: the codegen leaves the files as they were when its input has not changed, and a function hooked
+# since then must be called through its hook again (llamadas_directas.py only turns sub_X into __imp__sub_X).
+"$PY" tools/llamadas_directas.py --deshacer --gen "$APP/generated/default"
 if [ -n "${2:-}" ]; then
   "$PY" tools/llamadas_directas.py --gen "$APP/generated/default" --enganchadas "$RAIZ/$2"
 else
