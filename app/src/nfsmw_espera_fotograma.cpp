@@ -299,6 +299,12 @@ void Informe() {
               g_despertar_tardios.exchange(0), n, uint32_t(REXCVAR_GET(nfsmw_relevo_prioridad)));
 }
 
+// Each handoff thread raises its priority once. Each branch below only runs on its own thread (told apart by the
+// return address), so plain flags do: thread_local ones were left undefined by the MinGW build (emulated TLS and
+// debug info).
+bool t_prioridad_preparador = false;
+bool t_prioridad_ejecutor = false;
+
 }  // namespace
 
 // The game's Sleep(ms): li r4,0 and a jump to sub_8262F258. The two handoff loops only check the flag on
@@ -309,8 +315,7 @@ REX_HOOK_RAW(sub_8262D988) {
   if (activo && ctx.r3.u32 == 0) {
     const uint32_t retorno = uint32_t(ctx.lr);
     if (retorno == kRetornoPreparador) {
-      thread_local bool prioridad_puesta = false;
-      SubirPrioridadUnaVez(prioridad_puesta, "preparador");
+      SubirPrioridadUnaVez(t_prioridad_preparador, "preparador");
       bool por_aviso = false;
       const uint64_t ns = Esperar(base, 1, por_aviso);
       g_esperas_preparador.fetch_add(1, std::memory_order_relaxed);
@@ -325,8 +330,7 @@ REX_HOOK_RAW(sub_8262D988) {
       return;
     }
     if (retorno == kRetornoEjecutor) {
-      thread_local bool prioridad_puesta = false;
-      SubirPrioridadUnaVez(prioridad_puesta, "ejecutor (Main XThread)");
+      SubirPrioridadUnaVez(t_prioridad_ejecutor, "ejecutor (Main XThread)");
       bool por_aviso = false;
       const uint64_t ns = Esperar(base, 0, por_aviso);
       g_esperas_ejecutor.fetch_add(1, std::memory_order_relaxed);

@@ -395,6 +395,13 @@ const RUNTIME_FUNCTION* EntradaDesenrollado(const Modulo& m, uint64_t pc) {
 // One protected RtlVirtualUnwind step: an odd table or stack does not bring the game down. No objects with
 // destructors (__try does not allow them).
 bool PasoDesenrollado(uint64_t base, const RUNTIME_FUNCTION* f, CONTEXT* ctx) {
+#if !defined(_MSC_VER)  // MinGW: no __try/__except; the profiler is off unless asked for
+  PVOID datos_manejador = nullptr;
+  DWORD64 marco = 0;
+  RtlVirtualUnwind(UNW_FLAG_NHANDLER, base, ctx->Rip, const_cast<PRUNTIME_FUNCTION>(f), ctx, &datos_manejador, &marco,
+                   nullptr);
+  return true;
+#else
   __try {
     PVOID datos_manejador = nullptr;
     DWORD64 marco = 0;
@@ -404,6 +411,7 @@ bool PasoDesenrollado(uint64_t base, const RUNTIME_FUNCTION* f, CONTEXT* ctx) {
   } __except (EXCEPTION_EXECUTE_HANDLER) {
     return false;
   }
+#endif
 }
 
 std::vector<uint64_t> Desenrollar(const PilaCopiada& p, const std::vector<Modulo>& modulos) {

@@ -33,6 +33,15 @@ bool& RastroSistemaActivo();
 void RastroSistema(const char* nombre, uint32_t r3, uint32_t r4, uint32_t r5);
 }  // namespace rex
 
+// PARCHE LOCAL - MinGW: lld's automatic export of librexruntime.dll leaves out every name starting with "__imp_",
+// which is how the kernel exports are called (__imp__XNotifyGetNext): they are exported explicitly (and the rest
+// with --export-all-symbols, sdk/src/system/CMakeLists.txt).
+#if defined(__MINGW32__) && defined(rexruntime_EXPORTS)
+#define REX_DLL_EXPORT __declspec(dllexport)
+#else
+#define REX_DLL_EXPORT
+#endif
+
 //=============================================================================
 // Hook Macros
 //=============================================================================
@@ -43,35 +52,35 @@ void RastroSistema(const char* nombre, uint32_t r3, uint32_t r4, uint32_t r5);
 #ifdef REXGLUE_ENABLE_PROFILING
 #include <tracy/Tracy.hpp>
 #define REX_HOOK(subroutine, function)                           \
-  extern "C" REX_FUNC(subroutine) {                              \
+  extern "C" REX_DLL_EXPORT REX_FUNC(subroutine) {               \
     ZoneNamedN(___tracy_hook_zone, #subroutine, TracyIsStarted); \
     rex::ppc::HostToGuestFunction<function>(ctx, base);          \
   }
 #else
 #define REX_HOOK(subroutine, function)                  \
-  extern "C" REX_FUNC(subroutine) {                     \
+  extern "C" REX_DLL_EXPORT REX_FUNC(subroutine) {      \
     rex::ppc::HostToGuestFunction<function>(ctx, base); \
   }
 #endif
 
 // Define a raw hook with direct ctx/base access.
-#define REX_HOOK_RAW(name) extern "C" REX_FUNC(name)
+#define REX_HOOK_RAW(name) extern "C" REX_DLL_EXPORT REX_FUNC(name)
 
 // Stub: logs a warning when called.
 #define REX_STUB(subroutine)              \
-  extern "C" REX_FUNC(subroutine) {       \
+  extern "C" REX_DLL_EXPORT REX_FUNC(subroutine) {       \
     (void)base;                           \
     REXKRNL_WARN("{} STUB", #subroutine); \
   }
 
 #define REX_STUB_LOG(subroutine, msg)               \
-  extern "C" REX_FUNC(subroutine) {                 \
+  extern "C" REX_DLL_EXPORT REX_FUNC(subroutine) {                 \
     (void)base;                                     \
     REXKRNL_WARN("{} STUB - {}", #subroutine, msg); \
   }
 
 #define REX_STUB_RETURN(subroutine, value)                                                \
-  extern "C" REX_FUNC(subroutine) {                                                       \
+  extern "C" REX_DLL_EXPORT REX_FUNC(subroutine) {                                                       \
     (void)base;                                                                           \
     REXKRNL_WARN("{} STUB - returning {:#x}", #subroutine, static_cast<uint32_t>(value)); \
     ctx.r3.u64 = (value);                                                                 \
@@ -79,7 +88,7 @@ void RastroSistema(const char* nombre, uint32_t r3, uint32_t r4, uint32_t r5);
 
 // Export: hook + register in global registry for kernel ordinal lookup.
 #define REX_EXPORT(name, function)                                                  \
-  extern "C" REX_FUNC(name) {                                                       \
+  extern "C" REX_DLL_EXPORT REX_FUNC(name) {                                                       \
     if (rex::RastroSistemaActivo()) {                                               \
       rex::RastroSistema(#name, ctx.r3.u32, ctx.r4.u32, ctx.r5.u32);                \
     }                                                                               \

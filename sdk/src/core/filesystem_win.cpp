@@ -43,9 +43,19 @@ std::filesystem::path to_path(const std::u16string_view source) {
 namespace filesystem {
 
 std::filesystem::path GetExecutablePath() {
+#if defined(_MSC_VER)
   wchar_t* path;
   auto error = _get_wpgmptr(&path);
   return !error ? std::filesystem::path(path) : std::filesystem::path();
+#else  // MinGW: no _get_wpgmptr
+  std::wstring path(32768, L'\0');
+  const DWORD n = GetModuleFileNameW(nullptr, path.data(), DWORD(path.size()));
+  if (n == 0 || n >= path.size()) {
+    return std::filesystem::path();
+  }
+  path.resize(n);
+  return std::filesystem::path(path);
+#endif
 }
 
 std::filesystem::path GetExecutableFolder() {

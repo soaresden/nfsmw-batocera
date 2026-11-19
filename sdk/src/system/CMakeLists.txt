@@ -63,6 +63,24 @@ add_library(rex::kernel ALIAS rexruntime)
 
 set_target_properties(rexruntime PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
 
+# PARCHE LOCAL - MinGW: only rexruntime's own code exported, as with MSVC (cmake/rexglue_mingw_exports.cmake).
+if(MINGW)
+    find_program(REXGLUE_LLVM_NM NAMES llvm-nm-20 llvm-nm REQUIRED)
+    set(_rex_static_libs "")
+    foreach(_lib spdlog fmt SDL3-static xxhash aes128 mspack o1heap libavcodec libavutil)
+        if(TARGET ${_lib})
+            list(APPEND _rex_static_libs "$<TARGET_FILE:${_lib}>")
+        endif()
+    endforeach()
+    set(_rex_exclude_rsp "${CMAKE_CURRENT_BINARY_DIR}/rexruntime_exclude_exports.rsp")
+    add_custom_command(TARGET rexruntime PRE_LINK
+        COMMAND ${CMAKE_COMMAND} "-DNM=${REXGLUE_LLVM_NM}" "-DOUT=${_rex_exclude_rsp}"
+                "-DLIBS=$<JOIN:${_rex_static_libs},|>" -P "${REXGLUE_ROOT}/cmake/rexglue_mingw_exports.cmake"
+        VERBATIM)
+    # The kernel exports are dllexport (rex/hook.h, REX_DLL_EXPORT): the rest is then exported with this.
+    target_link_options(rexruntime PRIVATE "LINKER:@${_rex_exclude_rsp}" "LINKER:--export-all-symbols")
+endif()
+
 rex_target_pch(rexruntime
     <mutex>
     <unordered_map>

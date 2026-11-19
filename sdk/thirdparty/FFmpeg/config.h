@@ -1,5 +1,7 @@
 #if defined(WIN32) || defined(_WIN32)
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__MINGW32__) && !defined(__aarch64__)
+#include "config_mingw_x86_64.h"
+#elif defined(__aarch64__) || defined(_M_ARM64)
 #include "config_windows_aarch64.h"
 #else
 #include "config_windows_x86_64.h"

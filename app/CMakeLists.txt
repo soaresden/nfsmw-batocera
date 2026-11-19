@@ -160,6 +160,9 @@ if(ANDROID)
     target_include_directories(nfsmw PRIVATE "${NFSMW_SPIRV_CROSS}")
 elseif(WIN32)
     add_executable(nfsmw WIN32 ${NFSMW_SOURCES})
+    if(MINGW)
+        target_link_options(nfsmw PRIVATE -municode)  # the SDK's entry point is wWinMain
+    endif()
     # PC build: masks again the floating-point exceptions that
     # rex::ppc::FPSCR can leave unmasked on x86 (see the file).
     target_sources(nfsmw PRIVATE src/nfsmw_pc_coma_flotante.cpp)
