@@ -130,6 +130,16 @@ std::unique_ptr<VulkanProvider> VulkanProvider::Create(const bool with_gpu_emula
       }
     }
 
+    // PARCHE LOCAL: a dedicated GPU first (a laptop's GeForce before its Intel Iris Xe, listed first by Windows: the
+    // game ran on the integrated one). Stable, so the order above stays among GPUs of the same kind.
+    std::stable_sort(physical_devices_ordered.begin(), physical_devices_ordered.end(),
+                     [&ifn](VkPhysicalDevice a, VkPhysicalDevice b) {
+                       VkPhysicalDeviceProperties pa = {}, pb = {};
+                       ifn.vkGetPhysicalDeviceProperties(a, &pa);
+                       ifn.vkGetPhysicalDeviceProperties(b, &pb);
+                       return pa.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+                              pb.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+                     });
     for (const VkPhysicalDevice physical_device : physical_devices_ordered) {
       provider->vulkan_device_ = VulkanDevice::CreateIfSupported(
           provider->vulkan_instance_.get(), physical_device, with_gpu_emulation, with_presentation);

@@ -38,6 +38,8 @@ if exist "%JEU%\game_root\Movies\movies_report.txt" set "LANGUE=--nfsmw_idioma=0
 rem Black Edition : son logo (GLOBAL\GLOBALA.BUN) n'est dans game_root que si mods.py l'y a mis (option BLACK EDITION).
 set "BLACK="
 if exist "%JEU%\game_root\GLOBAL\GLOBALA.BUN" set "BLACK=--nfsmw_black_edition"
+rem ... ou l'option BLACK EDITION de Batocera, si ce dossier est dans une copie de /userdata (system\batocera.conf).
+if exist "%JEU%\..\..\..\system\batocera.conf" findstr /c:"nfsmw_black_edition=on" "%JEU%\..\..\..\system\batocera.conf" >nul 2>&1 && set "BLACK=--nfsmw_black_edition"
 rem Clavier (sans manette) : fleches pour les menus et la conduite (haut accelere, bas freine), Entree valide,
 rem Echap ou Retour arriere revient, P met en pause. Les touches du jeu par defaut supposent un clavier QWERTY.
 set TOUCHES="--keybind_lstick_up=Up" "--keybind_lstick_down=Down" "--keybind_lstick_left=Left" "--keybind_lstick_right=Right"
