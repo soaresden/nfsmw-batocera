@@ -6,6 +6,7 @@ rem pas de copie en double : les sauvegardes (data\, saves\) et les mods sont ce
 rem Pas de blocs entre parentheses : un chemin avec "(Windows)" les casserait.
 setlocal
 set "ICI=%~dp0"
+set "LANCEUR=%~nx0"
 set "JEU="
 rem chemin_du_jeu.txt (a cote de ce fichier) : le dossier du jeu sur une ligne, par exemple
 rem D:\batocera\roms\ports\NFS Most Wanted.sh
@@ -124,6 +125,9 @@ call :icones DYNTEX.BIN
 "%PY%" "%ICI%mods.py" apply "%JEU%" %STYLE% %BE% >> "%JOURNAL%" 2>&1
 rem Les icones telles que le jeu va les charger, pour y echanger les touches du clavier pendant le jeu.
 "%PY%" "%ICI%mods.py" icons "%JEU%" >> "%JOURNAL%" 2>&1
+rem La fiche de RetroBat (roms\windows\gamelist.xml) : description en anglais, images de forgamelist\ du jeu.
+for %%F in ("%ICI%.") do set "DOSSIER=%%~nxF"
+"%PY%" "%ICI%mods.py" gamelist "%JEU%" "%ICI%..\gamelist.xml" "./%DOSSIER%/%LANCEUR%" >> "%JOURNAL%" 2>&1
 exit /b 0
 
 :icones

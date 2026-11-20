@@ -6,6 +6,7 @@ run.sh calls, at every start:
     python3 mods.py restore <NFS Most Wanted.sh>          before the button icons are put in place
     python3 mods.py apply <NFS Most Wanted.sh> <style>    after them
     python3 mods.py icons <NFS Most Wanted.sh>            then: the icons as the game will load them
+    python3 mods.py gamelist <NFS Most Wanted.sh> <gamelist.xml> <entry path>   the EmulationStation entry
 
 mods/black-edition/ (the Black Edition title screen) is applied only when the BLACK EDITION option is on, and last.
 mods/desactives.txt (written by the Mods tab of the game's menu, one mod name per line) lists the mods switched off:
@@ -386,9 +387,78 @@ def icons(port):
           % (len(found), len(pictures)))
 
 
+DESC = """Need for Speed: Most Wanted (Xbox 360, 2005), recompiled to native code: no emulator. The PowerPC code of \
+the game's default.xex is translated to C++ with ReXGlue and drawn by the port's own Vulkan renderer.
+
+Climb the Blacklist in Rockport, with the Black Edition content, the full French dub (made from the original Xbox \
+French disc), PlayStation, GameCube or Xbox 360 button icons that turn into the PC keys while the keyboard is used, \
+and a Mods entry in the main menu to switch mods (such as the Mazda MX-5 RF) and the icon style.
+
+Hotkey + Start quits; L + R + Right opens the port's settings.
+
+Port: github.com/soaresden/nfsmw-batocera (installation page: soaresden.github.io/nfsmw-batocera). Built on \
+StevensND/nfsmw-nx (the recompilation and native renderer) and codepdbh/nfsmw-android (generic ARM64); French dub \
+tools from soaresden/nfsmw-nx; Black Edition patch by tuhana (xenia-canary game-patches). Your own copy of the game \
+is required."""
+GAME = {'name': 'Need for Speed: Most Wanted', 'desc': DESC, 'releasedate': '20051122T000000',
+        'developer': 'EA Black Box', 'publisher': 'Electronic Arts', 'genre': 'Racing', 'players': '1'}
+MEDIA = {'image': 'image.png', 'thumbnail': 'thumbnail.png', 'fanart': 'fanart.png'}
+
+
+def gamelist(port, xml, entry):
+    """Adds the game to an EmulationStation (Batocera, RetroBat) gamelist.xml, or completes its entry: name, the
+    English description above, the pictures of forgamelist/ (the page makes them from the player's FRONTB.LZC),
+    developer, date... `entry` is the game's path as the gamelist names it (./NFS Most Wanted.sh on Batocera). A field
+    the player has filled in stays as it is, except a description this function wrote before (it is refreshed)."""
+    import xml.etree.ElementTree as ET
+    here = os.path.dirname(os.path.abspath(xml))
+    try:
+        tree = ET.parse(xml)
+        root = tree.getroot()
+    except (OSError, ET.ParseError):
+        if os.path.exists(xml):
+            print('[mods] %s unreadable: left as it is' % xml)
+            return
+        root = ET.Element('gameList')
+        tree = ET.ElementTree(root)
+    norm = lambda p: os.path.normcase(os.path.normpath(os.path.join(here, p)))
+    game = next((g for g in root.findall('game') if norm(g.findtext('path', '')) == norm(entry)), None)
+    added = game is None
+    if added:
+        game = ET.SubElement(root, 'game')
+        ET.SubElement(game, 'path').text = entry
+    changed = added
+    values = dict(GAME)
+    media = os.path.join(port, 'forgamelist')
+    for tag, name in MEDIA.items():
+        if os.path.isfile(os.path.join(media, name)):
+            rel = os.path.relpath(os.path.join(media, name), here).replace(os.sep, '/')
+            values[tag] = rel if rel.startswith('.') else './' + rel
+    for tag, value in values.items():
+        el = game.find(tag)
+        old = el.text if el is not None else None
+        ours = tag == 'desc' and old and old.startswith(DESC.split(':')[0])
+        if old and not ours:
+            continue
+        if old == value:
+            continue
+        if el is None:
+            el = ET.SubElement(game, tag)
+        el.text = value
+        changed = True
+    if not changed:
+        return
+    if hasattr(ET, 'indent'):
+        ET.indent(tree, '\t')
+    tree.write(xml, encoding='utf-8', xml_declaration=True)
+    print('[mods] gamelist: %s %s in %s' % ('entry added' if added else 'entry completed', entry, xml))
+
+
 if __name__ == '__main__':
     if len(sys.argv) >= 3 and sys.argv[1] == 'restore':
         restore(sys.argv[2])
+    elif len(sys.argv) >= 5 and sys.argv[1] == 'gamelist':
+        gamelist(sys.argv[2], sys.argv[3], sys.argv[4])
     elif len(sys.argv) >= 3 and sys.argv[1] == 'icons':
         icons(sys.argv[2])
     elif len(sys.argv) >= 3 and sys.argv[1] == 'apply':

@@ -5,6 +5,10 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- The EmulationStation entry is written by the launchers (`mods.py gamelist`): `ports/gamelist.xml` on Batocera,
+  `windows/gamelist.xml` on RetroBat; English description with the GitHub references, developer, date and the
+  `forgamelist/` pictures the page makes from the player's FRONTB.LZC. The player's own fields are kept.
+
 - Keyboard: the controls screen's controller picture becomes a drawn keyboard while the keyboard is used, its
   callout lines ending where the game's labels are (Down brake, arrows steer, Up accelerate, E/D gears, Space
   handbrake, Shift nitro); the keys follow the controls screen (Ctrl Speedbreaker, X look back, C camera, R reset).

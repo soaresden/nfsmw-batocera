@@ -169,6 +169,13 @@ redémarrage d'EmulationStation) :
 
 Les autres réglages sont dans `nfsmw.toml`.
 
+### Fiche EmulationStation
+
+Le lanceur ajoute le jeu à `ports/gamelist.xml` (et la version Windows à `windows/gamelist.xml` de RetroBat) : nom,
+description en anglais avec les références GitHub, développeur, date, et les images de `forgamelist/` que la page
+tire de votre `FRONTB.LZC` (écran titre, M3 GTR poursuivie). Un champ que vous avez rempli vous-même n'est pas
+touché. La fiche apparaît après un redémarrage d'EmulationStation (ou « Mettre à jour les listes de jeux »).
+
 ### Mods (la MX-5…)
 
 Un dossier `NFS Most Wanted.sh/mods/<nom>/`, rangé comme `game_root/` (`CARS/…`, `GLOBAL/…`), est appliqué à chaque

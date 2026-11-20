@@ -212,6 +212,10 @@ prepare_mods() {
     [ "$MODS_PY" = 1 ] && python3 "$GAMEDIR/mods.py" apply "$GAMEDIR" "${ICONS:-}" "$(conf_get nfsmw_black_edition)" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
     # The button icons as the game will load them, for the keyboard keys swapped in while it runs.
     [ "$MODS_PY" = 1 ] && python3 "$GAMEDIR/mods.py" icons "$GAMEDIR" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
+    # The EmulationStation entry in ports/gamelist.xml: English description, the pictures of forgamelist/ (made by the
+    # page from the player's game), developer, date; a field the player filled in stays theirs.
+    [ "$MODS_PY" = 1 ] && python3 "$GAMEDIR/mods.py" gamelist "$GAMEDIR" "$(dirname "$GAMEDIR")/gamelist.xml" \
+        "./$(basename "$GAMEDIR")" >> "$GAMEDIR/nfsmw-stdout.log" 2>&1
 }
 prepare_mods
 export NFSMW_ICONOS="${ICONS:-}"  # the Mods screen draws its button hints in this style
