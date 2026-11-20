@@ -26,6 +26,10 @@ set(CMAKE_CXX_FLAGS_INIT "${NFSMW_CPU_FLAGS} ${NFSMW_MINGW_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld")
 set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld")
 set(CMAKE_MODULE_LINKER_FLAGS_INIT "${CMAKE_SHARED_LINKER_FLAGS_INIT}")
+# The port draws with Vulkan only; ReXGlue's D3D12 backend needs the Windows SDK's headers (DXProgrammableCapture.h,
+# not in MinGW).
+set(REXGLUE_USE_D3D12 OFF CACHE BOOL "D3D12 backend (needs the Windows SDK)")
+set(REXGLUE_USE_VULKAN ON CACHE BOOL "Vulkan backend (the port's renderer)")
 set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)

@@ -30,8 +30,9 @@ const EN = {
   "arch-both": "both (one folder for the Retroid and the PC)",
   "arch-arm": "an ARM handheld (Retroid Pocket, Odin…)",
   "arch-pc": "a PC (x86_64)",
+  "arch-win": "Windows / RetroBat",
   "get4": "<b>Black Edition</b><span>road M3 GTR, Camaro SS, 8 tuned cars, 4 events, its title screen</span>",
-  "callout": "<b>Want the game in French?</b> The French Xbox 360 edition is rare and expensive, but you do not need it: with <b>your European 360 ISO (PAL English) + the French ISO of the original Xbox</b>, you get <b>the European 360 version patched into French</b>: text, 31 of the 36 movies (the trailer behind "Press Start" stays in English) and all the police radio voices. The page does the patching itself, it just takes longer (1 to 3 hours).",
+  "callout": "<b>Want the game in French?</b> The French Xbox 360 edition is rare and expensive, but you do not need it: with <b>your European 360 ISO (PAL English) + the French ISO of the original Xbox</b>, you get <b>the European 360 version patched into French</b>: text, 31 of the 36 movies (the trailer behind \"Press Start\" stays in English) and all the police radio voices. The page does the patching itself, it just takes longer (1 to 3 hours).",
   "browser-h": "Browser",
   "browser-p": "To write straight to the SD card or the network share, and for the French dub, open this page with <strong>Chrome</strong> or <strong>Edge</strong> on a computer. Here the page makes a zip and you copy the game files yourself (you then need the folder extracted from the ISO).",
   "h1x": "Your game",
@@ -53,6 +54,7 @@ const EN = {
   "b-run": "Prepare everything",
   "done-h": "Done",
   "done-p": "On the console: restart EmulationStation (or the console), then start <strong>NFS Most Wanted</strong> in <strong>Ports</strong>. The options are in <strong>Advanced game options → NFS MOST WANTED</strong>. <strong>Hotkey + Start</strong> quits the game, <strong>Hotkey + L1</strong> takes a screenshot.",
+  "done-win": "On Windows: with RetroBat, restart EmulationStation and start <strong>NFS Most Wanted</strong> in the <strong>Windows</strong> system. Without RetroBat: run <code>NFS Most Wanted.sh\\bin\\x86_64-windows\\NFS Most Wanted.bat</code>. On the keyboard: arrows to drive, Shift nitro, Space handbrake, Esc pause; a controller works too.",
   "done-p2": "For feedback: send <code>nfsmw-stdout.log</code> and <code>data/logs/</code> from the game folder.",
   "footer": "Source code and explanations: <a href=\"https://github.com/soaresden/nfsmw-batocera\">nfsmw-batocera</a> (GPL-3.0), from nfsmw-nx and NFSMW Android Evolved. Black Edition: tuhana's patch (xenia-canary/game-patches), used by Epix Digital Studio. French dub: nfsmw-nx french-dub tool. The port is encrypted: only the edition's own <code>default.xex</code> opens it. Need for Speed is a trademark of Electronic Arts; this project is not affiliated with or endorsed by EA."
 };

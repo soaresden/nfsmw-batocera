@@ -91,7 +91,15 @@ const XEX_DATA = {  // the data sizes that go with each default.xex
 // The player's machine: aarch64 (Retroid Pocket, Odin, Raspberry Pi 5...), x86_64 (a PC with Batocera) or both, in
 // one folder (bin/aarch64/ and bin/x86_64/, the rest shared). Each machine has its own package (paquets/index.json
 // "arch"; the older entries have none and are aarch64), both opened by the same default.xex.
-const ARCHES = ['both', 'aarch64', 'x86_64'];
+// win64: Windows / RetroBat (package_windows.sh), in bin/x86_64-windows/ of the same folder; with RetroBat the folder
+// chosen is its roms/ (the game goes to ports/, a one-line launcher to windows/).
+const ARCHES = ['both', 'aarch64', 'x86_64', 'win64'];
+const binDir = (a) => (a === 'win64' ? 'x86_64-windows' : a);
+const WIN_LAUNCHER = 'windows/NFS Most Wanted.bat';
+const WIN_STUB = ['@echo off',
+  'rem NFS Most Wanted (Xbox 360, recompile) pour RetroBat : le jeu et son lanceur sont dans',
+  'rem roms\\ports\\NFS Most Wanted.sh\\ (bin\\x86_64-windows\\). Ecrit par la page d\'installation.',
+  'call "%~dp0..\\ports\\NFS Most Wanted.sh\\bin\\x86_64-windows\\NFS Most Wanted.bat" %*', ''].join('\r\n');
 state.arch = (() => { try { return localStorage.getItem('nfsmw-arch'); } catch { return null; } })();
 if (!ARCHES.includes(state.arch)) state.arch = 'both';
 const archList = () => (state.arch === 'both' ? ['aarch64', 'x86_64'] : [state.arch]);
@@ -109,6 +117,14 @@ for (const a of ARCHES) {
     try { localStorage.setItem('nfsmw-arch', a); } catch { /* remembered for this visit only */ }
     showArch();
     editionsTable(state.xexSha);
+    // Windows changes where things go in the chosen folder (RetroBat's roms/): chosen again.
+    if (state.dest && (a === 'win64' || state.retrobat)) {
+      state.dest = null;
+      state.retrobat = false;
+      $('dest-facts').replaceChildren();
+      $('s-run').classList.add('off');
+      $('run').disabled = true;
+    }
     if (state.lastGame) {  // the same game, with the other machine's package
       $('game-facts').replaceChildren();
       chooseGame(state.lastGame).catch((x) => fact('game-facts', String(x.message || x), 'bad'));
@@ -136,7 +152,8 @@ const canWrite = typeof window.showDirectoryPicker === 'function';
 
 // ------------------------------------------------------------------ small helpers
 
-const archName = (a) => (a === 'x86_64' ? L('PC (x86_64)', 'PC (x86_64)') : a === 'both' ? L('ARM et PC', 'ARM and PC') : L('ARM (Retroid…)', 'ARM (Retroid…)'));
+const archName = (a) => (a === 'x86_64' ? L('PC (x86_64)', 'PC (x86_64)') : a === 'both' ? L('ARM et PC', 'ARM and PC')
+  : a === 'win64' ? 'Windows' : L('ARM (Retroid…)', 'ARM (Retroid…)'));
 
 const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
 const sha256 = async (bytes) => hex(await crypto.subtle.digest('SHA-256', bytes));
@@ -154,7 +171,11 @@ function announce() {
   const out = $('output');
   const e = EDITIONS[state.xexSha];
   if (!state.paquet || !e) { out.hidden = true; return; }
-  const items = [`${flag(e.pays)} NFS Most Wanted ${edName(e)}, ${state.arch === 'x86_64'
+  const win = state.arch === 'win64';
+  const items = [`${flag(e.pays)} NFS Most Wanted ${edName(e)}, ${win
+    ? L('port natif pour Windows 10/11 (processeur avec AVX2, carte graphique Vulkan), avec RetroBat ou seul : au clavier ou à la manette',
+      'native port for Windows 10/11 (a processor with AVX2, a Vulkan graphics card), with RetroBat or on its own: keyboard or controller')
+    : state.arch === 'x86_64'
     ? L('port natif Batocera pour PC (x86_64, processeur avec AVX2, carte graphique Vulkan)', 'native Batocera port for PC (x86_64, a processor with AVX2, a Vulkan graphics card)')
     : state.arch === 'both'
       ? L('port natif Batocera pour les deux machines dans un seul dossier : Retroid Pocket 5 (60 FPS en course en 1280x720) et PC x86_64 (AVX2, Vulkan), avec le même jeu et les mêmes sauvegardes', 'native Batocera port for both machines in one folder: Retroid Pocket 5 (60 FPS in races at 1280x720) and x86_64 PC (AVX2, Vulkan), with the same game and saves')
@@ -168,10 +189,20 @@ function announce() {
     items.push(L(`Textes et voix : ${lg}, ou la langue de Batocera si le disque l'a`, `Text and voices: ${lg}, or Batocera's language if the disc has it`));
     if (e.vf === 'oui' || state.englishData) items.push(`<span class="muted">${L('Ajoutez l\'ISO Xbox française pour la VF complète', 'Add the French original Xbox ISO for the full French dub')}</span>`);
   }
-  items.push(L('Icônes PlayStation (par défaut), GameCube ou Xbox 360, au choix dans EmulationStation', 'PlayStation (default), GameCube or Xbox 360 button icons, chosen in EmulationStation'));
+  items.push(win
+    ? L('Icônes PlayStation (par défaut), GameCube, Xbox 360 ou clavier, au choix dans l\'écran Mods du jeu (menu principal) ; elles passent aux touches du PC quand vous jouez au clavier',
+      'PlayStation (default), GameCube, Xbox 360 or keyboard button icons, chosen in the game\'s Mods screen (main menu); they turn into the PC keys while you play on the keyboard')
+    : L('Icônes PlayStation (par défaut), GameCube ou Xbox 360, au choix dans EmulationStation', 'PlayStation (default), GameCube or Xbox 360 button icons, chosen in EmulationStation'));
   items.push(L('Shaders fabriqués à partir de votre disque, images de l\'écran titre pour la fiche du jeu', 'Shaders built from your disc, title screen pictures for the game\'s entry'));
-  items.push(L('<b>Black Edition</b> à activer dans les options : BMW M3 GTR de route, Camaro SS, 8 voitures tunées, l\'épreuve 70 du Challenge Series et 3 courses en plus, avec son écran titre (tiré de votre jeu, en noir et blanc, « Black Edition » sous le logo)', '<b>Black Edition</b> in the options: road BMW M3 GTR, Camaro SS, 8 tuned cars, Challenge Series event 70 and 3 more races, with its own title screen (made from your game, in black and white, "Black Edition" under the logo)'));
-  items.push(L('Options dans EmulationStation, sauvegardes, vibration, Hotkey + Start pour quitter', 'Options in EmulationStation, saves, rumble, Hotkey + Start to quit'));
+  if (win) items.push(L('<b>Black Edition</b> : un fichier vide <code>black_edition.txt</code> à côté du lanceur (<code>bin\\x86_64-windows\\</code>) l\'active (BMW M3 GTR de route, Camaro SS, 8 voitures tunées, 4 épreuves, son écran titre)',
+    '<b>Black Edition</b>: an empty <code>black_edition.txt</code> file next to the launcher (<code>bin\\x86_64-windows\\</code>) turns it on (road BMW M3 GTR, Camaro SS, 8 tuned cars, 4 events, its title screen)'));
+  else items.push(L('<b>Black Edition</b> à activer dans les options : BMW M3 GTR de route, Camaro SS, 8 voitures tunées, l\'épreuve 70 du Challenge Series et 3 courses en plus, avec son écran titre (tiré de votre jeu, en noir et blanc, « Black Edition » sous le logo)', '<b>Black Edition</b> in the options: road BMW M3 GTR, Camaro SS, 8 tuned cars, Challenge Series event 70 and 3 more races, with its own title screen (made from your game, in black and white, "Black Edition" under the logo)'));
+  items.push(win
+    ? L(state.retrobat ? 'Le jeu dans <code>roms\\ports\\</code> et sa fiche dans le système <b>Windows</b> de RetroBat (<code>roms\\windows\\NFS Most Wanted.bat</code>) ; sauvegardes, vibration, Alt+F4 pour quitter'
+      : 'Lancement par <code>bin\\x86_64-windows\\NFS Most Wanted.bat</code> ; pour RetroBat, choisissez plutôt son dossier <code>roms</code> comme destination ; sauvegardes, vibration, Alt+F4 pour quitter',
+    state.retrobat ? 'The game in <code>roms\\ports\\</code> and its entry in RetroBat\'s <b>Windows</b> system (<code>roms\\windows\\NFS Most Wanted.bat</code>); saves, rumble, Alt+F4 to quit'
+      : 'Started by <code>bin\\x86_64-windows\\NFS Most Wanted.bat</code>; for RetroBat, choose its <code>roms</code> folder as the destination instead; saves, rumble, Alt+F4 to quit')
+    : L('Options dans EmulationStation, sauvegardes, vibration, Hotkey + Start pour quitter', 'Options in EmulationStation, saves, rumble, Hotkey + Start to quit'));
   const time = state.vfXbox && !state.destDubbed ? L('quelques minutes, plus la copie du jeu, plus 1 à 3 heures de VF', 'a few minutes, plus the game copy, plus 1 to 3 hours for the French dub')
     : L('quelques minutes, plus la copie du jeu (7 Go)', 'a few minutes, plus the game copy (7 GB)');
   out.innerHTML = `<h3>${L('Ce que vous obtenez', 'What you get')}</h3><ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul><p class="muted small">${L('Durée', 'Time')} : ${time}.</p>`;
@@ -388,9 +419,20 @@ $('pick-dest').onclick = async () => {
     // An existing "NFS Most Wanted.sh" chosen itself is written into.
     state.dest = dir;
     state.base = dir.name === PORT ? '' : `${PORT}/`;
-    const where = state.base ? `${dir.name}/${PORT}/` : `${dir.name}/`;
+    // Windows: RetroBat's roms/ (it has ports/) gets the game in ports/ and its launcher in windows/.
+    state.retrobat = false;
+    if (state.arch === 'win64' && state.base) {
+      try { await dir.getDirectoryHandle('ports'); state.retrobat = true; state.base = `ports/${PORT}/`; } catch { /* not roms/ */ }
+    }
+    const where = `${dir.name}/${state.base}`;
     fact('dest-facts', `${L('Destination', 'Destination')} : <code>${where}</code>`, 'ok');
-    if (state.base && dir.name.toLowerCase() !== 'ports') {
+    if (state.retrobat) {
+      fact('dest-facts', L(`RetroBat : le lanceur <code>${dir.name}/${WIN_LAUNCHER}</code> s'ajoute au système Windows.`,
+        `RetroBat: the launcher <code>${dir.name}/${WIN_LAUNCHER}</code> is added to the Windows system.`), 'ok');
+    } else if (state.arch === 'win64') {
+      fact('dest-facts', L(`Avec RetroBat, choisissez plutôt son dossier <code>roms</code> : le jeu va dans <code>ports</code> et sa fiche dans le système Windows. Ici, lancez <code>${PORT}\\bin\\x86_64-windows\\NFS Most Wanted.bat</code>.`,
+        `With RetroBat, choose its <code>roms</code> folder instead: the game goes to <code>ports</code> and its entry to the Windows system. Here, run <code>${PORT}\\bin\\x86_64-windows\\NFS Most Wanted.bat</code>.`), 'muted');
+    } else if (state.base && dir.name.toLowerCase() !== 'ports') {
       fact('dest-facts', L(`Une fois fini, copiez le dossier <code>${PORT}</code> dans <code>roms/ports</code> de Batocera.`,
         `Once done, copy the <code>${PORT}</code> folder into Batocera's <code>roms/ports</code>.`), 'muted');
     }
@@ -409,8 +451,8 @@ $('pick-dest').onclick = async () => {
       return;
     }
     if (other.length) {
-      fact('dest-facts', L(`Ce dossier a déjà la version ${archName(other[0])} : la version ${archName(state.arch)} s'y ajoute (${archList().map((a) => `<code>bin/${a}/</code>`).join(', ')}). Le jeu, les sauvegardes, les mods et les réglages sont partagés entre les deux.`,
-        `This folder already has the ${archName(other[0])} version: the ${archName(state.arch)} one is added next to it (${archList().map((a) => `<code>bin/${a}/</code>`).join(', ')}). The game, saves, mods and settings are shared by both.`), 'ok');
+      fact('dest-facts', L(`Ce dossier a déjà la version ${archName(other[0])} : la version ${archName(state.arch)} s'y ajoute (${archList().map((a) => `<code>bin/${binDir(a)}/</code>`).join(', ')}). Le jeu, les sauvegardes, les mods et les réglages sont partagés entre les deux.`,
+        `This folder already has the ${archName(other[0])} version: the ${archName(state.arch)} one is added next to it (${archList().map((a) => `<code>bin/${binDir(a)}/</code>`).join(', ')}). The game, saves, mods and settings are shared by both.`), 'ok');
     } else if (archList().some((a) => installed.includes(a))) {
       fact('dest-facts', L(`Mise à jour de la version ${archName(state.arch)} déjà installée ici ; le jeu et les sauvegardes sont gardés.`,
         `Update of the ${archName(state.arch)} version already installed here; the game and saves are kept.`), 'ok');
@@ -576,7 +618,7 @@ async function destDir(path) {
 async function destInstalls() {
   const found = [];
   try {
-    for await (const [name, h] of (await destDir(`${state.base}bin`)).entries()) if (h.kind === 'directory') found.push(name);
+    for await (const [name, h] of (await destDir(`${state.base}bin`)).entries()) if (h.kind === 'directory') found.push(name === 'x86_64-windows' ? 'win64' : name);
   } catch { /* no bin/ */ }
   try {
     const exe = await (await (await destDir(state.base)).getFileHandle('nfsmw')).getFile();
@@ -970,10 +1012,15 @@ async function run() {
     if (!canWrite) {
       out['game_root/nfsmw_shaders.nfsp'] = await shaders(state.game);
       progress(0.85, L('Fabrication du zip…', 'Making the zip…'));
-      const zip = writeZip(Object.entries(out).map(([p, d]) => [`${PORT}/${p}`, d]));
-      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(zip), download: 'nfsmw-batocera.zip' });
+      // Windows: laid out as RetroBat's roms/ (ports/ and the launcher in windows/).
+      const winZip = state.arch === 'win64';
+      const files = Object.entries(out).map(([p, d]) => [`${winZip ? 'ports/' : ''}${PORT}/${p}`, d]);
+      if (winZip) files.push([WIN_LAUNCHER, new TextEncoder().encode(WIN_STUB)]);
+      const zip = writeZip(files);
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(zip), download: winZip ? 'nfsmw-windows.zip' : 'nfsmw-batocera.zip' });
       a.click();
-      log(L(`zip : ${size(zip.size)}. Décompressez-le dans roms/ports/, puis copiez default.xex, NFS/ et Movies/ dans ${PORT}/game_root/.`, `zip: ${size(zip.size)}. Extract it into roms/ports/, then copy default.xex, NFS/ and Movies/ into ${PORT}/game_root/.`));
+      if (winZip) log(L(`zip : ${size(zip.size)}. Décompressez-le dans le dossier roms de RetroBat, puis copiez default.xex, NFS/ et Movies/ dans ports/${PORT}/game_root/.`, `zip: ${size(zip.size)}. Extract it into RetroBat's roms folder, then copy default.xex, NFS/ and Movies/ into ports/${PORT}/game_root/.`));
+      else log(L(`zip : ${size(zip.size)}. Décompressez-le dans roms/ports/, puis copiez default.xex, NFS/ et Movies/ dans ${PORT}/game_root/.`, `zip: ${size(zip.size)}. Extract it into roms/ports/, then copy default.xex, NFS/ and Movies/ into ${PORT}/game_root/.`));
     } else {
       // The port first: if the shaders fail, the rest is in place and the error says what is missing.
       const entries = Object.entries(out);
@@ -985,6 +1032,10 @@ async function run() {
         progress(0.2 + 0.08 * (++i / entries.length), `${L('Écriture de', 'Writing')} ${p}…`);
       }
       log(`écrit : ${entries.length} fichiers dans ${PORT}/`);
+      if (state.retrobat) {
+        await writeTo(state.dest, WIN_LAUNCHER, new TextEncoder().encode(WIN_STUB));
+        log(L(`RetroBat : ${WIN_LAUNCHER} écrit (la fiche du jeu s'ajoute au premier lancement)`, `RetroBat: ${WIN_LAUNCHER} written (the game's entry is added at the first start)`));
+      }
       state.portWritten = true;
       if (await destLibrary()) log(L('shaders : déjà fabriqués par un essai précédent, gardés', 'shaders: already built by an earlier run, kept'));
       else await writeTo(state.dest, `${state.base}game_root/nfsmw_shaders.nfsp`, await shaders(state.game));
@@ -1010,6 +1061,8 @@ async function run() {
       else if (state.vfXbox) log(L('VF : déjà faite dans ce dossier, gardée', 'French dub: already done in this folder, kept'));
     }
     progress(1, L('Terminé.', 'Done.'));
+    $('done-win').hidden = state.arch !== 'win64';
+    $('done-bato').hidden = state.arch === 'win64';
     $('s-done').hidden = false;
   } catch (e) {
     console.error(e);

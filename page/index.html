@@ -168,6 +168,7 @@ footer a { color: inherit; }
       <button id="arch-both" class="second" data-i18n="arch-both">les deux (un seul dossier pour la Retroid et le PC)</button>
       <button id="arch-aarch64" class="second" data-i18n="arch-arm">une console ARM (Retroid Pocket, Odin…)</button>
       <button id="arch-x86_64" class="second" data-i18n="arch-pc">un PC (x86_64)</button>
+      <button id="arch-win64" class="second" data-i18n="arch-win">Windows / RetroBat</button>
     </div>
     <div id="drop">
       <div class="big" data-i18n="drop-big">Déposez ici vos ISO</div>
@@ -231,7 +232,11 @@ footer a { color: inherit; }
 
   <section id="s-done" class="panel" hidden>
     <h2 data-i18n="done-h">Terminé</h2>
-    <p data-i18n="done-p">Sur la console : redémarrez EmulationStation (ou la console), puis lancez <strong>NFS Most Wanted</strong>
+    <p id="done-win" hidden data-i18n="done-win">Sous Windows : avec RetroBat, redémarrez EmulationStation et lancez
+      <strong>NFS Most Wanted</strong> dans le système <strong>Windows</strong>. Sans RetroBat : lancez
+      <code>NFS Most Wanted.sh\bin\x86_64-windows\NFS Most Wanted.bat</code>. Au clavier : flèches pour conduire, Maj
+      nitro, Espace frein à main, Échap pause ; une manette marche aussi.</p>
+    <p id="done-bato" data-i18n="done-p">Sur la console : redémarrez EmulationStation (ou la console), puis lancez <strong>NFS Most Wanted</strong>
       dans <strong>Ports</strong>. Les options sont dans <strong>Options avancées du jeu → NFS MOST WANTED</strong>.
       <strong>Hotkey + Start</strong> quitte le jeu, <strong>Hotkey + L1</strong> fait une capture.</p>
     <p data-i18n="done-p2">Pour un retour : envoyez <code>nfsmw-stdout.log</code> et <code>data/logs/</code> du dossier du jeu.</p>

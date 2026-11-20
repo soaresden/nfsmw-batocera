@@ -5,6 +5,15 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- Windows / RetroBat on the installation page: a fourth machine, "Windows / RetroBat", with its own encrypted
+  package per edition (`nfsmw-<edition>-win64.pak`, same key as the others). The page writes it into
+  `NFS Most Wanted.sh/bin/x86_64-windows/` (nfsmw.exe, the DLLs, Python for mods.py, the launcher), next to the
+  Batocera builds if the folder has them; with RetroBat's `roms` folder chosen, the game goes to `ports/` and a
+  one-line `windows/NFS Most Wanted.bat` calls the launcher, which writes the entry to `windows/gamelist.xml`.
+  Chrome writes `.dll` files as `.dll.txt` on a real disk: the launcher gives them their name back first.
+  Built by `batocera/package_windows.sh` (`ARCH=win64` in `build.sh` / `build_edition.sh`, all three editions in
+  `rebuild_all.sh`).
+
 - The EmulationStation entry is written by the launchers (`mods.py gamelist`): `ports/gamelist.xml` on Batocera,
   `windows/gamelist.xml` on RetroBat; English description with the GitHub references, developer, date and the
   `forgamelist/` pictures the page makes from the player's FRONTB.LZC. The player's own fields are kept.

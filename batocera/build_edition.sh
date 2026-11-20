@@ -18,7 +18,8 @@
 #      page/paquets/ (batocera/make_paquet.py).
 # No PGO on Batocera, so unlike the Switch build the tree does not need to be swapped into app/.
 # ARCH=x86_64 builds for a PC (out/x86_64-<edition>, out/batocera-x86_64-<edition>, nfsmw-<edition>-x86_64.pak)
-# instead of aarch64; with SKIP_CODEGEN=1 the edition tree app_<edition> already made is used as it is.
+# instead of aarch64, ARCH=win64 for Windows / RetroBat (MinGW: out/win64-<edition>, out/windows-<edition>,
+# nfsmw-<edition>-win64.pak, see batocera/package_windows.sh); with SKIP_CODEGEN=1 the edition tree app_<edition> already made is used as it is.
 # Set FORCE=1 to accept a default.xex that is not the one listed for that edition, NO_PAQUET=1 to skip the encrypted
 # package (tests).
 set -euo pipefail
@@ -31,7 +32,8 @@ ARCH=${ARCH:-aarch64}
 case "$ARCH" in
   aarch64) BUILD_DIR="out/arm64-$ED"; PKG_DIR="out/batocera-$ED" ;;
   x86_64) BUILD_DIR="out/x86_64-$ED"; PKG_DIR="out/batocera-x86_64-$ED" ;;
-  *) echo "ARCH: aarch64 or x86_64" >&2; exit 1 ;;
+  win64) BUILD_DIR="out/win64-$ED"; PKG_DIR="out/windows-$ED" ;;
+  *) echo "ARCH: aarch64, x86_64 or win64" >&2; exit 1 ;;
 esac
 W="$RAIZ/out/editions/$ED"
 REF="$RAIZ/assets/game_root/default.xex"
@@ -92,11 +94,14 @@ fi
 echo "== 5. build ($ARCH), package"
 SYSROOT_ARG=()
 [ -n "${NFSMW_SYSROOT:-}" ] && SYSROOT_ARG=(-DNFSMW_SYSROOT="$NFSMW_SYSROOT")
+TOOLCHAIN="$RAIZ/batocera/toolchain-$ARCH-linux.cmake"
+if [ "$ARCH" = win64 ]; then TOOLCHAIN="$RAIZ/batocera/toolchain-x86_64-windows-mingw.cmake"; SYSROOT_ARG=(); fi
 cmake -S "app_$ED" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_TOOLCHAIN_FILE="$RAIZ/batocera/toolchain-$ARCH-linux.cmake" "${SYSROOT_ARG[@]}" \
+  -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" "${SYSROOT_ARG[@]}" \
   -DREXSDK_DIR="$RAIZ/sdk" -DREXGLUE_ENABLE_TRACY=OFF -DNFSMW_BUILD_LAUNCHER=OFF
 cmake --build "$BUILD_DIR" -j "$JOBS"
-batocera/package.sh "$BUILD_DIR" "$PKG_DIR"
+if [ "$ARCH" = win64 ]; then batocera/package_windows.sh "$BUILD_DIR" "$PKG_DIR"
+else batocera/package.sh "$BUILD_DIR" "$PKG_DIR"; fi
 if [ "${NO_PAQUET:-0}" = 1 ]; then echo "done: $PKG_DIR/ (no package: NO_PAQUET=1)"; exit 0; fi
 "$PY" batocera/make_paquet.py "$PKG_DIR/NFS Most Wanted.sh" "assets/editions/$ED/default.xex" "$ED"
 echo "done: $PKG_DIR/ and its package in page/paquets/ (add it with git add -f)"

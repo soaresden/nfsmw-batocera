@@ -1,5 +1,6 @@
 #!/bin/bash
-# Builds the Batocera package (Linux aarch64, or x86_64 for a PC with ARCH=x86_64) from your own default.xex.
+# Builds the Batocera package (Linux aarch64, or x86_64 for a PC with ARCH=x86_64; ARCH=win64 for Windows / RetroBat)
+# from your own default.xex.
 #
 #   batocera/build.sh /path/to/default.xex
 #
@@ -42,15 +43,19 @@ ARCH=${ARCH:-aarch64}
 case "$ARCH" in
   aarch64) BUILD_DIR="$OUT/arm64"; PKG_DIR="$OUT/batocera" ;;
   x86_64) BUILD_DIR="$OUT/x86_64"; PKG_DIR="$OUT/batocera-x86_64" ;;
-  *) echo "ARCH: aarch64 or x86_64" >&2; exit 1 ;;
+  win64) BUILD_DIR="$OUT/win64"; PKG_DIR="$OUT/windows" ;;
+  *) echo "ARCH: aarch64, x86_64 or win64" >&2; exit 1 ;;
 esac
-echo "== 3. build ($ARCH Linux)"
+echo "== 3. build ($ARCH)"
 SYSROOT_ARG=()
 [ -n "${NFSMW_SYSROOT:-}" ] && SYSROOT_ARG=(-DNFSMW_SYSROOT="$NFSMW_SYSROOT")
+TOOLCHAIN="$RAIZ/batocera/toolchain-$ARCH-linux.cmake"
+if [ "$ARCH" = win64 ]; then TOOLCHAIN="$RAIZ/batocera/toolchain-x86_64-windows-mingw.cmake"; SYSROOT_ARG=(); fi
 cmake -S "$RAIZ/app" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_TOOLCHAIN_FILE="$RAIZ/batocera/toolchain-$ARCH-linux.cmake" "${SYSROOT_ARG[@]}" \
+  -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" "${SYSROOT_ARG[@]}" \
   -DREXSDK_DIR="$RAIZ/sdk" -DREXGLUE_ENABLE_TRACY=OFF -DNFSMW_BUILD_LAUNCHER=OFF
 cmake --build "$BUILD_DIR" -j "$JOBS"
 
 echo "== 4. package"
-"$RAIZ/batocera/package.sh" "$BUILD_DIR" "$PKG_DIR"
+if [ "$ARCH" = win64 ]; then "$RAIZ/batocera/package_windows.sh" "$BUILD_DIR" "$PKG_DIR"
+else "$RAIZ/batocera/package.sh" "$BUILD_DIR" "$PKG_DIR"; fi

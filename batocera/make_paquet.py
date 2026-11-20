@@ -11,8 +11,9 @@ Container: u32 LE length of a JSON index {"version", "files": [{"path", "size"}]
 in that order. game_root/ is left out (the player's files go there).
 
 paquets/index.json lists the packages by SHA-256 of default.xex (already public: tools/editions/regional) and
-processor ("arch": aarch64 for the Retroid & co, x86_64 for a PC; read from the port's nfsmw). The x86_64 file is
-nfsmw-<edition>-x86_64.pak, the aarch64 one keeps nfsmw-<edition>.pak.
+processor ("arch": aarch64 for the Retroid & co, x86_64 for a PC with Batocera, win64 for Windows / RetroBat; read
+from the port's nfsmw or nfsmw.exe). The files are nfsmw-<edition>-x86_64.pak and nfsmw-<edition>-win64.pak, the
+aarch64 one keeps nfsmw-<edition>.pak.
 """
 import gzip
 import hashlib
@@ -51,6 +52,26 @@ def container(port):
     return version, len(index).to_bytes(4, 'little') + index + b''.join(blobs)
 
 
+def arch_of(port):
+    """The package's machine, from its one executable: an ELF nfsmw (aarch64 or x86_64 Linux) or a PE nfsmw.exe
+    (bin/x86_64-windows/, package_windows.sh: "win64")."""
+    bins = os.path.join(port, 'bin')
+    if not os.path.isdir(bins):  # bin/<arch>/ since 2026-11-18
+        exes = [os.path.join(port, 'nfsmw')]
+    else:
+        exes = [os.path.join(bins, a, n) for a in sorted(os.listdir(bins)) for n in ('nfsmw', 'nfsmw.exe')
+                if os.path.isfile(os.path.join(bins, a, n))]
+    if len(exes) != 1:
+        sys.exit('%s: one bin/<arch>/ per package' % port)
+    head = open(exes[0], 'rb').read(4096)
+    if head[:2] == b'MZ':
+        pe = int.from_bytes(head[0x3C:0x40], 'little')
+        if head[pe:pe + 4] != b'PE\0\0' or int.from_bytes(head[pe + 4:pe + 6], 'little') != 0x8664:
+            sys.exit('%s: not an x86-64 Windows executable' % exes[0])
+        return 'win64'
+    return {0xB7: 'aarch64', 0x3E: 'x86_64'}[head[18]]
+
+
 def main():
     if len(sys.argv) not in (4, 5):
         sys.exit(__doc__)
@@ -62,12 +83,7 @@ def main():
     version, plain = container(port)
     nonce = os.urandom(12)
     blob = MAGIC + nonce + AESGCM(key_of(xex)).encrypt(nonce, gzip.compress(plain, 9, mtime=0), MAGIC)
-    exes = [os.path.join(port, 'bin', a, 'nfsmw') for a in sorted(os.listdir(os.path.join(port, 'bin')))] \
-        if os.path.isdir(os.path.join(port, 'bin')) else [os.path.join(port, 'nfsmw')]  # bin/<arch>/ since 2026-11-18
-    if len(exes) != 1:
-        sys.exit('%s: one bin/<arch>/ per package' % port)
-    machine = open(exes[0], 'rb').read(20)[18]
-    arch = {0xB7: 'aarch64', 0x3E: 'x86_64'}[machine]
+    arch = arch_of(port)
     name = 'nfsmw-%s%s.pak' % (edition, '' if arch == 'aarch64' else '-' + arch)
     with open(os.path.join(out, name), 'wb') as f:
         f.write(blob)

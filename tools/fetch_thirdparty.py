@@ -104,6 +104,11 @@ def main():
                         raise FileNotFoundError(
                             f'Could not resolve vendored symlink {relative_path}: {link_target}'
                         )
+                if os.path.islink(src) and not os.path.isfile(src):
+                    # Linux checks the links out as links: one to a folder or to MoltenVK's Apple
+                    # dependencies (not fetched) has no file to copy.
+                    print(f'Skipping directory or dangling link: {relative_path}')
+                    continue
                 if os.path.exists(dst) and resolved_target is None:
                     kept += 1
                     continue

@@ -6,6 +6,9 @@ rem pas de copie en double : les sauvegardes (data\, saves\) et les mods sont ce
 rem Pas de blocs entre parentheses : un chemin avec "(Windows)" les casserait.
 setlocal
 set "ICI=%~dp0"
+rem La page d'installation (Chrome, Edge) ecrit les .dll en .dll.txt (Chrome refuse ce nom sur un disque) :
+rem remis a leur nom avant tout, python\ compris.
+for /r "%ICI%." %%F in (*.dll.txt) do move /y "%%F" "%%~dpnF" >nul
 set "LANCEUR=%~nx0"
 set "JEU="
 rem chemin_du_jeu.txt (a cote de ce fichier) : le dossier du jeu sur une ligne, par exemple
@@ -127,7 +130,14 @@ rem Les icones telles que le jeu va les charger, pour y echanger les touches du 
 "%PY%" "%ICI%mods.py" icons "%JEU%" >> "%JOURNAL%" 2>&1
 rem La fiche de RetroBat (roms\windows\gamelist.xml) : description en anglais, images de forgamelist\ du jeu.
 for %%F in ("%ICI%.") do set "DOSSIER=%%~nxF"
-"%PY%" "%ICI%mods.py" gamelist "%JEU%" "%ICI%..\gamelist.xml" "./%DOSSIER%/%LANCEUR%" >> "%JOURNAL%" 2>&1
+set "FICHE=%ICI%..\gamelist.xml"
+set "ENTREE=./%DOSSIER%/%LANCEUR%"
+rem Installe par la page (NFS Most Wanted.sh\bin\x86_64-windows\) : RetroBat lance roms\windows\NFS Most Wanted.bat,
+rem qui appelle ce fichier. Sans lui (pas de RetroBat), pas de fiche.
+if /i "%DOSSIER%"=="x86_64-windows" set "FICHE=%JEU%\..\..\windows\gamelist.xml"
+if /i "%DOSSIER%"=="x86_64-windows" set "ENTREE=./NFS Most Wanted.bat"
+if /i "%DOSSIER%"=="x86_64-windows" if not exist "%JEU%\..\..\windows\NFS Most Wanted.bat" exit /b 0
+"%PY%" "%ICI%mods.py" gamelist "%JEU%" "%FICHE%" "%ENTREE%" >> "%JOURNAL%" 2>&1
 exit /b 0
 
 :icones

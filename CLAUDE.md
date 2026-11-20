@@ -9,7 +9,8 @@
 est traduit en C++ par **ReXGlue** (`sdk/`, fork local), dessiné par un renderer Vulkan natif. Cibles :
 
 - **Batocera aarch64** (Retroid Pocket 5, l'appareil de l'utilisateur) et **Batocera x86_64** (PC, AVX2) ;
-- **Windows / RetroBat** (`.exe` MinGW), version **privée** : jamais publiée, ni sur la page ni sur le site.
+- **Windows / RetroBat** (`.exe` MinGW) : sur la page depuis le 20/11/2026, comme les autres, en paquet **chiffré**
+  (`nfsmw-<édition>-win64.pak`, posé dans `NFS Most Wanted.sh/bin/x86_64-windows/`). Jamais d'exe en clair publié.
 
 Trois éditions : **PAL Espagne** (`app/`, la référence), **USA** et **PAL anglaise** (`app_usa/`, `app_pal_en/`,
 générés par `tools/editions/` en traduisant les adresses : ne jamais éditer `app_*` à la main, tout part de `app/`).
@@ -56,17 +57,16 @@ projet dans `data.js`, et `?v=NN` à incrémenter dans `index.html` à chaque ch
 - Après un **nouveau crochet** `REX_HOOK_RAW(sub_X)` : `python3 tools/llamadas_directas.py --deshacer &&
   python3 tools/llamadas_directas.py` pour `app/` ; les éditions repassent par le codegen (fait par
   `rebuild_all.sh`, `tools/codegen.sh` défait maintenant les appels directs avant de les refaire).
-- **Windows** : `cmake -S app_pal_en -B out/win64-pal_en -G Ninja -DCMAKE_BUILD_TYPE=Release
-  -DCMAKE_TOOLCHAIN_FILE=batocera/toolchain-x86_64-windows-mingw.cmake -DREXSDK_DIR=sdk
-  -DREXGLUE_ENABLE_TRACY=OFF -DNFSMW_BUILD_LAUNCHER=OFF` (clang-20 + MinGW, threads **win32**). Le dossier livré :
-  `nfsmw.exe`, `librexruntime.dll`, `librexgpu-xenos.dll` (passés à `llvm-strip-20 --strip-debug`),
-  `libstdc++-6.dll` et `libgcc_s_seh-1.dll` de `/usr/lib/gcc/x86_64-w64-mingw32/13-win32/`, `python/` (Python 3.12
-  embarqué, paquet NuGet `python` 3.12.10, dossier `tools/`), `mods.py`, `jdlz.py`, `nfsmw.toml`, le `.bat`.
-  Vérifier que tous les imports des DLL se résolvent (`llvm-objdump-20 -p`). Donner le `.bat` renommé en `.bat.txt`
-  (sinon non téléchargeable).
-- Ce qui a été fait jusqu'ici l'a été dans un conteneur Linux (cross-compilation). Sur le PC Windows de
-  l'utilisateur, la compilation demande WSL ou un Linux ; une session locale sert surtout à tester, lire les logs,
-  et éditer/pousser.
+- **Windows** : `ARCH=win64` dans `build.sh` / `build_edition.sh` (clang-20 + MinGW, threads **win32**,
+  `batocera/toolchain-x86_64-windows-mingw.cmake`), dossier fait par `batocera/package_windows.sh` :
+  `bin/x86_64-windows/` avec `nfsmw.exe`, les DLL (strip-debug), `libstdc++-6.dll` / `libgcc_s_seh-1.dll` de
+  `13-win32`, `python/` (NuGet `python` 3.12.10, allégé), `mods.py`, `jdlz.py`, `nfsmw.toml`, le `.bat`. Le script
+  vérifie les imports des DLL. La page écrit les `.dll` en `.dll.txt` (Chrome), le `.bat` les renomme au démarrage.
+  Pour donner un `.bat` seul à l'utilisateur : le renommer en `.bat.txt` (sinon non téléchargeable).
+- **Où compiler** : WSL Ubuntu de l'utilisateur (`D:\WSL\Ubuntu`, 16 cœurs, ~7,6 Go de RAM : `JOBS=5`), copie de
+  travail `~/nfsmw-win` (clone du dépôt Windows, sans CRLF), xex dans `assets/`. Paquets installés en root
+  (`wsl -d Ubuntu -u root -- apt-get install …`, pas de mot de passe). Les `.sh` sont forcés en LF
+  (`.gitattributes`) : le dépôt Windows a `core.autocrlf=true`.
 
 ## Installation chez l'utilisateur
 
