@@ -39,16 +39,22 @@ for ed in usa pal_en; do
   done
 done
 step "packages"
+# Every folder first, then the encrypted packages: make_paquet.py changes page/paquets/index.json, which would make
+# the next VERSION read "-dirty".
+pkgs=()
 for a in $ARCHES; do
   for ed in pal_es usa pal_en; do
-    xex=assets/editions/$ed/default.xex; [ $ed = pal_es ] && xex=assets/game_root/default.xex
     sfx=$([ $ed = pal_es ] || echo "-$ed")
     case $a in
-      aarch64) batocera/package.sh "out/arm64$sfx" "out/batocera$sfx" > /dev/null; pkg="out/batocera$sfx" ;;
-      x86_64) batocera/package.sh "out/x86_64$sfx" "out/batocera-x86_64$sfx" > /dev/null; pkg="out/batocera-x86_64$sfx" ;;
-      win64) batocera/package_windows.sh "out/win64$sfx" "out/windows$sfx" > /dev/null; pkg="out/windows$sfx" ;;
+      aarch64) batocera/package.sh "out/arm64$sfx" "out/batocera$sfx" > /dev/null; pkgs+=("out/batocera$sfx $ed") ;;
+      x86_64) batocera/package.sh "out/x86_64$sfx" "out/batocera-x86_64$sfx" > /dev/null; pkgs+=("out/batocera-x86_64$sfx $ed") ;;
+      win64) batocera/package_windows.sh "out/win64$sfx" "out/windows$sfx" > /dev/null; pkgs+=("out/windows$sfx $ed") ;;
     esac
-    python3 batocera/make_paquet.py "$pkg/NFS Most Wanted.sh" "$xex" "$ed" | tail -1
   done
+done
+for p in "${pkgs[@]}"; do
+  set -- $p
+  xex=assets/editions/$2/default.xex; [ $2 = pal_es ] && xex=assets/game_root/default.xex
+  python3 batocera/make_paquet.py "$1/NFS Most Wanted.sh" "$xex" "$2" | tail -1
 done
 step "done"
