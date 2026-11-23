@@ -313,9 +313,12 @@ std::vector<XCONTENT_AGGREGATE_DATA> ContentManager::ListContent(uint32_t device
       continue;
     }
 
-    XCONTENT_AGGREGATE_DATA content_data;
-    if (XSUCCEEDED(ReadContentHeaderFile(rex::path_to_utf8(file_info.name), xuid, title_id,
-                                         content_type, content_data))) {
+    // Not XSUCCEEDED: ReadContentHeaderFile returns Win32 codes (X_ERROR_FILE_NOT_FOUND is 2), which that macro
+    // takes for success. A save copied by hand without its .header was then listed with uninitialized data (an
+    // empty name), and the game reported it as damaged.
+    XCONTENT_AGGREGATE_DATA content_data{};
+    if (ReadContentHeaderFile(rex::path_to_utf8(file_info.name), xuid, title_id, content_type,
+                              content_data) == X_ERROR_SUCCESS) {
       result.emplace_back(std::move(content_data));
     } else {
       content_data.device_id = device_id;
