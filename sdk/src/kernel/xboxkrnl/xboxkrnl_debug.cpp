@@ -12,6 +12,8 @@
 // Disable warnings about unused parameters for kernel functions
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
+#include <atomic>
+
 #include <rex/dbg.h>
 #include <rex/kernel/xboxkrnl/private.h>
 #include <rex/logging.h>
@@ -25,8 +27,27 @@
 namespace rex::kernel::xboxkrnl {
 using namespace rex::system;
 
+namespace {
+// A retail console without a debugger does not stop the game at a debug break. rex::debug::Break raises SIGTRAP:
+// its handler swallows the first one, the second kills the process (exit code 133, nothing in the logs). NFS Most
+// Wanted does it on Batocera right before the police radio says "all units". Without a debugger the break is now
+// logged (the first 50) and the game goes on; with one, it still stops there.
+void BreakIfDebugged(const char* where, uint32_t code) {
+  static const bool debugged = rex::debug::IsDebuggerAttached();
+  static std::atomic<uint32_t> count{0};
+  const uint32_t n = ++count;
+  if (n <= 50) {
+    REXKRNL_WARN("[debug] {} (code {:08X}), #{}: {}", where, code, n,
+                 debugged ? "debugger attached, breaking" : "no debugger, ignored as on a retail console");
+  }
+  if (debugged) {
+    rex::debug::Break();
+  }
+}
+}  // namespace
+
 void DbgBreakPoint_entry() {
-  rex::debug::Break();
+  BreakIfDebugged("DbgBreakPoint", 0);
 }
 
 // https://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
@@ -123,7 +144,7 @@ void HandleCppException(ppc_ptr_t<X_EXCEPTION_RECORD> record) {
   auto catchable_types = REX_KERNEL_MEMORY()->TranslateVirtual<x_s__CatchableTypeArray*>(
       throw_info->catchable_type_array_ptr);
 
-  rex::debug::Break();
+  BreakIfDebugged("RtlRaiseException C++ exception", record->code);
 }
 
 void RtlRaiseException_entry(ppc_ptr_t<X_EXCEPTION_RECORD> record) {
@@ -140,12 +161,12 @@ void RtlRaiseException_entry(ppc_ptr_t<X_EXCEPTION_RECORD> record) {
 
   // TODO(benvanik): unwinding.
   // This is going to suck.
-  rex::debug::Break();
+  BreakIfDebugged("RtlRaiseException", record->code);
 }
 
 void KeBugCheckEx_entry(u32 code, u32 param1, u32 param2, u32 param3, u32 param4) {
-  REXKRNL_DEBUG("*** STOP: 0x{:08X} (0x{:08X}, 0x{:08X}, 0x{:08X}, 0x{:08X})", code, param1, param2,
-                param3, param4);
+  REXKRNL_ERROR("*** STOP (KeBugCheck): 0x{:08X} (0x{:08X}, 0x{:08X}, 0x{:08X}, 0x{:08X})", code, param1,
+                param2, param3, param4);
   fflush(stdout);
   rex::debug::Break();
   assert_always();
