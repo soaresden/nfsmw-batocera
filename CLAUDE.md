@@ -67,6 +67,12 @@ projet dans `data.js`, et `?v=NN` à incrémenter dans `index.html` à chaque ch
   travail `~/nfsmw-win` (clone du dépôt Windows, sans CRLF), xex dans `assets/`. Paquets installés en root
   (`wsl -d Ubuntu -u root -- apt-get install …`, pas de mot de passe). Les `.sh` sont forcés en LF
   (`.gitattributes`) : le dépôt Windows a `core.autocrlf=true`.
+- **Versions Linux (Retroid, PC Batocera)** : le WSL est en Ubuntu 26.04, glibc trop récente pour Batocera. Elles se
+  compilent dans l'image Docker Ubuntu 24.04 (`batocera/docker/`) : `JOBS=4 bash batocera/docker/build.sh` dans
+  `~/nfsmw-win` (≈ 45 min les six, codegen sauté ; le Windows se fait hors Docker). Vérifier `GLIBC_2.38` au plus.
+- **Retroid** : maintenant en `192.168.1.22` (même clé d'hôte que l'ancienne .21, `HostKeyAlias=192.168.1.21`).
+  La clé SSH est refusée (carte SD en exFAT, tout en 777, Dropbear refuse) : fichiers par `\\BATOCERA\share`, qui
+  ne sait pas créer de dossiers ; pour ça, `ssh` dans un onglet du terminal où l'utilisateur tape le mot de passe.
 
 ## Installation chez l'utilisateur
 
