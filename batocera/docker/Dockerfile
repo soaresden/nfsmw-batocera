@@ -27,3 +27,5 @@ RUN set -e; LIBS="libc6-dev libstdc++-13-dev libvulkan-dev libwayland-dev libxkb
     apt-get install -y --no-install-recommends $(for l in $LIBS; do echo $l:arm64; done) \
       python3-minimal:amd64 python3.12-minimal:amd64 libpython3.12-minimal:amd64; \
     rm -rf /var/lib/apt/lists/*
+# The encrypted packages (batocera/make_paquet.py).
+RUN apt-get update && apt-get install -y --no-install-recommends python3-cryptography && rm -rf /var/lib/apt/lists/*
