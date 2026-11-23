@@ -5,6 +5,18 @@ Adreno 650 with Turnip) under Batocera v44. The `VERSION` file in the package na
 
 ## 2026-11
 
+- Crash fix: hitting a police car (right before the radio's "all units") ended the game with exit code 133 and
+  nothing in the logs. The game calls `DbgBreakPoint`, which the port turned into a SIGTRAP; a retail console without
+  a debugger goes on, and so does the port now (a `[debug]` warning in the log). Linux builds also write any
+  SIGTRAP / SIGABRT / SIGFPE to `nfsmw-stdout.log` with the address and call stack (`[fallo]` lines).
+
+- Saves copied by hand without their `.header` (from the Switch port, for example) are listed under their folder
+  name; they used to show up with an empty name and the game called them damaged. The save goes in
+  `data/B13EBABEBABEBABE/454107D9/00000001/<NAME>/<NAME>`.
+
+- The Batocera packages are built in an Ubuntu 24.04 Docker image (`batocera/docker/`) when the build PC is newer:
+  Batocera's glibc stays the limit (GLIBC_2.38).
+
 - Windows / RetroBat on the installation page: a fourth machine, "Windows / RetroBat", with its own encrypted
   package per edition (`nfsmw-<edition>-win64.pak`, same key as the others). The page writes it into
   `NFS Most Wanted.sh/bin/x86_64-windows/` (nfsmw.exe, the DLLs, Python for mods.py, the launcher), next to the
