@@ -5,8 +5,9 @@
 #
 #   batocera/rebuild_all.sh            # needs assets/game_root/default.xex and assets/editions/<ed>/default.xex
 #
-# ARCHES="win64" (or "aarch64 x86_64"...) rebuilds only those machines; the build folders out/arm64 and out/x86_64
-# must have been configured once by batocera/build.sh, out/win64 is configured here when missing.
+# ARCHES="win64" (or "aarch64 x86_64"...) rebuilds only those machines; missing PAL Spain build folders are configured
+# here. SKIP_CODEGEN=1 keeps the edition trees app_usa / app_pal_en as they are (no new hook since they were made).
+# The Linux builds need Ubuntu 24.04 (Batocera's glibc): on a newer system, run this in batocera/docker/.
 # After a new REX_HOOK on a game function, the edition trees must go through the codegen (this script does it): the
 # direct calls are rewritten so that the game calls the hook (tools/llamadas_directas.py). For app/ itself, run
 # `python3 tools/llamadas_directas.py --deshacer && python3 tools/llamadas_directas.py` before building.
@@ -20,18 +21,22 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 step() { echo "== $1 $(date +%T)"; }
 has() { [[ " $ARCHES " == *" $1 "* ]]; }
-has aarch64 && { step "PAL Spain aarch64"; cmake --build out/arm64 -j"$JOBS"; }
-has x86_64 && { step "PAL Spain x86_64"; cmake --build out/x86_64 -j"$JOBS"; }
-if has win64; then
-  step "PAL Spain win64"
-  [ -f out/win64/build.ninja ] || cmake -S app -B out/win64 -G Ninja -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_TOOLCHAIN_FILE="$RAIZ/batocera/toolchain-x86_64-windows-mingw.cmake" -DREXSDK_DIR="$RAIZ/sdk" \
-    -DREXGLUE_ENABLE_TRACY=OFF -DNFSMW_BUILD_LAUNCHER=OFF
-  cmake --build out/win64 -j"$JOBS"
-fi
+# PAL Spain: each build folder is configured here when missing (as batocera/build.sh does).
+for a in $ARCHES; do
+  case $a in
+    aarch64) dir=out/arm64; tc=toolchain-aarch64-linux.cmake ;;
+    x86_64) dir=out/x86_64; tc=toolchain-x86_64-linux.cmake ;;
+    win64) dir=out/win64; tc=toolchain-x86_64-windows-mingw.cmake ;;
+  esac
+  step "PAL Spain $a"
+  [ -f $dir/build.ninja ] || cmake -S app -B $dir -G Ninja -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_TOOLCHAIN_FILE="$RAIZ/batocera/$tc" -DREXSDK_DIR="$RAIZ/sdk" \
+    -DREXGLUE_ENABLE_TRACY=OFF -DNFSMW_BUILD_LAUNCHER=OFF > /dev/null
+  cmake --build $dir -j"$JOBS"
+done
 for ed in usa pal_en; do
   cp "assets/editions/$ed/default.xex" "$TMP/$ed.xex"  # build_edition.sh copies it into assets/editions/<ed>/
-  skip=0  # the codegen once per edition, with the first machine
+  skip=${SKIP_CODEGEN:-0}  # the codegen once per edition, with the first machine (SKIP_CODEGEN=1: trees already made)
   for a in $ARCHES; do
     step "$ed $a$([ $skip = 0 ] && echo ' (codegen)')"
     ARCH=$a SKIP_CODEGEN=$skip JOBS=$JOBS NO_PAQUET=1 bash batocera/build_edition.sh "$ed" "$TMP/$ed.xex"
