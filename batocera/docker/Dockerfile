@@ -21,5 +21,9 @@ RUN (apt-get install -y --no-install-recommends clang-20 lld-20 llvm-20) || ( \
 RUN set -e; LIBS="libc6-dev libstdc++-13-dev libvulkan-dev libwayland-dev libxkbcommon-dev libx11-dev libx11-xcb-dev \
       libxext-dev libxtst-dev libxrandr-dev libxi-dev libxcursor-dev libxss-dev libxfixes-dev libasound2-dev \
       libpulse-dev libdrm-dev libgbm-dev libudev-dev libegl-dev libgles-dev libdbus-1-dev"; \
-    apt-get install -y --no-install-recommends g++-aarch64-linux-gnu $LIBS $(for l in $LIBS; do echo $l:arm64; done) \
- && rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends g++-aarch64-linux-gnu $LIBS; \
+    # amd64 first: otherwise apt satisfies the arm64 packages' tools (glib's, python3) with arm64 builds that
+    # cannot run here.
+    apt-get install -y --no-install-recommends $(for l in $LIBS; do echo $l:arm64; done) \
+      python3-minimal:amd64 python3.12-minimal:amd64 libpython3.12-minimal:amd64; \
+    rm -rf /var/lib/apt/lists/*
