@@ -78,7 +78,8 @@ struct Instalar {
     accion.sa_sigaction = AlFallar;
     accion.sa_flags = SA_SIGINFO | SA_ONSTACK;
     sigemptyset(&accion.sa_mask);
-    for (const int senal : {SIGTRAP, SIGABRT, SIGFPE}) {
+    const int senales[] = {SIGTRAP, SIGABRT, SIGFPE};
+    for (const int senal : senales) {
       sigaction(senal, &accion, nullptr);
     }
   }
